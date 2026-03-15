@@ -1,6 +1,13 @@
 import Foundation
 import SwiftData
 
+struct CategorySpendingSummary: Identifiable, Equatable {
+    let category: ExpenseCategory
+    let total: Double
+
+    var id: ExpenseCategory { category }
+}
+
 enum BudgetStoreError: LocalizedError {
     case invalidExpenseCategory
     case invalidExpenseTitle
@@ -188,6 +195,49 @@ struct BudgetStore {
         recurringExpenseItems: [RecurringExpenseItem]
     ) -> Double {
         totalIncome(for: incomeItems) - totalRecurringExpenses(for: recurringExpenseItems)
+    }
+
+    static func categorySpending(
+        for expenses: [Expense],
+        calendar: Calendar = .current,
+        referenceDate: Date = .now
+    ) -> [CategorySpendingSummary] {
+        let currentMonthExpenses = currentMonthExpenses(
+            from: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        return ExpenseCategory.allCases.compactMap { category in
+            let total = currentMonthExpenses
+                .filter { $0.category == category }
+                .reduce(0) { $0 + $1.amount }
+
+            guard total > 0 else {
+                return nil
+            }
+
+            return CategorySpendingSummary(category: category, total: total)
+        }
+        .sorted { lhs, rhs in
+            if lhs.total == rhs.total {
+                return lhs.category.title < rhs.category.title
+            }
+
+            return lhs.total > rhs.total
+        }
+    }
+
+    static func topSpendingCategory(
+        for expenses: [Expense],
+        calendar: Calendar = .current,
+        referenceDate: Date = .now
+    ) -> CategorySpendingSummary? {
+        categorySpending(
+            for: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        ).first
     }
 
     static func remainingBudget(

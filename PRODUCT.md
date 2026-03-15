@@ -203,6 +203,15 @@ The first and most useful overview is:
 
 A pie chart is acceptable if it remains readable and quick to grasp. Its purpose is to help the user see where most variable spending is going and support better decisions.
 
+The chart should stay lightweight:
+
+- current month only
+- fixed categories only
+- easy to read at a glance
+- no dense controls or advanced analytics framing
+
+The dashboard should ideally surface a short insight alongside the chart, such as the largest spending category for the current month.
+
 ## Current v0.1 Scope
 
 PocketBudget v0.1 currently supports:

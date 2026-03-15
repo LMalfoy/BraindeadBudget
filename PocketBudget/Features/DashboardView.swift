@@ -1,3 +1,4 @@
+import Charts
 import Foundation
 import SwiftData
 import SwiftUI
@@ -47,6 +48,14 @@ struct DashboardView: View {
         )
     }
 
+    private var categorySpending: [CategorySpendingSummary] {
+        BudgetStore.categorySpending(for: expenses)
+    }
+
+    private var topCategory: CategorySpendingSummary? {
+        categorySpending.first
+    }
+
     private var currencyCode: String {
         budgetSettings?.currencyCode ?? Locale.current.currency?.identifier ?? "USD"
     }
@@ -71,6 +80,15 @@ struct DashboardView: View {
                         hasCompletedSetup: hasBaselineData
                     )
                     .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16))
+                }
+
+                Section {
+                    CategoryOverviewCardView(
+                        categorySpending: categorySpending,
+                        topCategory: topCategory,
+                        currencyCode: currencyCode
+                    )
+                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 12, trailing: 16))
                 }
 
                 Section {
@@ -236,6 +254,71 @@ private struct ExpenseRowView: View {
                 .font(.body.weight(.semibold))
         }
         .padding(.vertical, 6)
+    }
+}
+
+private struct CategoryOverviewCardView: View {
+    let categorySpending: [CategorySpendingSummary]
+    let topCategory: CategorySpendingSummary?
+    let currencyCode: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Category Overview")
+                .font(.headline)
+
+            if categorySpending.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("No category data yet for this month.")
+                        .foregroundStyle(.secondary)
+
+                    Text("Add a few expenses to see where your money is going.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                Chart(categorySpending) { summary in
+                    SectorMark(
+                        angle: .value("Amount", summary.total),
+                        innerRadius: .ratio(0.58),
+                        angularInset: 2
+                    )
+                    .foregroundStyle(summary.category.color)
+                }
+                .chartLegend(.hidden)
+                .frame(height: 180)
+
+                if let topCategory {
+                    Text(
+                        "Top category: \(topCategory.category.title) (\(topCategory.total.formatted(.currency(code: currencyCode))))"
+                    )
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.secondary)
+                }
+
+                VStack(spacing: 10) {
+                    ForEach(categorySpending) { summary in
+                        HStack(spacing: 10) {
+                            Circle()
+                                .fill(summary.category.color)
+                                .frame(width: 10, height: 10)
+
+                            Text(summary.category.title)
+                                .foregroundStyle(.primary)
+
+                            Spacer()
+
+                            Text(summary.total.formatted(.currency(code: currencyCode)))
+                                .fontWeight(.medium)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+        }
+        .padding(18)
+        .background(Color(uiColor: .secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 }
 

@@ -135,8 +135,10 @@ Show where variable spending is going.
 Scope:
 
 - aggregate current-month expenses by category
-- add a simple dashboard chart, likely a pie chart
+- add a simple dashboard chart, likely a pie or donut chart
 - highlight largest spending category clearly
+- keep the chart limited to the current month and the four fixed categories
+- ensure the chart supports the existing clean dashboard layout
 
 Why this matters:
 
@@ -151,6 +153,7 @@ Validation:
 - unit tests for category aggregation
 - manual visual checks for small and large category sets
 - ensure chart does not crowd the dashboard
+- verify zero-expense and single-category states remain readable
 
 ### Iteration 0.6: Expense Correction Basics
 

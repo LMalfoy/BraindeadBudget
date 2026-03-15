@@ -34,6 +34,71 @@ final class BudgetCalculationTests: XCTestCase {
         XCTAssertEqual(availableBudget, -300, accuracy: 0.001)
     }
 
+    func testCategorySpendingAggregatesCurrentMonthExpensesByCategory() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 3, day: 14, calendar: calendar)
+        let expenses = [
+            Expense(title: "Coffee", category: .food, amount: 5, date: makeDate(year: 2026, month: 3, day: 10, calendar: calendar)),
+            Expense(title: "Lunch", category: .food, amount: 12, date: makeDate(year: 2026, month: 3, day: 11, calendar: calendar)),
+            Expense(title: "Train", category: .transport, amount: 20, date: makeDate(year: 2026, month: 3, day: 12, calendar: calendar)),
+            Expense(title: "Old", category: .fun, amount: 50, date: makeDate(year: 2026, month: 2, day: 28, calendar: calendar))
+        ]
+
+        let summaries = BudgetStore.categorySpending(
+            for: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertEqual(summaries.count, 2)
+        XCTAssertEqual(summaries[0], CategorySpendingSummary(category: .transport, total: 20))
+        XCTAssertEqual(summaries[1], CategorySpendingSummary(category: .food, total: 17))
+    }
+
+    func testTopSpendingCategoryReturnsHighestCategoryForCurrentMonth() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 3, day: 14, calendar: calendar)
+        let expenses = [
+            Expense(title: "Movie", category: .fun, amount: 18, date: makeDate(year: 2026, month: 3, day: 8, calendar: calendar)),
+            Expense(title: "Dinner", category: .food, amount: 30, date: makeDate(year: 2026, month: 3, day: 9, calendar: calendar))
+        ]
+
+        let topCategory = BudgetStore.topSpendingCategory(
+            for: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertEqual(topCategory, CategorySpendingSummary(category: .food, total: 30))
+    }
+
+    func testCategorySpendingReturnsEmptyOverviewWhenNoCurrentMonthExpensesExist() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 3, day: 14, calendar: calendar)
+        let expenses = [
+            Expense(title: "Old", category: .food, amount: 10, date: makeDate(year: 2026, month: 2, day: 14, calendar: calendar))
+        ]
+
+        let summaries = BudgetStore.categorySpending(
+            for: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertTrue(summaries.isEmpty)
+        XCTAssertNil(BudgetStore.topSpendingCategory(
+            for: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        ))
+    }
+
     func testCurrentMonthExpensesOnlyIncludeMatchingMonth() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
