@@ -183,10 +183,124 @@ Validation:
 - manual check that dashboard totals update correctly
 - manual confirmation that deletion does not feel accidental or unclear
 
-### Iteration 0.7: Smart Single-Line Entry
+### Iteration 0.7: Polish Pass
 
 Goal:
-Reduce entry friction further with intelligent parsing.
+Refine the existing experience on real devices and remove rough edges without expanding the feature surface.
+
+Scope:
+
+- tighten dashboard spacing and panel alignment
+- remove small redundant UI where it does not help comprehension
+- refine chart presentation if needed
+- smooth expense-entry interaction details discovered during real-device use
+- address small polish notes that fit naturally within the current screens
+
+Why this matters:
+
+- the app is already useful, so quality improvements now have high leverage
+- polishing before more feature work reduces future churn
+
+Risk:
+Low
+
+Validation:
+
+- manual real-device review on iPhone
+- regression test pass
+- targeted fixes for issues discovered during real usage
+
+### Iteration 0.8: Final Stabilization
+
+Goal:
+Do a final bug-fix, refactor, and stability pass before the next feature expansion.
+
+Scope:
+
+- fix remaining small bugs
+- do a careful low-risk cleanup pass
+- improve test reliability
+- remove narrow rough edges discovered during v0.7 review
+- verify that the existing core flows are dependable on simulator and device
+
+Why this matters:
+
+- this creates a stronger base for the next larger feature set
+- it reduces the risk of stacking new features onto shaky UX details
+
+Risk:
+Low
+
+Validation:
+
+- full test pass
+- manual regression testing across the main flows
+- confirm no known critical friction remains in the core app
+- confirm the existing automated test suite is still worth trusting or narrow it if needed
+
+### Iteration 0.9: Settings Area
+
+Goal:
+Move app-level controls out of the dashboard and into a dedicated settings surface.
+
+Scope:
+
+- move budget editing into settings
+- keep first-run budget setup behavior when no baseline exists
+- add app/version/about information
+- leave room for future customization options
+
+Why this matters:
+
+- the dashboard should focus on action and status, not app configuration
+- settings become easier to extend later without cluttering the home screen
+
+Risk:
+Low to medium
+
+Validation:
+
+- manual review of onboarding-to-settings behavior
+- verify budget editing still works correctly
+- ensure the dashboard becomes simpler rather than harder to navigate
+
+### Iteration 1.0: Expense History
+
+Goal:
+Let the user browse and manage expenses by month.
+
+Scope:
+
+- dedicated expense-history sheet
+- month/year navigation
+- month-specific expense list
+- edit/delete from that history view
+
+Why this matters:
+
+- users need a complete view of a given month, not only recent dashboard rows
+- this is the most practical next expansion after stabilization
+
+Risk:
+Medium
+
+Validation:
+
+- manual testing across multiple months
+- verification that edits and deletes update related dashboard values correctly
+- confirm the history navigation remains easy to understand
+
+### Post-1.0 Candidates
+
+Potential next feature directions after stabilization:
+
+- category drill-down into underlying expenses
+- period-aware budgeting rules such as monthly carryover
+
+### Deferred Idea: Smart Single-Line Entry
+
+Goal:
+Reduce entry friction further with intelligent parsing if real usage eventually justifies it.
 
 Scope:
 
@@ -196,8 +310,8 @@ Scope:
 
 Why this matters:
 
-- this is the strongest opportunity to make the app feel notably faster
-- it supports the core product principle of frictionless capture
+- this may eventually make the app feel faster
+- but it is lower priority than polish, stability, and visibility features right now
 
 Risk:
 Medium to high

@@ -91,7 +91,7 @@ struct DashboardView: View {
                         currencyCode: currencyCode,
                         hasCompletedSetup: hasBaselineData
                     )
-                    .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16))
+                    .listRowInsets(Self.cardInsets)
                 }
 
                 Section {
@@ -100,7 +100,7 @@ struct DashboardView: View {
                         topCategory: topCategory,
                         currencyCode: currencyCode
                     )
-                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 12, trailing: 16))
+                    .listRowInsets(Self.cardInsets)
                 }
 
                 Section {
@@ -182,6 +182,8 @@ struct DashboardView: View {
             errorMessage = error.localizedDescription
         }
     }
+
+    private static let cardInsets = EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16)
 }
 
 private struct SummaryCardView: View {
@@ -221,9 +223,7 @@ private struct SummaryCardView: View {
                 }
             }
         }
-        .padding(18)
-        .background(Color(uiColor: .secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .dashboardCardStyle()
     }
 
     @ViewBuilder
@@ -294,9 +294,6 @@ private struct CategoryOverviewCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Category Overview")
-                .font(.headline)
-
             if categorySpending.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("No category data yet for this month.")
@@ -346,9 +343,7 @@ private struct CategoryOverviewCardView: View {
                 }
             }
         }
-        .padding(18)
-        .background(Color(uiColor: .secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .dashboardCardStyle()
     }
 }
 
@@ -364,5 +359,13 @@ private extension ExpenseCategory {
         case .fun:
             return .pink
         }
+    }
+}
+
+private extension View {
+    func dashboardCardStyle() -> some View {
+        padding(18)
+            .background(Color(uiColor: .secondarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 }

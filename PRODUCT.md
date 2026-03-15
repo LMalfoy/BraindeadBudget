@@ -80,6 +80,14 @@ Examples:
 
 These are subtracted from the calculated monthly spending budget to produce the remaining budget.
 
+## Future Period Handling
+
+The current product centers on monthly budgeting.
+
+In a later version with month-based history and period management, the product may support carryover between months so overspending in one month reduces the next month’s available budget.
+
+This should be treated as a future budgeting rule, not a near-term requirement, because it changes how month transitions behave and should be introduced deliberately.
+
 ## Primary User Flow
 
 ### First-Time Flow
@@ -176,22 +184,31 @@ This means:
 
 Polish should improve clarity and ease of use without adding visual complexity for its own sake.
 
-## Smart Entry Direction
+## Product Maturity Direction
 
-PocketBudget should eventually support a very fast single-line input option for expenses.
+After the core budgeting and expense-tracking flows are in place, near-term work should prioritize polish, stability, and trust over adding clever input shortcuts.
 
-Examples:
+That means:
 
-- `4 marmalade`
-- `marmalade 4`
+- improving the feel of the existing flows on a real device
+- smoothing small dashboard and expense-entry friction points
+- reducing visual rough edges
+- increasing confidence before broader feature expansion
 
-The app should parse likely amount and item values intelligently where possible.
+Smart input ideas such as single-line parsing may still be considered later, but they are not a near-term priority unless real usage clearly demands them.
 
-This feature is important, but correctness matters more than cleverness. It should only ship when:
+## Stabilization Direction
 
-- parsing rules are predictable
-- user mistakes are easy to catch
-- manual fallback remains simple
+Before expanding the app with larger new surfaces such as settings or expense history, the product should go through an explicit stabilization pass.
+
+This means:
+
+- fixing small bugs that affect trust or predictability
+- tightening rough edges in existing flows
+- improving the reliability of validation and test coverage
+- avoiding broad code movement unless it clearly reduces risk
+
+Stabilization work should make the current product safer to extend, not just “cleaner” in the abstract.
 
 ## Dashboard Analytics
 
@@ -269,12 +286,23 @@ Because of that, the app must eventually support lightweight correction flows fo
 
 Correction should be safe and understandable. The app should not make destructive actions feel accidental or hidden.
 
+## Future Expansion Direction
+
+Once the app is polished and stable, the next meaningful expansion areas are:
+
+- browsing expenses by month
+- drilling into a category to see its underlying expenses
+- period-aware budgeting rules such as monthly carryover
+
+These should come after stabilization, not before.
+
 ## Non-Functional Requirements
 
 - The main flows should use standard iOS interactions and stay easy to maintain.
 - The app should remain local-first and simple in its data model.
 - Features should be deliverable in small slices with focused tests.
 - Risky or ambiguous UX ideas should be introduced behind simple fallbacks.
+- The project should maintain a dependable verification path so future changes can be checked with reasonable confidence.
 
 ## Non-Goals
 
