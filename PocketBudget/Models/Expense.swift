@@ -22,18 +22,6 @@ enum ExpenseCategory: String, CaseIterable, Codable, Identifiable {
         }
     }
 
-    var tintName: String {
-        switch self {
-        case .food:
-            return "green"
-        case .transport:
-            return "blue"
-        case .household:
-            return "orange"
-        case .fun:
-            return "pink"
-        }
-    }
 }
 
 @Model

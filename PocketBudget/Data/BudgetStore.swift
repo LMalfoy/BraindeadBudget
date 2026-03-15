@@ -2,7 +2,6 @@ import Foundation
 import SwiftData
 
 enum BudgetStoreError: LocalizedError {
-    case invalidBudget
     case invalidExpenseCategory
     case invalidExpenseTitle
     case invalidExpenseAmount
@@ -13,8 +12,6 @@ enum BudgetStoreError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .invalidBudget:
-            return "Enter a budget greater than zero."
         case .invalidExpenseCategory:
             return "Choose a category for the expense."
         case .invalidExpenseTitle:
@@ -41,31 +38,6 @@ struct BudgetStore {
     init(context: ModelContext, calendar: Calendar = .current) {
         self.context = context
         self.calendar = calendar
-    }
-
-    func saveBudget(
-        amount: Double,
-        currencyCode: String = Locale.current.currency?.identifier ?? "USD"
-    ) throws {
-        guard amount > 0 else {
-            throw BudgetStoreError.invalidBudget
-        }
-
-        let budgets = try context.fetch(FetchDescriptor<BudgetSettings>())
-
-        if let settings = budgets.first {
-            settings.monthlyBudget = amount
-            settings.currencyCode = currencyCode
-            settings.updatedAt = .now
-
-            for duplicate in budgets.dropFirst() {
-                context.delete(duplicate)
-            }
-        } else {
-            context.insert(BudgetSettings(monthlyBudget: amount, currencyCode: currencyCode))
-        }
-
-        try context.save()
     }
 
     func saveSettings(currencyCode: String) throws {
@@ -115,10 +87,6 @@ struct BudgetStore {
             note: trimmedNote
         ))
         try context.save()
-    }
-
-    func currentBudgetSettings() throws -> BudgetSettings? {
-        try context.fetch(FetchDescriptor<BudgetSettings>()).first
     }
 
     func incomeItems() throws -> [IncomeItem] {
@@ -191,11 +159,6 @@ struct BudgetStore {
         try context.save()
     }
 
-    func hasCompletedBaselineSetup() throws -> Bool {
-        let descriptor = FetchDescriptor<IncomeItem>()
-        return try !context.fetch(descriptor).isEmpty
-    }
-
     static func currentMonthExpenses(
         from expenses: [Expense],
         calendar: Calendar = .current,
@@ -244,12 +207,5 @@ struct BudgetStore {
 
     func currentMonthExpenses(from expenses: [Expense], referenceDate: Date = .now) -> [Expense] {
         Self.currentMonthExpenses(from: expenses, calendar: calendar, referenceDate: referenceDate)
-    }
-
-    func availableMonthlyBudget() throws -> Double {
-        try Self.availableMonthlyBudget(
-            incomeItems: incomeItems(),
-            recurringExpenseItems: recurringExpenseItems()
-        )
     }
 }
