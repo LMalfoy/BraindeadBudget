@@ -1,0 +1,23 @@
+# macOS
+.DS_Store
+
+# Xcode user data
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+xcuserdata/
+
+# Build products
+DerivedData/
+build/
+
+# Swift Package Manager
+.build/
+
+# Test and profiling artifacts
+*.xccovreport
+*.xccovarchive
+*.profdata
+
+# Simulator and device logs
+*.log

@@ -1,0 +1,255 @@
+import Foundation
+import SwiftData
+import SwiftUI
+
+struct DashboardView: View {
+    @Environment(\.modelContext) private var modelContext
+    @AppStorage("hasCompletedBaselineSetup") private var hasCompletedSetup = false
+    @Query(sort: \Expense.date, order: .reverse) private var expenses: [Expense]
+    @Query(sort: \BudgetSettings.updatedAt, order: .reverse) private var budgets: [BudgetSettings]
+    @Query(sort: \IncomeItem.createdAt) private var incomeItems: [IncomeItem]
+    @Query(sort: \RecurringExpenseItem.createdAt) private var recurringExpenseItems: [RecurringExpenseItem]
+
+    @State private var showingAddExpense = false
+    @State private var showingBudgetSettings = false
+
+    private var store: BudgetStore {
+        BudgetStore(context: modelContext)
+    }
+
+    private var budgetSettings: BudgetSettings? {
+        budgets.first
+    }
+
+    private var hasBaselineData: Bool {
+        !incomeItems.isEmpty
+    }
+
+    private var currentMonthExpenses: [Expense] {
+        store.currentMonthExpenses(from: expenses)
+    }
+
+    private var totalSpent: Double {
+        BudgetStore.totalSpent(for: currentMonthExpenses)
+    }
+
+    private var monthlyBudget: Double {
+        BudgetStore.availableMonthlyBudget(
+            incomeItems: incomeItems,
+            recurringExpenseItems: recurringExpenseItems
+        )
+    }
+
+    private var remainingBudget: Double {
+        BudgetStore.remainingBudget(
+            monthlyBudget: monthlyBudget,
+            expenses: expenses
+        )
+    }
+
+    private var currencyCode: String {
+        budgetSettings?.currencyCode ?? Locale.current.currency?.identifier ?? "USD"
+    }
+
+    private var setupCoverBinding: Binding<Bool> {
+        Binding(
+            get: { !hasCompletedSetup },
+            set: { _ in }
+        )
+    }
+
+    var body: some View {
+        ZStack(alignment: .bottomTrailing) {
+            List {
+                Section {
+                    SummaryCardView(
+                        monthLabel: Date.now.formatted(.dateTime.month(.wide)),
+                        monthlyBudget: monthlyBudget,
+                        totalSpent: totalSpent,
+                        remainingBudget: remainingBudget,
+                        currencyCode: currencyCode,
+                        hasCompletedSetup: hasBaselineData
+                    )
+                    .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16))
+                }
+
+                Section {
+                    if expenses.isEmpty {
+                        Text(hasBaselineData
+                             ? "No expenses yet. Tap Add Expense to log your first purchase."
+                             : "Complete your budget setup first, then start logging daily expenses.")
+                            .foregroundStyle(.secondary)
+                            .padding(.vertical, 10)
+                    } else {
+                        ForEach(expenses) { expense in
+                            ExpenseRowView(expense: expense, currencyCode: currencyCode)
+                        }
+                    }
+                } header: {
+                    Text("Expenses")
+                }
+            }
+
+            Button {
+                showingAddExpense = true
+            } label: {
+                Label("Add Expense", systemImage: "plus")
+                    .font(.headline)
+                    .padding(.horizontal, 22)
+                    .padding(.vertical, 16)
+                    .background(hasBaselineData ? Color.accentColor : Color(uiColor: .systemGray4))
+                    .foregroundStyle(.white)
+                    .clipShape(Capsule())
+                    .shadow(color: .black.opacity(0.12), radius: 12, y: 6)
+            }
+            .disabled(!hasBaselineData)
+            .padding(.trailing, 20)
+            .padding(.bottom, 20)
+            .accessibilityIdentifier("dashboard.addExpenseButton")
+        }
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("Budget") {
+                    showingBudgetSettings = true
+                }
+                .accessibilityIdentifier("dashboard.editBudgetButton")
+            }
+        }
+        .sheet(isPresented: $showingAddExpense) {
+            AddExpenseSheet(currencyCode: currencyCode) { title, category, amount, date, note in
+                try store.addExpense(
+                    title: title,
+                    category: category,
+                    amount: amount,
+                    date: date,
+                    note: note
+                )
+            }
+        }
+        .sheet(isPresented: $showingBudgetSettings) {
+            BudgetSettingsSheet(mode: .manage)
+        }
+        .fullScreenCover(isPresented: setupCoverBinding) {
+            BudgetSettingsSheet(mode: .onboarding)
+        }
+    }
+}
+
+private struct SummaryCardView: View {
+    let monthLabel: String
+    let monthlyBudget: Double
+    let totalSpent: Double
+    let remainingBudget: Double
+    let currencyCode: String
+    let hasCompletedSetup: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            if hasCompletedSetup {
+                VStack(alignment: .leading, spacing: 12) {
+                    summaryRow(title: "Spent in \(monthLabel)", value: formatted(totalSpent))
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Remaining")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+
+                        Text(formatted(remainingBudget))
+                            .font(.system(size: 34, weight: .bold, design: .rounded))
+                            .foregroundStyle(remainingBudget < 0 ? .red : .green)
+                            .accessibilityIdentifier("dashboard.remainingBudgetValue")
+                    }
+
+                    summaryRow(title: "Available to Spend", value: formatted(monthlyBudget))
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Set up your income and recurring monthly costs to calculate what is available to spend.")
+                        .foregroundStyle(.secondary)
+                    Text("Once setup is complete, PocketBudget subtracts this month's expenses from that calculated budget.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .padding(18)
+        .background(Color(uiColor: .secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
+    @ViewBuilder
+    private func summaryRow(title: String, value: String) -> some View {
+        HStack {
+            Text(title)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Text(value)
+                .fontWeight(.medium)
+        }
+    }
+
+    private func formatted(_ amount: Double) -> String {
+        amount.formatted(.currency(code: currencyCode))
+    }
+}
+
+private struct ExpenseRowView: View {
+    let expense: Expense
+    let currencyCode: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                .fill(expense.category.color)
+                .frame(width: 6)
+
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 8) {
+                    Text(expense.title)
+                        .font(.body.weight(.medium))
+                        .lineLimit(1)
+
+                    Text(expense.category.title)
+                        .font(.caption2.weight(.semibold))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(expense.category.color.opacity(0.12))
+                        .foregroundStyle(expense.category.color)
+                        .clipShape(Capsule())
+                }
+
+                Text(expense.date, format: .dateTime.month(.abbreviated).day().year())
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                if !expense.note.isEmpty {
+                    Text(expense.note)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Spacer(minLength: 12)
+
+            Text(expense.amount.formatted(.currency(code: currencyCode)))
+                .font(.body.weight(.semibold))
+        }
+        .padding(.vertical, 6)
+    }
+}
+
+private extension ExpenseCategory {
+    var color: Color {
+        switch self {
+        case .food:
+            return .green
+        case .transport:
+            return .blue
+        case .household:
+            return .orange
+        case .fun:
+            return .pink
+        }
+    }
+}
