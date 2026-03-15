@@ -222,8 +222,10 @@ struct BudgetSettingsSheet: View {
 
     private func deleteIncomeItems(at offsets: IndexSet) {
         do {
-            for index in offsets {
-                try store.deleteIncomeItem(incomeItems[index])
+            let itemsToDelete = offsets.map { incomeItems[$0] }
+
+            for item in itemsToDelete {
+                try store.deleteIncomeItem(item)
             }
         } catch {
             errorMessage = error.localizedDescription
@@ -232,8 +234,10 @@ struct BudgetSettingsSheet: View {
 
     private func deleteRecurringExpenseItems(at offsets: IndexSet) {
         do {
-            for index in offsets {
-                try store.deleteRecurringExpenseItem(recurringExpenseItems[index])
+            let itemsToDelete = offsets.map { recurringExpenseItems[$0] }
+
+            for item in itemsToDelete {
+                try store.deleteRecurringExpenseItem(item)
             }
         } catch {
             errorMessage = error.localizedDescription

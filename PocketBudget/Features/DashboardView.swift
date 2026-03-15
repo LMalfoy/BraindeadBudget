@@ -175,8 +175,10 @@ struct DashboardView: View {
 
     private func deleteExpenses(at offsets: IndexSet) {
         do {
-            for index in offsets {
-                try store.deleteExpense(expenses[index])
+            let itemsToDelete = offsets.map { expenses[$0] }
+
+            for expense in itemsToDelete {
+                try store.deleteExpense(expense)
             }
         } catch {
             errorMessage = error.localizedDescription
