@@ -13,6 +13,8 @@ Future improvements, polish items, and larger feature notes to revisit after the
 - Add a dedicated expense-history sheet in a later version that lets the user browse expenses by month.
 - In that future history sheet, provide easy month/year navigation so the user can switch to a specific period quickly.
 - That future month-based expense list should support both editing and deleting expenses.
+- On the main dashboard, a quick downward scroll toward the expense list can later become the cue that opens the monthly expense-history page.
+- That future transition should feel like moving from the lightweight recent-expense preview into the full month-based list.
 - Add a dedicated settings area in a later version so budget editing and app-level controls are not always exposed as a top-left dashboard action.
 - In that future settings area, the budget setup screen should still open automatically when no budget information exists.
 - Use that future settings area for version info, author/app info, and later customization options.

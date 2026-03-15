@@ -210,6 +210,42 @@ This means:
 
 Stabilization work should make the current product safer to extend, not just “cleaner” in the abstract.
 
+## Settings Direction
+
+After stabilization, PocketBudget should introduce a dedicated settings area.
+
+The purpose of settings is to:
+
+- move budget editing out of the dashboard’s permanent chrome
+- keep app-level actions in one predictable place
+- create a clean home for app metadata and later customization
+
+The first version of settings should stay intentionally small and should include:
+
+- access to budget management
+- app version information
+- author information
+
+If no baseline budget information exists, the budget setup flow should still open automatically without requiring the user to find settings first.
+
+For the current product direction, the author information can explicitly credit:
+
+- Dr. Kevin Sicking
+- Codex (GPT-5)
+
+## Expense History Direction
+
+After settings, the next major feature surface should be a dedicated monthly expense-history view.
+
+That future area should:
+
+- show all expenses for a selected month
+- support easy month and year switching
+- allow editing and deleting entries
+- feel like a deeper layer beyond the lightweight dashboard preview
+
+The dashboard’s recent-expense area can later serve as the natural entry point into that broader monthly expense view.
+
 ## Dashboard Analytics
 
 PocketBudget should provide lightweight visual insight without becoming a heavy analytics app.

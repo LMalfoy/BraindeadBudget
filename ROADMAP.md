@@ -248,6 +248,7 @@ Scope:
 - move budget editing into settings
 - keep first-run budget setup behavior when no baseline exists
 - add app/version/about information
+- include author credits for Dr. Kevin Sicking and Codex (GPT-5)
 - leave room for future customization options
 
 Why this matters:

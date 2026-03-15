@@ -28,6 +28,22 @@ final class PocketBudgetUITests: XCTestCase {
         XCTAssertFalse(coffeeText.waitForExistence(timeout: 1))
     }
 
+    func testUserCanOpenSettingsAndManageBudget() throws {
+        let app = XCUIApplication()
+        launchAndCompleteBudgetSetup(in: app)
+
+        let settingsButton = app.buttons["dashboard.settingsButton"].firstMatch
+        XCTAssertTrue(settingsButton.waitForExistence(timeout: 5))
+        settingsButton.tap()
+
+        let manageBudgetButton = app.buttons["settings.manageBudgetButton"].firstMatch
+        XCTAssertTrue(manageBudgetButton.waitForExistence(timeout: 5))
+        manageBudgetButton.tap()
+
+        let finishButton = app.buttons["budgetSetup.finishButton"].firstMatch
+        XCTAssertTrue(finishButton.waitForExistence(timeout: 5))
+    }
+
     private func launchAndCompleteBudgetSetup(in app: XCUIApplication) {
         app.launchArguments.append("-ui-testing")
         app.launch()

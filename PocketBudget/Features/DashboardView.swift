@@ -12,7 +12,7 @@ struct DashboardView: View {
     @Query(sort: \RecurringExpenseItem.createdAt) private var recurringExpenseItems: [RecurringExpenseItem]
 
     @State private var showingAddExpense = false
-    @State private var showingBudgetSettings = false
+    @State private var showingSettings = false
     @State private var errorMessage: String?
 
     private var store: BudgetStore {
@@ -140,11 +140,14 @@ struct DashboardView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button("Budget") {
-                    showingBudgetSettings = true
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showingSettings = true
+                } label: {
+                    Image(systemName: "gearshape")
                 }
-                .accessibilityIdentifier("dashboard.editBudgetButton")
+                .accessibilityLabel("Settings")
+                .accessibilityIdentifier("dashboard.settingsButton")
             }
         }
         .sheet(isPresented: $showingAddExpense) {
@@ -158,8 +161,8 @@ struct DashboardView: View {
                 )
             }
         }
-        .sheet(isPresented: $showingBudgetSettings) {
-            BudgetSettingsSheet(mode: .manage)
+        .sheet(isPresented: $showingSettings) {
+            SettingsSheet()
         }
         .fullScreenCover(isPresented: setupCoverBinding) {
             BudgetSettingsSheet(mode: .onboarding)
