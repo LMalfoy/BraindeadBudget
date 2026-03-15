@@ -99,6 +99,76 @@ final class BudgetCalculationTests: XCTestCase {
         ))
     }
 
+    func testRemainingBudgetUpdatesAfterDeletingExpenseFromInputSet() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 3, day: 14, calendar: calendar)
+        let keptExpense = Expense(
+            title: "Lunch",
+            category: .food,
+            amount: 12.5,
+            date: makeDate(year: 2026, month: 3, day: 11, calendar: calendar)
+        )
+        let deletedExpense = Expense(
+            title: "Train",
+            category: .transport,
+            amount: 20,
+            date: makeDate(year: 2026, month: 3, day: 12, calendar: calendar)
+        )
+
+        let remainingBeforeDelete = BudgetStore.remainingBudget(
+            monthlyBudget: 100,
+            expenses: [keptExpense, deletedExpense],
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+        let remainingAfterDelete = BudgetStore.remainingBudget(
+            monthlyBudget: 100,
+            expenses: [keptExpense],
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertEqual(remainingBeforeDelete, 67.5, accuracy: 0.001)
+        XCTAssertEqual(remainingAfterDelete, 87.5, accuracy: 0.001)
+    }
+
+    func testCategoryOverviewUpdatesAfterDeletingExpenseFromInputSet() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 3, day: 14, calendar: calendar)
+        let keptExpense = Expense(
+            title: "Dinner",
+            category: .food,
+            amount: 22,
+            date: makeDate(year: 2026, month: 3, day: 10, calendar: calendar)
+        )
+        let deletedExpense = Expense(
+            title: "Cinema",
+            category: .fun,
+            amount: 18,
+            date: makeDate(year: 2026, month: 3, day: 12, calendar: calendar)
+        )
+
+        let categorySpendingBeforeDelete = BudgetStore.categorySpending(
+            for: [keptExpense, deletedExpense],
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+        let categorySpendingAfterDelete = BudgetStore.categorySpending(
+            for: [keptExpense],
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertEqual(categorySpendingBeforeDelete.count, 2)
+        XCTAssertEqual(categorySpendingAfterDelete, [
+            CategorySpendingSummary(category: .food, total: 22)
+        ])
+    }
+
     func testCurrentMonthExpensesOnlyIncludeMatchingMonth() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!

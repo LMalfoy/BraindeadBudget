@@ -13,6 +13,7 @@ struct DashboardView: View {
 
     @State private var showingAddExpense = false
     @State private var showingBudgetSettings = false
+    @State private var errorMessage: String?
 
     private var store: BudgetStore {
         BudgetStore(context: modelContext)
@@ -67,6 +68,17 @@ struct DashboardView: View {
         )
     }
 
+    private var errorAlertBinding: Binding<Bool> {
+        Binding(
+            get: { errorMessage != nil },
+            set: { isPresented in
+                if !isPresented {
+                    errorMessage = nil
+                }
+            }
+        )
+    }
+
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             List {
@@ -102,6 +114,7 @@ struct DashboardView: View {
                         ForEach(expenses) { expense in
                             ExpenseRowView(expense: expense, currencyCode: currencyCode)
                         }
+                        .onDelete(perform: deleteExpenses)
                     }
                 } header: {
                     Text("Expenses")
@@ -150,6 +163,23 @@ struct DashboardView: View {
         }
         .fullScreenCover(isPresented: setupCoverBinding) {
             BudgetSettingsSheet(mode: .onboarding)
+        }
+        .alert("Couldn’t Delete Expense", isPresented: errorAlertBinding) {
+            Button("OK", role: .cancel) {
+                errorMessage = nil
+            }
+        } message: {
+            Text(errorMessage ?? "Something went wrong.")
+        }
+    }
+
+    private func deleteExpenses(at offsets: IndexSet) {
+        do {
+            for index in offsets {
+                try store.deleteExpense(expenses[index])
+            }
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 }

@@ -74,6 +74,28 @@ final class BudgetStoreTests: XCTestCase {
         XCTAssertEqual(expenses.first?.note, "Weekly shop")
     }
 
+    func testDeleteExpenseRemovesRecord() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let store = BudgetStore(context: context)
+
+        try store.addExpense(
+            title: "Coffee",
+            category: .food,
+            amount: 5.5,
+            date: .now,
+            note: ""
+        )
+
+        let expense = try XCTUnwrap(context.fetch(FetchDescriptor<Expense>()).first)
+
+        try store.deleteExpense(expense)
+
+        let expenses = try context.fetch(FetchDescriptor<Expense>())
+
+        XCTAssertTrue(expenses.isEmpty)
+    }
+
     private func makeContainer() throws -> ModelContainer {
         let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
         return try ModelContainer(

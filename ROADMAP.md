@@ -163,8 +163,10 @@ Let the user fix mistakes in recorded spending.
 Scope:
 
 - delete an expense
-- optionally add a simple edit flow if delete is already stable
+- optionally add a simple detail sheet if it supports the delete flow cleanly
+- defer full edit support unless it remains small and stable
 - ensure totals update immediately after changes
+- add safe destructive-action confirmation if needed
 
 Why this matters:
 
@@ -179,6 +181,7 @@ Validation:
 - unit tests for delete and recalculation behavior
 - UI test for the basic correction flow
 - manual check that dashboard totals update correctly
+- manual confirmation that deletion does not feel accidental or unclear
 
 ### Iteration 0.7: Smart Single-Line Entry
 

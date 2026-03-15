@@ -96,6 +96,11 @@ struct BudgetStore {
         try context.save()
     }
 
+    func deleteExpense(_ expense: Expense) throws {
+        context.delete(expense)
+        try context.save()
+    }
+
     func incomeItems() throws -> [IncomeItem] {
         try context.fetch(FetchDescriptor<IncomeItem>(sortBy: [SortDescriptor(\.createdAt)]))
     }

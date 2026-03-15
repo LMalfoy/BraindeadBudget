@@ -243,6 +243,7 @@ The product is succeeding when:
 - expense entry is fast enough to use in everyday situations
 - the home screen answers the monthly budget question immediately
 - categories help the user see where money is going without adding friction
+- mistakes in recorded expenses can be corrected without confusion
 - new development does not frequently break existing behavior
 
 ## Functional Requirements
@@ -254,7 +255,19 @@ The product is succeeding when:
 - The app must support a small fixed set of simple expense categories.
 - The app must show recent expenses on the main screen.
 - The app must show a category-based spending overview on the main screen.
+- The app must allow the user to remove obviously incorrect recorded expenses.
 - The app must validate invalid input such as empty descriptions or non-positive amounts.
+
+## Data Trust Direction
+
+Fast entry increases the chance of small mistakes.
+
+Because of that, the app must eventually support lightweight correction flows for recorded expenses:
+
+- deletion of clearly wrong entries
+- simple editing if it can be added without complexity
+
+Correction should be safe and understandable. The app should not make destructive actions feel accidental or hidden.
 
 ## Non-Functional Requirements
 
