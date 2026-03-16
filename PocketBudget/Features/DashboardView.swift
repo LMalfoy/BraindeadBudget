@@ -21,6 +21,14 @@ struct DashboardView: View {
         budgets.first
     }
 
+    private var initialAvailableBudget: Double? {
+        budgetSettings?.initialAvailableBudget
+    }
+
+    private var initialBudgetAnchorMonth: Date? {
+        budgetSettings?.initialBudgetAnchorMonth
+    }
+
     private var hasBaselineData: Bool {
         !incomeItems.isEmpty
     }
@@ -47,21 +55,27 @@ struct DashboardView: View {
     private var previousMonthCarryover: Double {
         BudgetStore.previousMonthCarryover(
             monthlyBudget: monthlyBudget,
-            expenses: expenses
+            expenses: expenses,
+            initialAvailableBudget: initialAvailableBudget,
+            initialBudgetAnchorMonth: initialBudgetAnchorMonth
         )
     }
 
     private var adjustedMonthlyBudget: Double {
         BudgetStore.adjustedMonthlyBudget(
             monthlyBudget: monthlyBudget,
-            expenses: expenses
+            expenses: expenses,
+            initialAvailableBudget: initialAvailableBudget,
+            initialBudgetAnchorMonth: initialBudgetAnchorMonth
         )
     }
 
     private var remainingBudget: Double {
         BudgetStore.remainingBudget(
             monthlyBudget: monthlyBudget,
-            expenses: expenses
+            expenses: expenses,
+            initialAvailableBudget: initialAvailableBudget,
+            initialBudgetAnchorMonth: initialBudgetAnchorMonth
         )
     }
 

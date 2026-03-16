@@ -39,6 +39,7 @@ struct BudgetSettingsSheet: View {
 
     @State private var activeEditor: BaselineItemDraft?
     @State private var errorMessage: String?
+    @State private var initialAvailableBudgetText = ""
 
     private var store: BudgetStore {
         BudgetStore(context: modelContext)
@@ -63,8 +64,16 @@ struct BudgetSettingsSheet: View {
         )
     }
 
+    private var parsedInitialAvailableBudget: Double? {
+        Self.parseAmount(initialAvailableBudgetText)
+    }
+
+    private var currentAvailableBudget: Double {
+        parsedInitialAvailableBudget ?? 0
+    }
+
     private var canCompleteSetup: Bool {
-        !incomeItems.isEmpty
+        !incomeItems.isEmpty && (mode == .manage || parsedInitialAvailableBudget != nil)
     }
 
     private var errorAlertBinding: Binding<Bool> {
@@ -84,6 +93,10 @@ struct BudgetSettingsSheet: View {
                 summarySection
                 incomeSection
                 recurringExpenseSection
+
+                if mode == .onboarding {
+                    initialBudgetAnchorSection
+                }
             }
             .navigationTitle(mode.title)
             .navigationBarTitleDisplayMode(.inline)
@@ -142,12 +155,21 @@ struct BudgetSettingsSheet: View {
                     .fontWeight(.medium)
             }
 
-            LabeledContent("Available to Spend") {
+            LabeledContent(mode == .onboarding ? "Calculated Monthly Budget" : "Available to Spend") {
                 Text(availableBudget.formatted(.currency(code: currencyCode)))
                     .fontWeight(.semibold)
                     .foregroundStyle(availableBudget < 0 ? .red : .primary)
             }
             .accessibilityIdentifier("budgetSetup.availableBudgetValue")
+
+            if mode == .onboarding {
+                LabeledContent("Available Right Now") {
+                    Text(currentAvailableBudget.formatted(.currency(code: currencyCode)))
+                        .fontWeight(.semibold)
+                        .foregroundStyle(currentAvailableBudget < 0 ? .red : .primary)
+                }
+                .accessibilityIdentifier("budgetSetup.initialAvailableBudgetValue")
+            }
         } header: {
             Text(mode == .onboarding ? "Monthly Budget" : "Summary")
         } footer: {
@@ -207,9 +229,21 @@ struct BudgetSettingsSheet: View {
         }
     }
 
+    private var initialBudgetAnchorSection: some View {
+        Section {
+            TextField("Available Budget Right Now", text: $initialAvailableBudgetText)
+                .keyboardType(.numbersAndPunctuation)
+                .accessibilityIdentifier("budgetSetup.initialAvailableBudgetField")
+        } header: {
+            Text("Starting Point")
+        } footer: {
+            Text("Enter how much variable budget you still have available for the rest of the current period. This becomes your initial budget anchor and is not stored as past spending.")
+        }
+    }
+
     private var summaryFooterText: String {
         if mode == .onboarding {
-            return "This budget is calculated from income minus recurring monthly costs."
+            return "This shows your calculated monthly baseline first. During setup, also enter how much budget is still available right now."
         }
 
         return "Update these values any time to recalculate your monthly budget."
@@ -217,7 +251,11 @@ struct BudgetSettingsSheet: View {
 
     private func completeFlow() {
         do {
-            try store.saveSettings(currencyCode: currencyCode)
+            try store.saveSettings(
+                currencyCode: currencyCode,
+                initialAvailableBudget: mode == .onboarding ? parsedInitialAvailableBudget : nil,
+                initialBudgetAnchorMonth: mode == .onboarding ? Self.monthAnchor(for: .now) : nil
+            )
             hasCompletedSetup = true
             dismiss()
         } catch {
@@ -247,6 +285,20 @@ struct BudgetSettingsSheet: View {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    private static func parseAmount(_ text: String) -> Double? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !trimmed.isEmpty else {
+            return nil
+        }
+
+        return Double(trimmed.replacingOccurrences(of: ",", with: "."))
+    }
+
+    private static func monthAnchor(for date: Date, calendar: Calendar = .current) -> Date {
+        calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? date
     }
 }
 

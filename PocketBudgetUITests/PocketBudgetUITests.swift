@@ -296,6 +296,11 @@ final class PocketBudgetUITests: XCTestCase {
         XCTAssertTrue(saveButton.waitForExistence(timeout: 5))
         saveButton.tap()
 
+        let initialAvailableBudgetField = app.textFields["budgetSetup.initialAvailableBudgetField"].firstMatch
+        XCTAssertTrue(initialAvailableBudgetField.waitForExistence(timeout: 5))
+        initialAvailableBudgetField.tap()
+        initialAvailableBudgetField.typeText("500")
+
         let finishButton = app.buttons["budgetSetup.finishButton"].firstMatch
         XCTAssertTrue(finishButton.waitForExistence(timeout: 5))
         finishButton.tap()

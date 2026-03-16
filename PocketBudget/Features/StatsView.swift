@@ -22,6 +22,14 @@ struct StatsView: View {
         budgets.first?.currencyCode ?? Locale.current.currency?.identifier ?? "USD"
     }
 
+    private var initialAvailableBudget: Double? {
+        budgets.first?.initialAvailableBudget
+    }
+
+    private var initialBudgetAnchorMonth: Date? {
+        budgets.first?.initialBudgetAnchorMonth
+    }
+
     private var categorySpending: [CategorySpendingSummary] {
         BudgetStore.categorySpending(for: expenses)
     }
@@ -48,7 +56,9 @@ struct StatsView: View {
     private var trajectory: [BudgetTrajectoryPoint] {
         BudgetStore.budgetTrajectory(
             monthlyBudget: monthlyBudget,
-            expenses: expenses
+            expenses: expenses,
+            initialAvailableBudget: initialAvailableBudget,
+            initialBudgetAnchorMonth: initialBudgetAnchorMonth
         )
     }
 
@@ -67,21 +77,27 @@ struct StatsView: View {
     private var carryoverAmount: Double {
         BudgetStore.previousMonthCarryover(
             monthlyBudget: monthlyBudget,
-            expenses: expenses
+            expenses: expenses,
+            initialAvailableBudget: initialAvailableBudget,
+            initialBudgetAnchorMonth: initialBudgetAnchorMonth
         )
     }
 
     private var carryoverHistory: [CarryoverHistoryPoint] {
         BudgetStore.carryoverHistory(
             monthlyBudget: monthlyBudget,
-            expenses: expenses
+            expenses: expenses,
+            initialAvailableBudget: initialAvailableBudget,
+            initialBudgetAnchorMonth: initialBudgetAnchorMonth
         )
     }
 
     private var disciplineEvaluation: BudgetDisciplineEvaluation {
         BudgetStore.evaluateBudgetDiscipline(
             monthlyBudget: monthlyBudget,
-            expenses: expenses
+            expenses: expenses,
+            initialAvailableBudget: initialAvailableBudget,
+            initialBudgetAnchorMonth: initialBudgetAnchorMonth
         )
     }
 

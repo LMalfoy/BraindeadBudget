@@ -11,6 +11,7 @@
 		72A18DEE2F66D20B00F78675 /* RecurringExpenseItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72A18DED2F66D20B00F78675 /* RecurringExpenseItem.swift */; };
 		72A18DF02F677D6E00F78675 /* SettingsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72A18DEF2F677D6E00F78675 /* SettingsSheet.swift */; };
 		72A18DF22F6784DC00F78675 /* ExpenseHistorySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72A18DF12F6784DC00F78675 /* ExpenseHistorySheet.swift */; };
+		72A18DF42F67F11300F78675 /* StatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72A18DF32F67F11300F78675 /* StatsView.swift */; };
 		A10000000000000000000210 /* PocketBudgetApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000110 /* PocketBudgetApp.swift */; };
 		A10000000000000000000211 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000111 /* ContentView.swift */; };
 		A10000000000000000000212 /* BudgetSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000112 /* BudgetSettings.swift */; };
@@ -47,6 +48,7 @@
 		72A18DED2F66D20B00F78675 /* RecurringExpenseItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringExpenseItem.swift; sourceTree = "<group>"; };
 		72A18DEF2F677D6E00F78675 /* SettingsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSheet.swift; sourceTree = "<group>"; };
 		72A18DF12F6784DC00F78675 /* ExpenseHistorySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseHistorySheet.swift; sourceTree = "<group>"; };
+		72A18DF32F67F11300F78675 /* StatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsView.swift; sourceTree = "<group>"; };
 		A10000000000000000000100 /* PocketBudget.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PocketBudget.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A10000000000000000000101 /* PocketBudgetTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PocketBudgetTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A10000000000000000000102 /* PocketBudgetUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PocketBudgetUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -157,6 +159,7 @@
 				A10000000000000000000117 /* BudgetSettingsSheet.swift */,
 				72A18DEF2F677D6E00F78675 /* SettingsSheet.swift */,
 				72A18DF12F6784DC00F78675 /* ExpenseHistorySheet.swift */,
+				72A18DF32F67F11300F78675 /* StatsView.swift */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -313,6 +316,7 @@
 				A10000000000000000000213 /* Expense.swift in Sources */,
 				72A18DF02F677D6E00F78675 /* SettingsSheet.swift in Sources */,
 				A10000000000000000000214 /* BudgetStore.swift in Sources */,
+				72A18DF42F67F11300F78675 /* StatsView.swift in Sources */,
 				A10000000000000000000215 /* DashboardView.swift in Sources */,
 				A10000000000000000000216 /* AddExpenseSheet.swift in Sources */,
 				A10000000000000000000217 /* BudgetSettingsSheet.swift in Sources */,
@@ -375,7 +379,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 15;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -388,7 +392,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.9.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.PocketBudget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -405,7 +409,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 15;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = PocketBudget;
@@ -417,7 +421,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.9.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.PocketBudget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -433,7 +437,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 15;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -459,7 +463,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 15;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -482,7 +486,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 15;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -507,7 +511,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 15;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;

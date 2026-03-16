@@ -18,6 +18,8 @@ Future improvements, polish items, and larger feature notes to revisit after the
 - Add a dedicated settings area in a later version so budget editing and app-level controls are not always exposed as a top-left dashboard action.
 - In that future settings area, the budget setup screen should still open automatically when no budget information exists.
 - Use that future settings area for version info, author/app info, and later customization options.
+- Future settings should allow changing the app currency.
+- Later customization could allow adjusting spending categories and their colors.
 - The settings entry point on the dashboard can later stay hidden by default and only reveal itself when the user pulls the dashboard down.
 - In a future period-based budgeting version, a negative remainder from one month should carry over into the next month’s available budget.
 - Example: if March ends at `-200`, April should begin with that `200` deducted from the new month’s budget.

@@ -108,8 +108,34 @@ That change should be introduced deliberately, because it affects the meaning of
 1. Open the app.
 2. Enter one or more monthly income items.
 3. Enter recurring monthly expenses and commitments.
-4. Review the automatically calculated monthly spending budget.
-5. Start logging day-to-day expenses.
+4. Enter the variable budget that is currently still available right now.
+5. Review the starting budget anchor for the active period.
+6. Start logging day-to-day expenses.
+
+## Initial Onboarding Anchor
+
+PocketBudget should assume that most users start using the app in the middle of an already active spending period.
+
+Because of that, first setup should always ask for:
+
+- monthly income
+- recurring monthly costs
+- current available variable budget right now
+
+This current available budget value should be treated as:
+
+- the starting budget anchor for the active period
+- a real user-provided starting state
+- not inferred historical spending
+- not a fake expense entry
+
+Important:
+
+- this value should be required during first setup
+- it should work whether the user starts on the first day of a month or later
+- later periods should return to the normal carryover-based model
+
+The first active period should therefore begin from real user-entered reality, not from a guessed clean month start.
 
 ### Repeat Daily Flow
 

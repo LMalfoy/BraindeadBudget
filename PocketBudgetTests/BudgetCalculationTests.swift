@@ -119,6 +119,54 @@ final class BudgetCalculationTests: XCTestCase {
         XCTAssertEqual(remaining, 120, accuracy: 0.001)
     }
 
+    func testInitialAvailableBudgetAnchorsCurrentMonthRemainingBudget() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 3, day: 14, calendar: calendar)
+        let currentMonthExpense = Expense(
+            title: "Train",
+            category: .transport,
+            amount: 20,
+            date: makeDate(year: 2026, month: 3, day: 12, calendar: calendar)
+        )
+
+        let remaining = BudgetStore.remainingBudget(
+            monthlyBudget: 100,
+            expenses: [currentMonthExpense],
+            initialAvailableBudget: 55,
+            initialBudgetAnchorMonth: makeDate(year: 2026, month: 3, day: 1, calendar: calendar),
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertEqual(remaining, 35, accuracy: 0.001)
+    }
+
+    func testInitialAvailableBudgetDrivesCarryoverIntoNextMonth() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 4, day: 14, calendar: calendar)
+        let anchoredMonthExpense = Expense(
+            title: "Coffee",
+            category: .food,
+            amount: 25,
+            date: makeDate(year: 2026, month: 3, day: 20, calendar: calendar)
+        )
+
+        let carryover = BudgetStore.previousMonthCarryover(
+            monthlyBudget: 100,
+            expenses: [anchoredMonthExpense],
+            initialAvailableBudget: 80,
+            initialBudgetAnchorMonth: makeDate(year: 2026, month: 3, day: 1, calendar: calendar),
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertEqual(carryover, 55, accuracy: 0.001)
+    }
+
     func testCategorySpendingAggregatesCurrentMonthExpensesByCategory() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!

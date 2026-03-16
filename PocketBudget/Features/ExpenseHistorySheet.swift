@@ -25,6 +25,14 @@ struct ExpenseHistorySheet: View {
         budgets.first?.currencyCode ?? Locale.current.currency?.identifier ?? "USD"
     }
 
+    private var initialAvailableBudget: Double? {
+        budgets.first?.initialAvailableBudget
+    }
+
+    private var initialBudgetAnchorMonth: Date? {
+        budgets.first?.initialBudgetAnchorMonth
+    }
+
     private var monthExpenses: [Expense] {
         store.expenses(from: expenses, inMonthContaining: selectedMonth)
     }
@@ -40,6 +48,8 @@ struct ExpenseHistorySheet: View {
         BudgetStore.monthlyHistoryDigest(
             monthlyBudget: monthlyBudget,
             expenses: expenses,
+            initialAvailableBudget: initialAvailableBudget,
+            initialBudgetAnchorMonth: initialBudgetAnchorMonth,
             referenceDate: selectedMonth
         )
     }

@@ -9,13 +9,18 @@ final class BudgetStoreTests: XCTestCase {
         let context = ModelContext(container)
         let store = BudgetStore(context: context)
 
-        try store.saveSettings(currencyCode: "USD")
+        try store.saveSettings(
+            currencyCode: "USD",
+            initialAvailableBudget: 400,
+            initialBudgetAnchorMonth: Date(timeIntervalSince1970: 0)
+        )
         try store.saveSettings(currencyCode: "EUR")
 
         let budgets = try context.fetch(FetchDescriptor<BudgetSettings>())
 
         XCTAssertEqual(budgets.count, 1)
         XCTAssertEqual(budgets.first?.currencyCode, "EUR")
+        XCTAssertEqual(budgets.first?.initialAvailableBudget, 400)
     }
 
     func testSaveIncomeItemUpdatesExistingRecord() throws {
