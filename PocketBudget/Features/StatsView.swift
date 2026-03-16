@@ -4,7 +4,15 @@ import SwiftData
 import SwiftUI
 
 struct StatsView: View {
+    private enum Perspective: String, CaseIterable, Identifiable {
+        case budgetSpending = "Budget Spending"
+        case totalSpending = "Total Spending"
+
+        var id: String { rawValue }
+    }
+
     private let calendar = Calendar.current
+    @State private var selectedPerspective: Perspective = .budgetSpending
     @Query(sort: \Expense.date, order: .reverse) private var expenses: [Expense]
     @Query(sort: \BudgetSettings.updatedAt, order: .reverse) private var budgets: [BudgetSettings]
     @Query(sort: \IncomeItem.createdAt) private var incomeItems: [IncomeItem]
@@ -169,289 +177,351 @@ struct StatsView: View {
     var body: some View {
         List {
             Section {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Budget Discipline")
-                        .font(.headline)
-
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(disciplineEvaluation.rank.title)
-                            .font(.system(size: 34, weight: .bold, design: .rounded))
-                            .foregroundStyle(rankColor(for: disciplineEvaluation.rank))
-                            .accessibilityIdentifier("stats.rankValue")
-
-                        Text(disciplineEvaluation.summary)
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(.secondary)
-                            .accessibilityIdentifier("stats.rankSummary")
-                    }
-
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Why")
-                            .font(.subheadline.weight(.semibold))
-
-                        ForEach(disciplineEvaluation.reasons) { reason in
-                            HStack(alignment: .top, spacing: 10) {
-                                Text(symbol(for: reason.tone))
-                                    .font(.subheadline.weight(.bold))
-                                    .foregroundStyle(reasonColor(for: reason.tone))
-
-                                Text(reason.message)
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
+                Picker("Statistics Perspective", selection: $selectedPerspective) {
+                    ForEach(Perspective.allCases) { perspective in
+                        Text(perspective.rawValue).tag(perspective)
                     }
                 }
-                .statsCardStyle()
-                .accessibilityIdentifier("stats.rankModule")
+                .pickerStyle(.segmented)
+                .accessibilityIdentifier("stats.perspectivePicker")
             }
 
-            Section {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Budget Trajectory")
-                        .font(.headline)
-
-                    if trajectory.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("No trajectory data yet for this month.")
-                                .foregroundStyle(.secondary)
-
-                            Text(trajectoryInterpretation)
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                                .accessibilityIdentifier("stats.trajectoryInterpretation")
-                        }
-                    } else {
-                        Chart(trajectory) { point in
-                            LineMark(
-                                x: .value("Date", point.date),
-                                y: .value("Remaining", point.remainingBudget)
-                            )
-                            .interpolationMethod(.catmullRom)
-                            .foregroundStyle(Color.accentColor)
-
-                            AreaMark(
-                                x: .value("Date", point.date),
-                                y: .value("Remaining", point.remainingBudget)
-                            )
-                            .interpolationMethod(.catmullRom)
-                            .foregroundStyle(
-                                .linearGradient(
-                                    colors: [Color.accentColor.opacity(0.22), Color.accentColor.opacity(0.02)],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                            )
-                        }
-                        .frame(height: 220)
-                        .accessibilityIdentifier("stats.trajectoryChart")
-
-                        Text(trajectoryInterpretation)
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(.secondary)
-                            .accessibilityIdentifier("stats.trajectoryInterpretation")
-                    }
-                }
-                .statsCardStyle()
-                .accessibilityIdentifier("stats.trajectoryModule")
-            }
-
-            Section {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Carryover")
-                        .font(.headline)
-
-                    if carryoverHistory.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("No carryover history yet.")
-                                .foregroundStyle(.secondary)
-
-                            Text(carryoverInterpretation)
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                                .accessibilityIdentifier("stats.carryoverInterpretation")
-                        }
-                    } else {
-                        Chart(carryoverHistory) { point in
-                            BarMark(
-                                x: .value("Month", point.month, unit: .month),
-                                y: .value("Carryover", point.amount)
-                            )
-                            .foregroundStyle(point.amount >= 0 ? Color.green.gradient : Color.red.gradient)
-                            .cornerRadius(6)
-                        }
-                        .frame(height: 220)
-                        .accessibilityIdentifier("stats.carryoverChart")
-
-                        HStack {
-                            Text("Current Carryover")
-                                .foregroundStyle(.secondary)
-
-                            Spacer()
-
-                            Text(carryoverAmount.formatted(.currency(code: currencyCode)))
-                                .font(.title3.weight(.semibold))
-                                .foregroundStyle(carryoverColor)
-                        }
-
-                        Text("Last 6 months")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Text(carryoverInterpretation)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.secondary)
-                        .accessibilityIdentifier("stats.carryoverInterpretation")
-                }
-                .statsCardStyle()
-                .accessibilityIdentifier("stats.carryoverModule")
-            }
-
-            Section {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Month Comparison")
-                        .font(.headline)
-
-                    if monthComparisonHistory.allSatisfy({ $0.total == 0 }) {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("No comparison data yet.")
-                                .foregroundStyle(.secondary)
-
-                            Text(comparisonInterpretation)
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                                .accessibilityIdentifier("stats.comparisonInterpretation")
-                        }
-                    } else {
-                        Chart(monthComparisonHistory) { point in
-                            BarMark(
-                                x: .value("Month", point.month, unit: .month),
-                                y: .value("Amount", point.total)
-                            )
-                            .foregroundStyle(
-                                calendar.isDate(point.month, equalTo: .now, toGranularity: .month)
-                                ? Color.accentColor
-                                : Color.secondary.opacity(0.45)
-                            )
-                            .cornerRadius(8)
-                        }
-                        .frame(height: 220)
-                        .accessibilityIdentifier("stats.comparisonChart")
-
-                        VStack(alignment: .leading, spacing: 6) {
-                            comparisonRow(title: "Current Month", amount: monthComparison.currentMonthTotal)
-                            comparisonRow(title: "Previous Month", amount: monthComparison.previousMonthTotal)
-                            comparisonRow(title: "Difference", amount: monthComparison.difference)
-                        }
-
-                        Text(comparisonInterpretation)
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(.secondary)
-                            .accessibilityIdentifier("stats.comparisonInterpretation")
-                    }
-                }
-                .statsCardStyle()
-                .accessibilityIdentifier("stats.comparisonModule")
-            }
-
-            Section {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Spending Pattern")
-                        .font(.headline)
-
-                    if temporalSpendingBuckets.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("No temporal spending pattern yet for this month.")
-                                .foregroundStyle(.secondary)
-
-                            Text(temporalInterpretation)
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                                .accessibilityIdentifier("stats.temporalInterpretation")
-                        }
-                    } else {
-                        Chart(temporalSpendingBuckets) { bucket in
-                            BarMark(
-                                x: .value("Period", bucket.title),
-                                y: .value("Amount", bucket.total)
-                            )
-                            .foregroundStyle(Color.accentColor.gradient)
-                            .cornerRadius(8)
-                        }
-                        .frame(height: 220)
-                        .accessibilityIdentifier("stats.temporalChart")
-
-                        Text(temporalInterpretation)
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(.secondary)
-                            .accessibilityIdentifier("stats.temporalInterpretation")
-                    }
-                }
-                .statsCardStyle()
-                .accessibilityIdentifier("stats.temporalModule")
-            }
-
-            Section {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Spending by Category")
-                        .font(.headline)
-
-                    if categorySpending.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("No category data yet for this month.")
-                                .foregroundStyle(.secondary)
-
-                            Text(categoryInterpretation)
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                                .accessibilityIdentifier("stats.categoryInterpretation")
-                        }
-                    } else {
-                        Chart(categorySpending) { summary in
-                            SectorMark(
-                                angle: .value("Amount", summary.total),
-                                innerRadius: .ratio(0.58),
-                                angularInset: 2
-                            )
-                            .foregroundStyle(summary.category.color)
-                        }
-                        .chartLegend(.hidden)
-                        .frame(height: 220)
-                        .accessibilityIdentifier("stats.categoryChart")
-
-                        Text(categoryInterpretation)
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(.secondary)
-                            .accessibilityIdentifier("stats.categoryInterpretation")
-
-                        VStack(spacing: 10) {
-                            ForEach(categorySpending) { summary in
-                                HStack(spacing: 10) {
-                                    Circle()
-                                        .fill(summary.category.color)
-                                        .frame(width: 10, height: 10)
-
-                                    Text(summary.category.title)
-                                        .foregroundStyle(.primary)
-
-                                    Spacer()
-
-                                    Text(summary.total.formatted(.currency(code: currencyCode)))
-                                        .fontWeight(.medium)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                        }
-                    }
-                }
-                .statsCardStyle()
-                .accessibilityIdentifier("stats.categoryModule")
+            if selectedPerspective == .budgetSpending {
+                budgetSpendingSections
+            } else {
+                totalSpendingSections
             }
         }
         .contentMargins(.top, 0, for: .scrollContent)
         .navigationTitle("Stats")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    @ViewBuilder
+    private var budgetSpendingSections: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Budget Discipline")
+                    .font(.headline)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(disciplineEvaluation.rank.title)
+                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                        .foregroundStyle(rankColor(for: disciplineEvaluation.rank))
+                        .accessibilityIdentifier("stats.rankValue")
+
+                    Text(disciplineEvaluation.summary)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("stats.rankSummary")
+                }
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Why")
+                        .font(.subheadline.weight(.semibold))
+
+                    ForEach(disciplineEvaluation.reasons) { reason in
+                        HStack(alignment: .top, spacing: 10) {
+                            Text(symbol(for: reason.tone))
+                                .font(.subheadline.weight(.bold))
+                                .foregroundStyle(reasonColor(for: reason.tone))
+
+                            Text(reason.message)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+            .statsCardStyle()
+            .accessibilityIdentifier("stats.rankModule")
+        }
+
+        Section {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Budget Trajectory")
+                    .font(.headline)
+
+                if trajectory.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("No trajectory data yet for this month.")
+                            .foregroundStyle(.secondary)
+
+                        Text(trajectoryInterpretation)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("stats.trajectoryInterpretation")
+                    }
+                } else {
+                    Chart(trajectory) { point in
+                        LineMark(
+                            x: .value("Date", point.date),
+                            y: .value("Remaining", point.remainingBudget)
+                        )
+                        .interpolationMethod(.catmullRom)
+                        .foregroundStyle(Color.accentColor)
+
+                        AreaMark(
+                            x: .value("Date", point.date),
+                            y: .value("Remaining", point.remainingBudget)
+                        )
+                        .interpolationMethod(.catmullRom)
+                        .foregroundStyle(
+                            .linearGradient(
+                                colors: [Color.accentColor.opacity(0.22), Color.accentColor.opacity(0.02)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                    }
+                    .frame(height: 220)
+                    .accessibilityIdentifier("stats.trajectoryChart")
+
+                    Text(trajectoryInterpretation)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("stats.trajectoryInterpretation")
+                }
+            }
+            .statsCardStyle()
+            .accessibilityIdentifier("stats.trajectoryModule")
+        }
+
+        Section {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Carryover")
+                    .font(.headline)
+
+                if carryoverHistory.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("No carryover history yet.")
+                            .foregroundStyle(.secondary)
+
+                        Text(carryoverInterpretation)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("stats.carryoverInterpretation")
+                    }
+                } else {
+                    Chart(carryoverHistory) { point in
+                        BarMark(
+                            x: .value("Month", point.month, unit: .month),
+                            y: .value("Carryover", point.amount)
+                        )
+                        .foregroundStyle(point.amount >= 0 ? Color.green.gradient : Color.red.gradient)
+                        .cornerRadius(6)
+                    }
+                    .frame(height: 220)
+                    .accessibilityIdentifier("stats.carryoverChart")
+
+                    HStack {
+                        Text("Current Carryover")
+                            .foregroundStyle(.secondary)
+
+                        Spacer()
+
+                        Text(carryoverAmount.formatted(.currency(code: currencyCode)))
+                            .font(.title3.weight(.semibold))
+                            .foregroundStyle(carryoverColor)
+                    }
+
+                    Text("Last 6 months")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Text(carryoverInterpretation)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("stats.carryoverInterpretation")
+            }
+            .statsCardStyle()
+            .accessibilityIdentifier("stats.carryoverModule")
+        }
+
+        Section {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Month Comparison")
+                    .font(.headline)
+
+                if monthComparisonHistory.allSatisfy({ $0.total == 0 }) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("No comparison data yet.")
+                            .foregroundStyle(.secondary)
+
+                        Text(comparisonInterpretation)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("stats.comparisonInterpretation")
+                    }
+                } else {
+                    Chart(monthComparisonHistory) { point in
+                        BarMark(
+                            x: .value("Month", point.month, unit: .month),
+                            y: .value("Amount", point.total)
+                        )
+                        .foregroundStyle(
+                            calendar.isDate(point.month, equalTo: .now, toGranularity: .month)
+                            ? Color.accentColor
+                            : Color.secondary.opacity(0.45)
+                        )
+                        .cornerRadius(8)
+                    }
+                    .frame(height: 220)
+                    .accessibilityIdentifier("stats.comparisonChart")
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        comparisonRow(title: "Current Month", amount: monthComparison.currentMonthTotal)
+                        comparisonRow(title: "Previous Month", amount: monthComparison.previousMonthTotal)
+                        comparisonRow(title: "Difference", amount: monthComparison.difference)
+                    }
+
+                    Text(comparisonInterpretation)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("stats.comparisonInterpretation")
+                }
+            }
+            .statsCardStyle()
+            .accessibilityIdentifier("stats.comparisonModule")
+        }
+
+        Section {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Spending Pattern")
+                    .font(.headline)
+
+                if temporalSpendingBuckets.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("No temporal spending pattern yet for this month.")
+                            .foregroundStyle(.secondary)
+
+                        Text(temporalInterpretation)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("stats.temporalInterpretation")
+                    }
+                } else {
+                    Chart(temporalSpendingBuckets) { bucket in
+                        BarMark(
+                            x: .value("Period", bucket.title),
+                            y: .value("Amount", bucket.total)
+                        )
+                        .foregroundStyle(Color.accentColor.gradient)
+                        .cornerRadius(8)
+                    }
+                    .frame(height: 220)
+                    .accessibilityIdentifier("stats.temporalChart")
+
+                    Text(temporalInterpretation)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("stats.temporalInterpretation")
+                }
+            }
+            .statsCardStyle()
+            .accessibilityIdentifier("stats.temporalModule")
+        }
+
+        Section {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Spending by Category")
+                    .font(.headline)
+
+                if categorySpending.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("No category data yet for this month.")
+                            .foregroundStyle(.secondary)
+
+                        Text(categoryInterpretation)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("stats.categoryInterpretation")
+                    }
+                } else {
+                    Chart(categorySpending) { summary in
+                        SectorMark(
+                            angle: .value("Amount", summary.total),
+                            innerRadius: .ratio(0.58),
+                            angularInset: 2
+                        )
+                        .foregroundStyle(summary.category.color)
+                    }
+                    .chartLegend(.hidden)
+                    .frame(height: 220)
+                    .accessibilityIdentifier("stats.categoryChart")
+
+                    Text(categoryInterpretation)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("stats.categoryInterpretation")
+
+                    VStack(spacing: 10) {
+                        ForEach(categorySpending) { summary in
+                            HStack(spacing: 10) {
+                                Circle()
+                                    .fill(summary.category.color)
+                                    .frame(width: 10, height: 10)
+
+                                Text(summary.category.title)
+                                    .foregroundStyle(.primary)
+
+                                Spacer()
+
+                                Text(summary.total.formatted(.currency(code: currencyCode)))
+                                    .fontWeight(.medium)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+            }
+            .statsCardStyle()
+            .accessibilityIdentifier("stats.categoryModule")
+        }
+    }
+
+    @ViewBuilder
+    private var totalSpendingSections: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Total Spending")
+                    .font(.headline)
+
+                Text("This perspective will expand Stats to include recurring monthly commitments like housing, subscriptions, insurance, savings, and debt.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
+                Text("The behavioral budget analysis remains under Budget Spending. Total Spending will focus on financial structure and monthly constraints.")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+            .statsCardStyle()
+            .accessibilityIdentifier("stats.totalSpendingIntro")
+        }
+
+        Section {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Coming Next")
+                    .font(.headline)
+
+                Text("Fixed Cost Ratio")
+                    .font(.subheadline.weight(.semibold))
+                Text("See what share of monthly income is already committed before daily spending begins.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
+                Divider()
+
+                Text("Fixed Cost Distribution")
+                    .font(.subheadline.weight(.semibold))
+                Text("Understand how recurring costs are split across housing, subscriptions, insurance, savings, and debt.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .statsCardStyle()
+            .accessibilityIdentifier("stats.totalSpendingPlaceholder")
+        }
     }
 
     private var carryoverColor: Color {

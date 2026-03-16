@@ -125,6 +125,22 @@ final class PocketBudgetUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Knight"].firstMatch.waitForExistence(timeout: 5))
     }
 
+    func testUserCanSwitchStatsPerspective() throws {
+        let app = XCUIApplication()
+        launchAndCompleteBudgetSetup(in: app)
+
+        let statsButton = app.tabBars.buttons["Stats"].firstMatch
+        XCTAssertTrue(statsButton.waitForExistence(timeout: 5))
+        statsButton.tap()
+
+        let totalSpendingButton = app.buttons["Total Spending"].firstMatch
+        XCTAssertTrue(totalSpendingButton.waitForExistence(timeout: 5))
+        totalSpendingButton.tap()
+
+        XCTAssertTrue(app.staticTexts["Total Spending"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Coming Next"].firstMatch.waitForExistence(timeout: 5))
+    }
+
     func testUserCanOpenExpenseHistory() throws {
         let app = XCUIApplication()
         launchAndCompleteBudgetSetup(in: app)
