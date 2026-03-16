@@ -671,6 +671,26 @@ final class BudgetCalculationTests: XCTestCase {
         XCTAssertEqual(savingsStability.savingsShare, 0.1, accuracy: 0.001)
     }
 
+    func testSavingsStabilityHistoryBuildsTrailingSixMonthSeries() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 6, day: 20, calendar: calendar)
+        let recurringExpenseItems = [
+            RecurringExpenseItem(name: "Savings", amount: 300, category: .savings)
+        ]
+
+        let history = BudgetStore.savingsStabilityHistory(
+            recurringExpenseItems: recurringExpenseItems,
+            months: 6,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertEqual(history.count, 6)
+        XCTAssertTrue(history.allSatisfy { abs($0.savingsAmount - 300) < 0.001 })
+    }
+
     private func makeDate(year: Int, month: Int, day: Int, calendar: Calendar) -> Date {
         calendar.date(from: DateComponents(year: year, month: month, day: day))!
     }

@@ -110,6 +110,13 @@ struct SavingsStabilitySummary: Equatable {
     }
 }
 
+struct SavingsStabilityPoint: Identifiable, Equatable {
+    let month: Date
+    let savingsAmount: Double
+
+    var id: Date { month }
+}
+
 enum ChessProgressionPiece: Int, CaseIterable, Equatable {
     case pawn
     case knight
@@ -524,6 +531,30 @@ struct BudgetStore {
             monthlyIncome: totalIncome(for: incomeItems),
             savingsAmount: savingsAmount
         )
+    }
+
+    static func savingsStabilityHistory(
+        recurringExpenseItems: [RecurringExpenseItem],
+        months: Int = 6,
+        calendar: Calendar = .current,
+        referenceDate: Date = .now
+    ) -> [SavingsStabilityPoint] {
+        guard months > 0 else {
+            return []
+        }
+
+        let referenceMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: referenceDate)) ?? referenceDate
+        let savingsAmount = recurringExpenseItems
+            .filter { $0.category == .savings }
+            .reduce(0) { $0 + $1.amount }
+
+        return (0..<months).compactMap { offset in
+            guard let month = calendar.date(byAdding: .month, value: offset - (months - 1), to: referenceMonth) else {
+                return nil
+            }
+
+            return SavingsStabilityPoint(month: month, savingsAmount: savingsAmount)
+        }
     }
 
     static func availableMonthlyBudget(

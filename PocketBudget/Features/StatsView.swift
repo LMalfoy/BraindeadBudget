@@ -135,6 +135,10 @@ struct StatsView: View {
         )
     }
 
+    private var savingsStabilityHistory: [SavingsStabilityPoint] {
+        BudgetStore.savingsStabilityHistory(recurringExpenseItems: recurringExpenseItems)
+    }
+
     private var totalRecurringCost: Double {
         recurringExpenseItems.reduce(0) { $0 + $1.amount }
     }
@@ -147,10 +151,6 @@ struct StatsView: View {
 
     private var totalMonthlyOutflow: Double {
         currentVariableSpending + totalRecurringCost
-    }
-
-    private var hasFixedCostData: Bool {
-        !recurringExpenseItems.isEmpty
     }
 
     private var combinedSpendingSlices: [CombinedSpendingSlice] {
@@ -309,10 +309,10 @@ struct StatsView: View {
         }
 
         if savingsStability.monthlyIncome > 0, savingsStability.savingsShare >= 0.1 {
-            return "You consistently invest part of your income."
+            return "You have maintained a meaningful recurring savings contribution across recent months."
         }
 
-        return "Savings are present in your monthly structure."
+        return "Savings are present in your recurring monthly structure."
     }
 
     private var totalSpendingInterpretation: String {
@@ -504,193 +504,6 @@ struct StatsView: View {
 
     @ViewBuilder
     private var budgetSpendingSections: some View {
-
-        Section {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Budget Trajectory")
-                    .font(.headline)
-
-                if trajectory.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("No trajectory data yet for this month.")
-                            .foregroundStyle(.secondary)
-
-                        Text(trajectoryInterpretation)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .accessibilityIdentifier("stats.trajectoryInterpretation")
-                    }
-                } else {
-                    Chart(trajectory) { point in
-                        LineMark(
-                            x: .value("Date", point.date),
-                            y: .value("Remaining", point.remainingBudget)
-                        )
-                        .interpolationMethod(.catmullRom)
-                        .foregroundStyle(Color.accentColor)
-
-                        AreaMark(
-                            x: .value("Date", point.date),
-                            y: .value("Remaining", point.remainingBudget)
-                        )
-                        .interpolationMethod(.catmullRom)
-                        .foregroundStyle(
-                            .linearGradient(
-                                colors: [Color.accentColor.opacity(0.22), Color.accentColor.opacity(0.02)],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                    }
-                    .frame(height: 220)
-                    .accessibilityIdentifier("stats.trajectoryChart")
-
-                    Text(trajectoryInterpretation)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.secondary)
-                        .accessibilityIdentifier("stats.trajectoryInterpretation")
-                }
-            }
-            .statsCardStyle()
-            .accessibilityIdentifier("stats.trajectoryModule")
-        }
-
-        Section {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Carryover")
-                    .font(.headline)
-
-                if carryoverHistory.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("No carryover history yet.")
-                            .foregroundStyle(.secondary)
-
-                        Text(carryoverInterpretation)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .accessibilityIdentifier("stats.carryoverInterpretation")
-                    }
-                } else {
-                    Chart(carryoverHistory) { point in
-                        BarMark(
-                            x: .value("Month", point.month, unit: .month),
-                            y: .value("Carryover", point.amount)
-                        )
-                        .foregroundStyle(point.amount >= 0 ? Color.green.gradient : Color.red.gradient)
-                        .cornerRadius(6)
-                    }
-                    .frame(height: 220)
-                    .accessibilityIdentifier("stats.carryoverChart")
-
-                    HStack {
-                        Text("Current Carryover")
-                            .foregroundStyle(.secondary)
-
-                        Spacer()
-
-                        Text(carryoverAmount.formatted(.currency(code: currencyCode)))
-                            .font(.title3.weight(.semibold))
-                            .foregroundStyle(carryoverColor)
-                    }
-
-                    Text("Last 6 months")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Text(carryoverInterpretation)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.secondary)
-                    .accessibilityIdentifier("stats.carryoverInterpretation")
-            }
-            .statsCardStyle()
-            .accessibilityIdentifier("stats.carryoverModule")
-        }
-
-        Section {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Month Comparison")
-                    .font(.headline)
-
-                if monthComparisonHistory.allSatisfy({ $0.total == 0 }) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("No comparison data yet.")
-                            .foregroundStyle(.secondary)
-
-                        Text(comparisonInterpretation)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .accessibilityIdentifier("stats.comparisonInterpretation")
-                    }
-                } else {
-                    Chart(monthComparisonHistory) { point in
-                        BarMark(
-                            x: .value("Month", point.month, unit: .month),
-                            y: .value("Amount", point.total)
-                        )
-                        .foregroundStyle(
-                            calendar.isDate(point.month, equalTo: .now, toGranularity: .month)
-                            ? Color.accentColor
-                            : Color.secondary.opacity(0.45)
-                        )
-                        .cornerRadius(8)
-                    }
-                    .frame(height: 220)
-                    .accessibilityIdentifier("stats.comparisonChart")
-
-                    VStack(alignment: .leading, spacing: 6) {
-                        comparisonRow(title: "Current Month", amount: monthComparison.currentMonthTotal)
-                        comparisonRow(title: "Previous Month", amount: monthComparison.previousMonthTotal)
-                        comparisonRow(title: "Difference", amount: monthComparison.difference)
-                    }
-
-                    Text(comparisonInterpretation)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.secondary)
-                        .accessibilityIdentifier("stats.comparisonInterpretation")
-                }
-            }
-            .statsCardStyle()
-            .accessibilityIdentifier("stats.comparisonModule")
-        }
-
-        Section {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Spending Pattern")
-                    .font(.headline)
-
-                if temporalSpendingBuckets.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("No temporal spending pattern yet for this month.")
-                            .foregroundStyle(.secondary)
-
-                        Text(temporalInterpretation)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .accessibilityIdentifier("stats.temporalInterpretation")
-                    }
-                } else {
-                    Chart(temporalSpendingBuckets) { bucket in
-                        BarMark(
-                            x: .value("Period", bucket.title),
-                            y: .value("Amount", bucket.total)
-                        )
-                        .foregroundStyle(Color.accentColor.gradient)
-                        .cornerRadius(8)
-                    }
-                    .frame(height: 220)
-                    .accessibilityIdentifier("stats.temporalChart")
-
-                    Text(temporalInterpretation)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.secondary)
-                        .accessibilityIdentifier("stats.temporalInterpretation")
-                }
-            }
-            .statsCardStyle()
-            .accessibilityIdentifier("stats.temporalModule")
-        }
-
         Section {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Spending by Category")
@@ -747,96 +560,196 @@ struct StatsView: View {
             .statsCardStyle()
             .accessibilityIdentifier("stats.categoryModule")
         }
-    }
 
-    @ViewBuilder
-    private var recurringSpendingSections: some View {
         Section {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Fixed Cost Structure")
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Budget Trajectory")
                     .font(.headline)
 
-                if hasFixedCostData {
-                    VStack(alignment: .leading, spacing: 6) {
-                        comparisonRow(title: "Recurring Costs", amount: totalRecurringCost)
-
-                        HStack {
-                            Text("Active Items")
-                                .foregroundStyle(.secondary)
-
-                            Spacer()
-
-                            Text("\(recurringExpenseItems.count)")
-                                .fontWeight(.medium)
-                                .foregroundStyle(.primary)
-                        }
-                    }
-
-                    Text("This view focuses on recurring monthly commitments before day-to-day spending begins.")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.secondary)
-                } else {
+                if trajectory.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("No fixed monthly costs are recorded yet.")
+                        Text("No trajectory data yet for this month.")
                             .foregroundStyle(.secondary)
 
-                        Text("Add housing, Abos, insurance, savings, or debt items to understand your monthly financial structure.")
+                        Text(trajectoryInterpretation)
                             .font(.footnote)
                             .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("stats.trajectoryInterpretation")
                     }
+                } else {
+                    Chart(trajectory) { point in
+                        LineMark(
+                            x: .value("Date", point.date),
+                            y: .value("Remaining", point.remainingBudget)
+                        )
+                        .interpolationMethod(.catmullRom)
+                        .foregroundStyle(Color.accentColor)
+
+                        AreaMark(
+                            x: .value("Date", point.date),
+                            y: .value("Remaining", point.remainingBudget)
+                        )
+                        .interpolationMethod(.catmullRom)
+                        .foregroundStyle(
+                            .linearGradient(
+                                colors: [Color.accentColor.opacity(0.22), Color.accentColor.opacity(0.02)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                    }
+                    .frame(height: 220)
+                    .accessibilityIdentifier("stats.trajectoryChart")
+
+                    Text(trajectoryInterpretation)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("stats.trajectoryInterpretation")
                 }
             }
             .statsCardStyle()
-            .accessibilityIdentifier("stats.fixedCostOverviewModule")
+            .accessibilityIdentifier("stats.trajectoryModule")
         }
 
         Section {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Fixed Cost Ratio")
+                Text("Month Comparison")
                     .font(.headline)
 
-                if fixedCostRatio.monthlyIncome <= 0 {
+                if monthComparisonHistory.allSatisfy({ $0.total == 0 }) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("No monthly income is available yet.")
+                        Text("No comparison data yet.")
                             .foregroundStyle(.secondary)
 
-                        Text(fixedCostRatioInterpretation)
+                        Text(comparisonInterpretation)
                             .font(.footnote)
                             .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("stats.comparisonInterpretation")
                     }
                 } else {
-                    Gauge(value: min(max(fixedCostRatio.recurringShare, 0), 1)) {
-                        EmptyView()
-                    } currentValueLabel: {
-                        Text(fixedCostRatio.recurringShare.formatted(.percent.precision(.fractionLength(0))))
-                            .font(.system(size: 34, weight: .bold, design: .rounded))
-                    } minimumValueLabel: {
-                        Text("0%")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    } maximumValueLabel: {
-                        Text("100%")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                    Chart(monthComparisonHistory) { point in
+                        BarMark(
+                            x: .value("Month", point.month, unit: .month),
+                            y: .value("Amount", point.total)
+                        )
+                        .foregroundStyle(
+                            calendar.isDate(point.month, equalTo: .now, toGranularity: .month)
+                            ? Color.accentColor
+                            : Color.secondary.opacity(0.45)
+                        )
+                        .cornerRadius(8)
                     }
-                    .gaugeStyle(.accessoryCircularCapacity)
-                    .tint(fixedCostRatio.recurringShare >= 0.6 ? .orange : .accentColor)
-                    .frame(maxWidth: .infinity)
+                    .frame(height: 220)
+                    .accessibilityIdentifier("stats.comparisonChart")
 
                     VStack(alignment: .leading, spacing: 6) {
-                        comparisonRow(title: "Monthly Income", amount: fixedCostRatio.monthlyIncome)
-                        comparisonRow(title: "Recurring Costs", amount: fixedCostRatio.recurringTotal)
+                        comparisonRow(title: "Current Month", amount: monthComparison.currentMonthTotal)
+                        comparisonRow(title: "Previous Month", amount: monthComparison.previousMonthTotal)
+                        comparisonRow(title: "Difference", amount: monthComparison.difference)
                     }
 
-                    Text(fixedCostRatioInterpretation)
+                    Text(comparisonInterpretation)
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("stats.comparisonInterpretation")
                 }
             }
             .statsCardStyle()
-            .accessibilityIdentifier("stats.fixedCostRatioModule")
+            .accessibilityIdentifier("stats.comparisonModule")
         }
 
+        Section {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Carryover")
+                    .font(.headline)
+
+                if carryoverHistory.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("No carryover history yet.")
+                            .foregroundStyle(.secondary)
+
+                        Text(carryoverInterpretation)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("stats.carryoverInterpretation")
+                    }
+                } else {
+                    Chart(carryoverHistory) { point in
+                        BarMark(
+                            x: .value("Month", point.month, unit: .month),
+                            y: .value("Carryover", point.amount)
+                        )
+                        .foregroundStyle(point.amount >= 0 ? Color.green.gradient : Color.red.gradient)
+                        .cornerRadius(6)
+                    }
+                    .frame(height: 220)
+                    .accessibilityIdentifier("stats.carryoverChart")
+
+                    HStack {
+                        Text("Current Carryover")
+                            .foregroundStyle(.secondary)
+
+                        Spacer()
+
+                        Text(carryoverAmount.formatted(.currency(code: currencyCode)))
+                            .font(.title3.weight(.semibold))
+                            .foregroundStyle(carryoverColor)
+                    }
+
+                    Text("Last 6 months")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Text(carryoverInterpretation)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("stats.carryoverInterpretation")
+            }
+            .statsCardStyle()
+            .accessibilityIdentifier("stats.carryoverModule")
+        }
+
+        Section {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Spending Pattern")
+                    .font(.headline)
+
+                if temporalSpendingBuckets.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("No temporal spending pattern yet for this month.")
+                            .foregroundStyle(.secondary)
+
+                        Text(temporalInterpretation)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("stats.temporalInterpretation")
+                    }
+                } else {
+                    Chart(temporalSpendingBuckets) { bucket in
+                        BarMark(
+                            x: .value("Period", bucket.title),
+                            y: .value("Amount", bucket.total)
+                        )
+                        .foregroundStyle(Color.accentColor.gradient)
+                        .cornerRadius(8)
+                    }
+                    .frame(height: 220)
+                    .accessibilityIdentifier("stats.temporalChart")
+
+                    Text(temporalInterpretation)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("stats.temporalInterpretation")
+                }
+            }
+            .statsCardStyle()
+            .accessibilityIdentifier("stats.temporalModule")
+        }
+    }
+
+    @ViewBuilder
+    private var recurringSpendingSections: some View {
         Section {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Fixed Cost Distribution")
@@ -890,6 +803,53 @@ struct StatsView: View {
             }
             .statsCardStyle()
             .accessibilityIdentifier("stats.fixedCostDistributionModule")
+        }
+
+        Section {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Fixed Cost Ratio")
+                    .font(.headline)
+
+                if fixedCostRatio.monthlyIncome <= 0 {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("No monthly income is available yet.")
+                            .foregroundStyle(.secondary)
+
+                        Text(fixedCostRatioInterpretation)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    Gauge(value: min(max(fixedCostRatio.recurringShare, 0), 1)) {
+                        EmptyView()
+                    } currentValueLabel: {
+                        Text(fixedCostRatio.recurringShare.formatted(.percent.precision(.fractionLength(0))))
+                            .font(.system(size: 34, weight: .bold, design: .rounded))
+                    } minimumValueLabel: {
+                        Text("0%")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } maximumValueLabel: {
+                        Text("100%")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .gaugeStyle(.accessoryCircularCapacity)
+                    .tint(fixedCostRatio.recurringShare >= 0.6 ? .orange : .accentColor)
+                    .frame(maxWidth: .infinity)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        comparisonRow(title: "Monthly Income", amount: fixedCostRatio.monthlyIncome)
+                        comparisonRow(title: "Recurring Costs", amount: fixedCostRatio.recurringTotal)
+                    }
+
+                    Text(fixedCostRatioInterpretation)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .statsCardStyle()
+            .accessibilityIdentifier("stats.fixedCostRatioModule")
         }
 
         Section {
@@ -951,6 +911,17 @@ struct StatsView: View {
                             .foregroundStyle(.secondary)
                     }
                 } else {
+                    Chart(savingsStabilityHistory) { point in
+                        BarMark(
+                            x: .value("Month", point.month, unit: .month),
+                            y: .value("Savings", point.savingsAmount)
+                        )
+                        .foregroundStyle(Color.green.gradient)
+                        .cornerRadius(8)
+                    }
+                    .frame(height: 220)
+                    .accessibilityIdentifier("stats.savingsStabilityChart")
+
                     VStack(alignment: .leading, spacing: 6) {
                         comparisonRow(title: "Monthly Savings", amount: savingsStability.savingsAmount)
 
@@ -967,6 +938,10 @@ struct StatsView: View {
                             }
                         }
                     }
+
+                    Text("Last 6 months")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
 
                     Text(savingsStabilityInterpretation)
                         .font(.subheadline.weight(.medium))
