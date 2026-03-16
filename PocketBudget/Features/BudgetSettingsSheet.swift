@@ -65,7 +65,7 @@ struct BudgetSettingsSheet: View {
     }
 
     private var parsedInitialAvailableBudget: Double? {
-        Self.parseAmount(initialAvailableBudgetText)
+        parseDecimalAmount(initialAvailableBudgetText)
     }
 
     private var currentAvailableBudget: Double {
@@ -287,16 +287,6 @@ struct BudgetSettingsSheet: View {
         }
     }
 
-    private static func parseAmount(_ text: String) -> Double? {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard !trimmed.isEmpty else {
-            return nil
-        }
-
-        return Double(trimmed.replacingOccurrences(of: ",", with: "."))
-    }
-
     private static func monthAnchor(for date: Date, calendar: Calendar = .current) -> Date {
         calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? date
     }
@@ -417,7 +407,7 @@ private struct BaselineItemEditorSheet: View {
     }
 
     private var parsedAmount: Double? {
-        Self.parseAmount(amountText)
+        parseDecimalAmount(amountText)
     }
 
     private var isSaveDisabled: Bool {
@@ -572,13 +562,7 @@ private struct BaselineItemEditorSheet: View {
     }
 
     private static func parseAmount(_ text: String) -> Double? {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard !trimmed.isEmpty else {
-            return nil
-        }
-
-        return Double(trimmed.replacingOccurrences(of: ",", with: "."))
+        parseDecimalAmount(text)
     }
 
     private static func startingText(for amount: Double?) -> String {
@@ -586,8 +570,22 @@ private struct BaselineItemEditorSheet: View {
             return ""
         }
 
-        return String(format: "%.2f", amount)
+        return formattedAmountText(amount)
     }
+}
+
+private func parseDecimalAmount(_ text: String) -> Double? {
+    let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+
+    guard !trimmed.isEmpty else {
+        return nil
+    }
+
+    return Double(trimmed.replacingOccurrences(of: ",", with: "."))
+}
+
+private func formattedAmountText(_ amount: Double) -> String {
+    String(format: "%.2f", amount)
 }
 
 private extension RecurringExpenseCategory {

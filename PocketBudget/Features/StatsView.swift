@@ -18,16 +18,20 @@ struct StatsView: View {
     @Query(sort: \IncomeItem.createdAt) private var incomeItems: [IncomeItem]
     @Query(sort: \RecurringExpenseItem.createdAt) private var recurringExpenseItems: [RecurringExpenseItem]
 
+    private var budgetSettings: BudgetSettings? {
+        budgets.first
+    }
+
     private var currencyCode: String {
-        budgets.first?.currencyCode ?? Locale.current.currency?.identifier ?? "USD"
+        budgetSettings?.currencyCode ?? Locale.current.currency?.identifier ?? "USD"
     }
 
     private var initialAvailableBudget: Double? {
-        budgets.first?.initialAvailableBudget
+        budgetSettings?.initialAvailableBudget
     }
 
     private var initialBudgetAnchorMonth: Date? {
-        budgets.first?.initialBudgetAnchorMonth
+        budgetSettings?.initialBudgetAnchorMonth
     }
 
     private var categorySpending: [CategorySpendingSummary] {
