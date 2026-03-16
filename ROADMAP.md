@@ -729,3 +729,30 @@ Validation:
 - unit tests for rank evaluation and sparse-data behavior
 - manual review that the reasons match the displayed rank
 - confirm that the rank feels stable rather than jumpy across nearby states
+
+### Iteration 2.1: Statistics Refinement
+
+Goal:
+Deepen the usefulness of the existing Statistics modules without expanding the feature surface unnecessarily.
+
+Scope:
+
+- refine the spending-pattern module from coarse early/mid/late grouping to a finer intra-month sampling model
+- keep the interpretation plain-language and behavior-oriented despite the finer sampling
+- expand month comparison from current-vs-previous month into a trailing 6-month view
+- preserve the existing discipline-rank logic while feeding it stronger underlying signals
+
+Why this matters:
+
+- the current statistics foundation works, but two modules remain too coarse
+- better temporal and month-comparison signals should improve both user insight and later rank fairness
+
+Risk:
+Medium
+
+Validation:
+
+- unit tests for the finer temporal bucketing model
+- unit tests for the 6-month comparison series
+- manual review that interpretations still read naturally
+- UI verification that the Stats screen remains readable and not overcrowded

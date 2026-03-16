@@ -79,6 +79,8 @@ final class PocketBudgetUITests: XCTestCase {
         let statsButton = app.tabBars.buttons["Stats"].firstMatch
         XCTAssertTrue(statsButton.waitForExistence(timeout: 5))
         statsButton.tap()
+        app.swipeUp()
+        app.swipeUp()
 
         XCTAssertTrue(app.staticTexts["Spending Pattern"].firstMatch.waitForExistence(timeout: 5))
     }
@@ -91,6 +93,8 @@ final class PocketBudgetUITests: XCTestCase {
         let statsButton = app.tabBars.buttons["Stats"].firstMatch
         XCTAssertTrue(statsButton.waitForExistence(timeout: 5))
         statsButton.tap()
+        app.swipeUp()
+        app.swipeUp()
 
         XCTAssertTrue(app.staticTexts["Month Comparison"].firstMatch.waitForExistence(timeout: 5))
     }

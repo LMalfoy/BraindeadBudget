@@ -4,6 +4,7 @@ import SwiftData
 import SwiftUI
 
 struct StatsView: View {
+    private let calendar = Calendar.current
     @Query(sort: \Expense.date, order: .reverse) private var expenses: [Expense]
     @Query(sort: \BudgetSettings.updatedAt, order: .reverse) private var budgets: [BudgetSettings]
     @Query(sort: \IncomeItem.createdAt) private var incomeItems: [IncomeItem]
@@ -43,12 +44,16 @@ struct StatsView: View {
         )
     }
 
-    private var temporalSpending: [TemporalSpendingSummary] {
-        BudgetStore.temporalSpending(for: expenses)
+    private var temporalSpendingBuckets: [TemporalSpendingBucket] {
+        BudgetStore.temporalSpendingBuckets(for: expenses)
     }
 
     private var monthComparison: MonthComparisonSummary {
         BudgetStore.monthComparison(for: expenses)
+    }
+
+    private var monthComparisonHistory: [MonthlySpendingPoint] {
+        BudgetStore.monthComparisonHistory(for: expenses)
     }
 
     private var carryoverAmount: Double {
@@ -92,37 +97,43 @@ struct StatsView: View {
     }
 
     private var temporalInterpretation: String {
-        guard !temporalSpending.isEmpty else {
+        guard !temporalSpendingBuckets.isEmpty else {
             return "Add a few expenses to see when your spending tends to happen."
         }
 
-        let sortedTotals = temporalSpending.map(\.total).sorted(by: >)
+        let sortedTotals = temporalSpendingBuckets.map(\.total).sorted(by: >)
 
-        if let first = sortedTotals.first, let last = sortedTotals.last, temporalSpending.count == 3, first - last < 0.15 * first {
+        if let first = sortedTotals.first, let last = sortedTotals.last, first - last < 0.15 * first {
             return "Your spending is spread fairly evenly across the month."
         }
 
-        guard let topSegment = temporalSpending.max(by: { $0.total < $1.total })?.segment else {
+        guard let topBucket = temporalSpendingBuckets.max(by: { $0.total < $1.total }) else {
             return "Add a few expenses to see when your spending tends to happen."
         }
 
-        switch topSegment {
-        case .early:
+        let relativePosition = Double(topBucket.index) / Double(max(temporalSpendingBuckets.count - 1, 1))
+
+        switch relativePosition {
+        case ..<0.2:
             return "Your spending is concentrated at the beginning of the month."
-        case .mid:
-            return "Most of your spending happens in the middle of the month."
-        case .late:
+        case ..<0.4:
+            return "Your spending leans toward the early-middle part of the month."
+        case ..<0.6:
+            return "Most of your spending happens around the middle of the month."
+        case ..<0.8:
+            return "Your spending leans toward the late-middle part of the month."
+        default:
             return "Most of your spending happens later in the month."
         }
     }
 
     private var comparisonInterpretation: String {
-        if monthComparison.currentMonthTotal == 0, monthComparison.previousMonthTotal == 0 {
-            return "Add some history to compare this month against the previous one."
+        if monthComparisonHistory.allSatisfy({ $0.total == 0 }) {
+            return "Add some history to compare this month against recent spending."
         }
 
         if monthComparison.previousMonthTotal == 0 {
-            return "You have no spending recorded last month to compare against yet."
+            return "You have limited recent history, so this trend is still forming."
         }
 
         let difference = monthComparison.difference
@@ -302,7 +313,7 @@ struct StatsView: View {
                     Text("Month Comparison")
                         .font(.headline)
 
-                    if monthComparison.currentMonthTotal == 0, monthComparison.previousMonthTotal == 0 {
+                    if monthComparisonHistory.allSatisfy({ $0.total == 0 }) {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("No comparison data yet.")
                                 .foregroundStyle(.secondary)
@@ -313,15 +324,16 @@ struct StatsView: View {
                                 .accessibilityIdentifier("stats.comparisonInterpretation")
                         }
                     } else {
-                        Chart([
-                            MonthComparisonBar(label: "Previous", amount: monthComparison.previousMonthTotal),
-                            MonthComparisonBar(label: "Current", amount: monthComparison.currentMonthTotal)
-                        ]) { bar in
+                        Chart(monthComparisonHistory) { point in
                             BarMark(
-                                x: .value("Month", bar.label),
-                                y: .value("Amount", bar.amount)
+                                x: .value("Month", point.month, unit: .month),
+                                y: .value("Amount", point.total)
                             )
-                            .foregroundStyle(bar.color)
+                            .foregroundStyle(
+                                calendar.isDate(point.month, equalTo: .now, toGranularity: .month)
+                                ? Color.accentColor
+                                : Color.secondary.opacity(0.45)
+                            )
                             .cornerRadius(8)
                         }
                         .frame(height: 220)
@@ -348,7 +360,7 @@ struct StatsView: View {
                     Text("Spending Pattern")
                         .font(.headline)
 
-                    if temporalSpending.isEmpty {
+                    if temporalSpendingBuckets.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("No temporal spending pattern yet for this month.")
                                 .foregroundStyle(.secondary)
@@ -359,10 +371,10 @@ struct StatsView: View {
                                 .accessibilityIdentifier("stats.temporalInterpretation")
                         }
                     } else {
-                        Chart(temporalSpending) { summary in
+                        Chart(temporalSpendingBuckets) { bucket in
                             BarMark(
-                                x: .value("Segment", summary.segment.title),
-                                y: .value("Amount", summary.total)
+                                x: .value("Period", bucket.title),
+                                y: .value("Amount", bucket.total)
                             )
                             .foregroundStyle(Color.accentColor.gradient)
                             .cornerRadius(8)
@@ -508,17 +520,6 @@ struct StatsView: View {
     }
 }
 
-private struct MonthComparisonBar: Identifiable {
-    let label: String
-    let amount: Double
-
-    var id: String { label }
-
-    var color: Color {
-        label == "Current" ? .accentColor : Color.secondary.opacity(0.45)
-    }
-}
-
 private extension ExpenseCategory {
     var color: Color {
         switch self {
@@ -536,8 +537,11 @@ private extension ExpenseCategory {
 
 private extension View {
     func statsCardStyle() -> some View {
-        padding(18)
+        frame(maxWidth: .infinity, alignment: .leading)
+            .padding(18)
             .background(Color(uiColor: .secondarySystemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+            .listRowSeparator(.hidden)
     }
 }

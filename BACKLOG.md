@@ -35,8 +35,14 @@ Future improvements, polish items, and larger feature notes to revisit after the
 - The future Budget Discipline Score should use chess-role progression: Pawn, Knight, Bishop, Queen, King.
 - Chess-role gamification should only be added after the core statistics modules are stable and meaningful.
 - Before shipping chess-piece artwork, verify the exact license and attribution requirements for the chosen asset files.
+- First-run onboarding should support users who begin using the app in the middle of an existing spending period rather than at the start of a fresh month.
+- The app should capture an initial in-period budget state explicitly, rather than faking it through one large synthetic expense entry.
+- A fake `spent so far` expense would distort statistics, so mid-period initialization needs its own correct product/model approach.
 - In expense history, the left/right month arrows should always navigate to adjacent months even when no entries exist there.
 - Empty months should still be reachable and display as valid periods; data for that month only exists once the user records entries there.
+- The Stats spending-pattern module should later use finer temporal sampling than only early/mid/late month.
+- A useful next step is splitting the month into roughly 10 periods while still producing plain-language interpretations that describe where spending is mostly concentrated.
+- The Stats month-comparison module should later expand from current-vs-previous month into a trailing 6-month comparison view.
 
 ## Usage Rule
 

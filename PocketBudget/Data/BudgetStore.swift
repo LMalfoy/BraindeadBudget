@@ -47,6 +47,14 @@ struct TemporalSpendingSummary: Identifiable, Equatable {
     var id: Segment { segment }
 }
 
+struct TemporalSpendingBucket: Identifiable, Equatable {
+    let index: Int
+    let title: String
+    let total: Double
+
+    var id: Int { index }
+}
+
 struct MonthComparisonSummary: Equatable {
     let currentMonthTotal: Double
     let previousMonthTotal: Double
@@ -59,6 +67,13 @@ struct MonthComparisonSummary: Equatable {
 struct CarryoverHistoryPoint: Identifiable, Equatable {
     let month: Date
     let amount: Double
+
+    var id: Date { month }
+}
+
+struct MonthlySpendingPoint: Identifiable, Equatable {
+    let month: Date
+    let total: Double
 
     var id: Date { month }
 }
@@ -575,6 +590,54 @@ struct BudgetStore {
         }
     }
 
+    static func temporalSpendingBuckets(
+        for expenses: [Expense],
+        bucketCount: Int = 10,
+        calendar: Calendar = .current,
+        referenceDate: Date = .now
+    ) -> [TemporalSpendingBucket] {
+        guard bucketCount > 0 else {
+            return []
+        }
+
+        let currentMonthExpenses = currentMonthExpenses(
+            from: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+        guard let daysInMonth = calendar.range(of: .day, in: .month, for: referenceDate)?.count else {
+            return []
+        }
+
+        let totals = Dictionary(grouping: currentMonthExpenses) { expense in
+            temporalBucketIndex(
+                for: expense.date,
+                bucketCount: bucketCount,
+                calendar: calendar,
+                daysInMonth: daysInMonth
+            )
+        }
+        .mapValues { groupedExpenses in
+            groupedExpenses.reduce(0) { $0 + $1.amount }
+        }
+
+        return (0..<bucketCount).compactMap { index in
+            guard let total = totals[index], total > 0 else {
+                return nil
+            }
+
+            return TemporalSpendingBucket(
+                index: index,
+                title: temporalBucketTitle(
+                    index: index,
+                    bucketCount: bucketCount,
+                    daysInMonth: daysInMonth
+                ),
+                total: total
+            )
+        }
+    }
+
     static func temporalSegment(
         for date: Date,
         calendar: Calendar = .current
@@ -589,6 +652,28 @@ struct BudgetStore {
         default:
             return .late
         }
+    }
+
+    static func temporalBucketIndex(
+        for date: Date,
+        bucketCount: Int,
+        calendar: Calendar = .current,
+        daysInMonth: Int? = nil
+    ) -> Int {
+        let resolvedDaysInMonth = daysInMonth ?? calendar.range(of: .day, in: .month, for: date)?.count ?? 30
+        let day = max(calendar.component(.day, from: date) - 1, 0)
+        let fraction = Double(day) / Double(max(resolvedDaysInMonth, 1))
+        return min(Int(fraction * Double(bucketCount)), bucketCount - 1)
+    }
+
+    static func temporalBucketTitle(
+        index: Int,
+        bucketCount: Int,
+        daysInMonth: Int
+    ) -> String {
+        let startDay = Int((Double(index) / Double(bucketCount)) * Double(daysInMonth)) + 1
+        let endDay = Int((Double(index + 1) / Double(bucketCount)) * Double(daysInMonth))
+        return "\(startDay)-\(max(startDay, endDay))"
     }
 
     static func monthComparison(
@@ -615,6 +700,36 @@ struct BudgetStore {
             currentMonthTotal: currentTotal,
             previousMonthTotal: previousTotal
         )
+    }
+
+    static func monthComparisonHistory(
+        for expenses: [Expense],
+        months: Int = 6,
+        calendar: Calendar = .current,
+        referenceDate: Date = .now
+    ) -> [MonthlySpendingPoint] {
+        guard months > 0 else {
+            return []
+        }
+
+        let referenceMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: referenceDate)) ?? referenceDate
+
+        return (0..<months).compactMap { offset in
+            guard let month = calendar.date(byAdding: .month, value: offset - (months - 1), to: referenceMonth) else {
+                return nil
+            }
+
+            return MonthlySpendingPoint(
+                month: month,
+                total: totalSpent(
+                    for: currentMonthExpenses(
+                        from: expenses,
+                        calendar: calendar,
+                        referenceDate: month
+                    )
+                )
+            )
+        }
     }
 
     static func carryoverHistory(
@@ -668,7 +783,7 @@ struct BudgetStore {
             calendar: calendar,
             referenceDate: referenceDate
         )
-        let temporalSpending = temporalSpending(
+        let temporalSpendingBuckets = temporalSpendingBuckets(
             for: expenses,
             calendar: calendar,
             referenceDate: referenceDate
@@ -739,7 +854,7 @@ struct BudgetStore {
         )
         let temporalStrength = disciplineTemporalStrength(
             currentMonthExpenses: currentMonthExpenses,
-            temporalSpending: temporalSpending
+            temporalSpendingBuckets: temporalSpendingBuckets
         )
         let comparisonStrength = disciplineComparisonStrength(comparison)
         let carryoverStrength = disciplineCarryoverStrength(
@@ -864,20 +979,22 @@ struct BudgetStore {
 
     private static func disciplineTemporalStrength(
         currentMonthExpenses: [Expense],
-        temporalSpending: [TemporalSpendingSummary]
+        temporalSpendingBuckets: [TemporalSpendingBucket]
     ) -> BudgetSignalStrength {
         let total = totalSpent(for: currentMonthExpenses)
-        guard total > 0, temporalSpending.count >= 2, let strongestSegment = temporalSpending.max(by: { $0.total < $1.total }) else {
+        guard total > 0,
+              temporalSpendingBuckets.count >= 2,
+              let strongestBucket = temporalSpendingBuckets.max(by: { $0.total < $1.total }) else {
             return .neutral
         }
 
-        let concentration = strongestSegment.total / total
+        let concentration = strongestBucket.total / total
 
-        if concentration <= 0.45 {
+        if concentration <= 0.22 {
             return .strong
         }
 
-        if concentration <= 0.65 {
+        if concentration <= 0.35 {
             return .neutral
         }
 

@@ -511,6 +511,57 @@ final class BudgetCalculationTests: XCTestCase {
         XCTAssertFalse(evaluation.isSparseData)
     }
 
+    func testTemporalSpendingBucketsSplitMonthIntoFinerSampling() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 6, day: 20, calendar: calendar)
+        let expenses = [
+            Expense(title: "Early", category: .food, amount: 10, date: makeDate(year: 2026, month: 6, day: 2, calendar: calendar)),
+            Expense(title: "Middle", category: .food, amount: 15, date: makeDate(year: 2026, month: 6, day: 15, calendar: calendar)),
+            Expense(title: "Late", category: .food, amount: 20, date: makeDate(year: 2026, month: 6, day: 28, calendar: calendar))
+        ]
+
+        let buckets = BudgetStore.temporalSpendingBuckets(
+            for: expenses,
+            bucketCount: 10,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertEqual(buckets.count, 3)
+        XCTAssertEqual(buckets.map(\.index), [0, 4, 9])
+        for (actual, expected) in zip(buckets.map(\.total), [10.0, 15.0, 20.0]) {
+            XCTAssertEqual(actual, expected, accuracy: 0.001)
+        }
+    }
+
+    func testMonthComparisonHistoryBuildsTrailingSixMonthSeries() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 6, day: 20, calendar: calendar)
+        let expenses = [
+            Expense(title: "Jan", category: .food, amount: 10, date: makeDate(year: 2026, month: 1, day: 2, calendar: calendar)),
+            Expense(title: "Mar", category: .food, amount: 30, date: makeDate(year: 2026, month: 3, day: 2, calendar: calendar)),
+            Expense(title: "Apr", category: .food, amount: 40, date: makeDate(year: 2026, month: 4, day: 2, calendar: calendar)),
+            Expense(title: "Jun", category: .food, amount: 60, date: makeDate(year: 2026, month: 6, day: 2, calendar: calendar))
+        ]
+
+        let history = BudgetStore.monthComparisonHistory(
+            for: expenses,
+            months: 6,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertEqual(history.count, 6)
+        let expectedTotals = [10.0, 0.0, 30.0, 40.0, 0.0, 60.0]
+        for (actual, expected) in zip(history.map(\.total), expectedTotals) {
+            XCTAssertEqual(actual, expected, accuracy: 0.001)
+        }
+    }
+
     private func makeDate(year: Int, month: Int, day: Int, calendar: Calendar) -> Date {
         calendar.date(from: DateComponents(year: year, month: month, day: day))!
     }

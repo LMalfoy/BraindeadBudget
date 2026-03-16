@@ -114,6 +114,15 @@ Why last:
 - the rank should summarize real behavioral signals
 - it should not precede the modules it depends on
 
+## Immediate Refinement Step
+
+After the first complete rollout is in place, the next practical step is not a brand-new module. It is refinement of two existing modules:
+
+- Spending Pattern should use finer intra-month sampling than only early / mid / late
+- Month Comparison should expand into a trailing 6-month view
+
+These changes should sharpen the quality of behavioral feedback while keeping the Stats area understandable.
+
 ## Non-Goals For Early Stats
 
 - no speculative machine-learning style predictions

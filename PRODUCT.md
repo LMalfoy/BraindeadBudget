@@ -267,6 +267,15 @@ And it should be stabilized or adjusted by outcome signals:
 - monthly carryover
 - leftover budget percentage for the month
 
+After the first complete Statistics arc is in place, the next refinement step should deepen the existing modules rather than add new ones immediately.
+
+Two especially valuable refinements are:
+
+- increasing temporal-pattern sampling so the app can detect more precise within-month spending concentration
+- expanding month comparison from a two-month snapshot into a short rolling view across multiple months
+
+These refinements should improve behavioral usefulness without turning the Statistics area into a dense analytics dashboard.
+
 This means:
 
 - stronger visual hierarchy for the remaining budget
