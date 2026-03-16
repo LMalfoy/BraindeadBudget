@@ -164,6 +164,43 @@ The keyboard flow should reduce manual interaction:
 - the amount field should use a numeric keypad
 - once a valid numeric amount has been entered, pressing Return or Send should submit the expense directly
 
+## Statistics Perspective Direction
+
+PocketBudget now has two statistics directions with different purposes.
+
+### Budget Spending
+
+This is the behavioral budgeting view.
+
+It focuses on:
+
+- variable day-to-day spending
+- category distribution
+- budget pace
+- temporal pattern
+- month comparison
+- carryover
+- discipline rank
+
+### Total Spending
+
+The current `Total Spending` perspective is a structural recurring-cost view.
+
+It helps the user understand:
+
+- how much monthly income is already committed
+- how recurring costs are distributed
+- how large the subscription stack is
+- whether savings are stable
+
+This view should remain simple and explainable.
+
+Important:
+
+- it should not interfere with the behavioral rank system
+- it does not yet represent literal combined total spending
+- a later redesign may merge variable and recurring spending into a true all-in spending perspective
+
 ## Expense History Requirements
 
 The app should provide a dedicated monthly history view that supports review and correction without crowding the dashboard.
@@ -236,6 +273,85 @@ Each statistics module should follow these rules:
 - include a short plain-language interpretation
 - prefer behavioral usefulness over analytical density
 - build iteratively on top of the existing budget model
+
+The Statistics area should eventually support two perspectives:
+
+- `Budget Spending`
+- `Total Spending`
+
+### Budget Spending
+
+This is the current behavioral view.
+
+It should focus on:
+
+- variable spending behavior
+- category usage
+- pacing through the month
+- carryover and rollover outcomes
+- comparisons across recent months
+- the qualitative discipline rank
+
+### Total Spending
+
+This should be added as a separate statistics perspective rather than mixed into the behavioral view.
+
+Its purpose is to help the user understand fixed financial structure and monthly constraints, including recurring commitments such as:
+
+- rent
+- utilities
+- subscriptions
+- insurance
+- savings contributions
+- debt payments
+
+This perspective should not interfere with the behavioral rank system.
+
+Instead, it should answer structural questions such as:
+
+- how much of the month is already committed before day-to-day spending begins
+- how large the subscription stack is
+- which fixed-cost categories dominate the monthly financial structure
+- whether savings are consistently present in the monthly baseline
+
+To keep this understandable, recurring-cost categories should remain intentionally broad:
+
+- Housing / Utilities
+- Subscriptions
+- Insurance
+- Savings
+- Debt
+
+The Total Spending perspective should be built in small steps, just like the original Statistics rollout.
+
+Recurring-cost entry should eventually match the quality of the main expense-entry flow.
+
+That means recurring-cost setup should become:
+
+- visually immediate
+- category-first
+- fast to complete
+- consistent with the app's existing expense-entry language
+
+The recurring-cost editor should mirror the add-expense flow as closely as practical, with one intentional difference:
+
+- recurring costs use 5 categories in one row instead of 4
+
+Those categories should remain:
+
+- Housing / Utilities
+- Subscriptions
+- Insurance
+- Savings
+- Debt
+
+The category controls should feel like the expense category tiles:
+
+- color-coded
+- clearly selected when active
+- obvious at a glance
+
+The recurring-cost editor should aim for the same frictionless feel as expense entry rather than reading like a generic form.
 
 The final capstone of the Statistics area should be a qualitative discipline rank.
 

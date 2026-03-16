@@ -107,6 +107,14 @@ struct StatsView: View {
         )
     }
 
+    private var totalRecurringCost: Double {
+        recurringExpenseItems.reduce(0) { $0 + $1.amount }
+    }
+
+    private var hasFixedCostData: Bool {
+        !recurringExpenseItems.isEmpty
+    }
+
     private var trajectoryInterpretation: String {
         guard let firstPoint = trajectory.first, let lastPoint = trajectory.last else {
             return "Add a few expenses to see how your budget pace changes through the month."
@@ -216,7 +224,7 @@ struct StatsView: View {
 
     private var fixedCostDistributionInterpretation: String {
         guard let topCategory = fixedCostDistribution.first else {
-            return "Add recurring costs to see which fixed commitments shape your monthly finances."
+            return "Add fixed monthly costs to see which commitments shape your monthly finances."
         }
 
         return "\(topCategory.category.title) dominates your fixed financial structure."
@@ -224,7 +232,7 @@ struct StatsView: View {
 
     private var subscriptionLoadInterpretation: String {
         if subscriptionLoad.count == 0 {
-            return "You have no recurring subscriptions recorded yet."
+            return "You have no recurring subscription costs recorded yet."
         }
 
         if subscriptionLoad.count >= 5 || subscriptionLoad.totalMonthlyCost >= 100 {
@@ -236,7 +244,7 @@ struct StatsView: View {
 
     private var savingsStabilityInterpretation: String {
         if savingsStability.savingsAmount <= 0 {
-            return "Savings are not yet a meaningful part of your monthly structure."
+            return "No recurring savings contribution is shaping your monthly structure yet."
         }
 
         if savingsStability.monthlyIncome > 0, savingsStability.savingsShare >= 0.1 {
@@ -556,6 +564,45 @@ struct StatsView: View {
     @ViewBuilder
     private var totalSpendingSections: some View {
         Section {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Fixed Cost Structure")
+                    .font(.headline)
+
+                if hasFixedCostData {
+                    VStack(alignment: .leading, spacing: 6) {
+                        comparisonRow(title: "Recurring Costs", amount: totalRecurringCost)
+
+                        HStack {
+                            Text("Active Items")
+                                .foregroundStyle(.secondary)
+
+                            Spacer()
+
+                            Text("\(recurringExpenseItems.count)")
+                                .fontWeight(.medium)
+                                .foregroundStyle(.primary)
+                        }
+                    }
+
+                    Text("This view focuses on recurring monthly commitments before day-to-day spending begins.")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                } else {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("No fixed monthly costs are recorded yet.")
+                            .foregroundStyle(.secondary)
+
+                        Text("Add housing, Abos, insurance, savings, or debt items to understand your monthly financial structure.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .statsCardStyle()
+            .accessibilityIdentifier("stats.fixedCostOverviewModule")
+        }
+
+        Section {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Fixed Cost Ratio")
                     .font(.headline)
@@ -662,29 +709,40 @@ struct StatsView: View {
                 Text("Subscription Load")
                     .font(.headline)
 
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("\(subscriptionLoad.count)")
-                            .font(.system(size: 30, weight: .bold, design: .rounded))
-                        Text("Subscriptions")
-                            .font(.caption)
+                if subscriptionLoad.count == 0 {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("No subscription costs are recorded.")
+                            .foregroundStyle(.secondary)
+
+                        Text(subscriptionLoadInterpretation)
+                            .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
+                } else {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("\(subscriptionLoad.count)")
+                                .font(.system(size: 30, weight: .bold, design: .rounded))
+                            Text("Abos")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
 
-                    Spacer()
+                        Spacer()
 
-                    VStack(alignment: .trailing, spacing: 4) {
-                        Text(subscriptionLoad.totalMonthlyCost.formatted(.currency(code: currencyCode)))
-                            .font(.title3.weight(.semibold))
-                        Text("Monthly Cost")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        VStack(alignment: .trailing, spacing: 4) {
+                            Text(subscriptionLoad.totalMonthlyCost.formatted(.currency(code: currencyCode)))
+                                .font(.title3.weight(.semibold))
+                            Text("Monthly Cost")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
+
+                    Text(subscriptionLoadInterpretation)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
                 }
-
-                Text(subscriptionLoadInterpretation)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.secondary)
             }
             .statsCardStyle()
             .accessibilityIdentifier("stats.subscriptionLoadModule")
@@ -695,26 +753,37 @@ struct StatsView: View {
                 Text("Savings Stability")
                     .font(.headline)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    comparisonRow(title: "Monthly Savings", amount: savingsStability.savingsAmount)
+                if savingsStability.savingsAmount <= 0 {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("No recurring savings contribution is recorded.")
+                            .foregroundStyle(.secondary)
 
-                    if savingsStability.monthlyIncome > 0 {
-                        HStack {
-                            Text("Savings Share")
-                                .foregroundStyle(.secondary)
+                        Text(savingsStabilityInterpretation)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    VStack(alignment: .leading, spacing: 6) {
+                        comparisonRow(title: "Monthly Savings", amount: savingsStability.savingsAmount)
 
-                            Spacer()
+                        if savingsStability.monthlyIncome > 0 {
+                            HStack {
+                                Text("Savings Share")
+                                    .foregroundStyle(.secondary)
 
-                            Text(savingsStability.savingsShare.formatted(.percent.precision(.fractionLength(0))))
-                                .fontWeight(.medium)
-                                .foregroundStyle(.primary)
+                                Spacer()
+
+                                Text(savingsStability.savingsShare.formatted(.percent.precision(.fractionLength(0))))
+                                    .fontWeight(.medium)
+                                    .foregroundStyle(.primary)
+                            }
                         }
                     }
-                }
 
-                Text(savingsStabilityInterpretation)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.secondary)
+                    Text(savingsStabilityInterpretation)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
             }
             .statsCardStyle()
             .accessibilityIdentifier("stats.savingsStabilityModule")

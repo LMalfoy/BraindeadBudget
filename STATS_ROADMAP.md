@@ -19,6 +19,40 @@ Its purpose is not to add generic analytics. Its purpose is to help the user:
 - avoid dense dashboards
 - keep each iteration explainable and testable
 
+## Two Perspectives
+
+The Statistics area should eventually contain two separate perspectives:
+
+### Budget Spending
+
+This is the existing behavioral statistics view.
+
+It focuses on:
+
+- variable spending behavior
+- pacing
+- category distribution
+- temporal pattern
+- month comparisons
+- carryover and rollover
+- discipline rank
+
+### Total Spending
+
+This is a structural monthly-finance view.
+
+It should focus on recurring commitments and fixed monthly costs rather than day-to-day behavior.
+
+It should include only a very small recurring-cost category model:
+
+- Housing / Utilities
+- Subscriptions
+- Insurance
+- Savings
+- Debt
+
+This perspective should not affect the behavioral rank system directly.
+
 ## Planned Rollout
 
 ### Stats v1: Spending by Category
@@ -122,6 +156,66 @@ After the first complete rollout is in place, the next practical step is not a b
 - Month Comparison should expand into a trailing 6-month view
 
 These changes should sharpen the quality of behavioral feedback while keeping the Stats area understandable.
+
+## Planned Total Spending Rollout
+
+### Total Spending v1: Perspective Split
+
+Scope:
+
+- add a top switch between `Budget Spending` and `Total Spending`
+- preserve the existing behavioral view as-is
+- create the structural shell for fixed-cost statistics
+
+### Total Spending v2: Fixed Cost Ratio And Distribution
+
+Scope:
+
+- show what share of monthly income is already committed to fixed costs
+- show how fixed costs are distributed across the recurring-cost categories
+- include short interpretations
+
+### Total Spending v3: Subscription Load And Savings Stability
+
+Scope:
+
+- show subscription count and total monthly subscription cost
+- show savings amount and savings share when applicable
+- include short interpretations
+- support the Total Spending rollout with a clearer recurring-cost setup flow
+
+### Total Spending v4: Recurring Cost Entry Redesign
+
+Scope:
+
+- redesign recurring-cost entry to visually match the add-expense flow
+- keep 5 recurring-cost categories visible in one row
+- preserve the faster, category-first interaction pattern
+
+### Total Spending v5: Perspective Completion
+
+Scope:
+
+- treat the current `Total Spending` tab as a finished recurring-cost structure view
+- tighten wording, interpretations, and empty states where needed
+- make the perspective feel complete and intentional before larger product shifts
+
+Important:
+
+- this still does not represent true combined total spending
+- variable spending should be folded into a future redesign only after onboarding and image work
+
+## Later Structural Redesign
+
+After the recurring-cost perspective, mid-period onboarding, and the image/icon pass are complete, the product should revisit the statistics information architecture.
+
+At that point, `Total Spending` may need to evolve into one of these forms:
+
+- a true combined-spending perspective
+- a three-way split such as `Budget Spending`, `Fixed Costs`, and `Total Spending`
+- another structure that keeps behavioral and structural insights clear
+
+That redesign should be planned deliberately rather than appended onto the current fixed-cost rollout.
 
 ## Non-Goals For Early Stats
 

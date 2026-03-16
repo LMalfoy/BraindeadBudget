@@ -259,6 +259,22 @@ Why this matters:
 Risk:
 Low to medium
 
+## Current Forward Plan
+
+After the first major Statistics rollout, the remaining product work should proceed in this order:
+
+1. finish the current recurring-cost statistics perspective cleanly
+2. redesign onboarding for users who start in the middle of a month
+3. add visual identity work such as app icon and chess piece imagery
+4. only then revisit `Total Spending` as a true combined-spending perspective
+
+This order matters because:
+
+- recurring-cost statistics are already partially built and should be completed coherently
+- mid-period onboarding is a correctness issue that affects real users immediately
+- imagery should sit on top of stable product logic
+- true total spending likely requires a broader statistics redesign and should not be forced prematurely
+
 ### Iteration 1.0: Carryover Budgeting
 
 Goal:
@@ -756,3 +772,116 @@ Validation:
 - unit tests for the 6-month comparison series
 - manual review that interpretations still read naturally
 - UI verification that the Stats screen remains readable and not overcrowded
+
+### Iteration 2.2: Statistics Perspective Split
+
+Goal:
+Introduce a second statistics perspective for total spending without disrupting the existing behavioral statistics flow.
+
+Scope:
+
+- add a simple top-level switch inside Stats:
+  - `Budget Spending`
+  - `Total Spending`
+- keep the existing behavioral statistics under `Budget Spending`
+- create the structural shell for `Total Spending`
+- avoid adding too many fixed-cost modules at once
+
+Why this matters:
+
+- recurring financial commitments are part of real monthly finance structure
+- they should be visible in Stats without polluting the behavioral discipline analysis
+
+Risk:
+Medium
+
+Validation:
+
+- manual verification that switching between the two perspectives is clear
+- UI test for reaching both statistics perspectives
+- ensure the existing discipline-rank flow remains unchanged
+
+### Iteration 2.3: Fixed Cost Ratio And Distribution
+
+Goal:
+Make the Total Spending perspective useful by showing how much of the month is already structurally committed.
+
+Scope:
+
+- add `Fixed Cost Ratio`
+- add `Fixed Cost Distribution`
+- include plain-language interpretations
+- keep recurring categories limited to:
+  - housing / utilities
+  - subscriptions
+  - insurance
+  - savings
+  - debt
+
+Why this matters:
+
+- many users need to understand structural financial pressure before analyzing day-to-day spending
+
+Risk:
+Medium
+
+Validation:
+
+- unit tests for recurring-cost categorization and aggregation
+- visual review of the distribution chart
+- verify zero-fixed-cost and single-category states remain readable
+
+### Iteration 2.4: Subscription Load And Savings Stability
+
+Goal:
+Extend the Total Spending perspective with two focused fixed-cost insight modules and polish recurring-cost setup UX.
+
+Scope:
+
+- add `Subscription Load`
+- add `Savings Stability`
+- include clear plain-language interpretations
+- keep the Total Spending screen simple and constraint-oriented rather than analytical
+- make recurring-cost categorization faster and more visual
+- make budget-setup row editing feel more obviously tappable
+
+Why this matters:
+
+- subscriptions and savings are especially useful recurring-cost signals for many users
+- they improve financial structure awareness without creating a heavy finance dashboard
+- the recurring-cost setup flow should feel as immediate and legible as expense entry
+
+Risk:
+Low to medium
+
+Validation:
+
+- unit tests for subscription-count and savings-share logic
+- manual review that interpretations remain understandable and not overly judgmental
+
+### Iteration 2.5: Recurring Cost Entry Redesign
+
+Goal:
+Make recurring-cost entry feel as fast, visual, and frictionless as the main add-expense flow.
+
+Scope:
+
+- redesign recurring-cost entry to mirror the add-expense layout
+- keep recurring-cost category selection at the top
+- show all 5 recurring-cost categories in one row
+- use color-coded category tiles with a clear selected state
+- preserve the existing save/edit behavior while improving the entry experience
+
+Why this matters:
+
+- recurring-cost setup is now important enough that it should not feel like a generic fallback form
+- consistency with expense entry should make the app feel more intentional and easier to learn
+
+Risk:
+Low to medium
+
+Validation:
+
+- manual review of recurring-cost creation and editing flow
+- UI test for choosing a recurring-cost category and saving the item
+- confirm income editing remains unaffected
