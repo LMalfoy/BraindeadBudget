@@ -334,7 +334,13 @@ private struct BaselineItemDraft: Identifiable {
 }
 
 private struct BaselineItemEditorSheet: View {
+    private enum Field: Hashable {
+        case name
+        case amount
+    }
+
     @Environment(\.dismiss) private var dismiss
+    @FocusState private var focusedField: Field?
 
     let draft: BaselineItemDraft
     let currencyCode: String
@@ -380,22 +386,56 @@ private struct BaselineItemEditorSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    TextField(draft.kind.nameLabel, text: $name)
-                        .textInputAutocapitalization(.words)
-                        .accessibilityIdentifier("baselineItem.nameField")
-
-                    TextField("Amount", text: $amountText)
-                        .keyboardType(.decimalPad)
-                        .accessibilityIdentifier("baselineItem.amountField")
-
-                    if draft.kind == .recurringExpense {
+                if draft.kind == .recurringExpense {
+                    Section {
                         recurringCategoryTiles
+                    } header: {
+                        Text("Category")
                     }
-                } header: {
-                    Text(draft.kind.title)
-                } footer: {
-                    Text("Amounts are stored as monthly values in \(currencyCode).")
+
+                    Section {
+                        TextField(draft.kind.nameLabel, text: $name)
+                            .textInputAutocapitalization(.words)
+                            .submitLabel(.next)
+                            .focused($focusedField, equals: .name)
+                            .onSubmit {
+                                focusedField = .amount
+                            }
+                            .accessibilityIdentifier("baselineItem.nameField")
+
+                        TextField("Amount", text: $amountText)
+                            .keyboardType(.decimalPad)
+                            .submitLabel(.done)
+                            .focused($focusedField, equals: .amount)
+                            .onSubmit {
+                                guard !isSaveDisabled else {
+                                    return
+                                }
+
+                                saveItem()
+                            }
+                            .accessibilityIdentifier("baselineItem.amountField")
+                    } header: {
+                        Text("Recurring Cost")
+                    } footer: {
+                        Text("Amounts are stored as monthly values in \(currencyCode).")
+                    }
+                } else {
+                    Section {
+                        TextField(draft.kind.nameLabel, text: $name)
+                            .textInputAutocapitalization(.words)
+                            .focused($focusedField, equals: .name)
+                            .accessibilityIdentifier("baselineItem.nameField")
+
+                        TextField("Amount", text: $amountText)
+                            .keyboardType(.decimalPad)
+                            .focused($focusedField, equals: .amount)
+                            .accessibilityIdentifier("baselineItem.amountField")
+                    } header: {
+                        Text(draft.kind.title)
+                    } footer: {
+                        Text("Amounts are stored as monthly values in \(currencyCode).")
+                    }
                 }
             }
             .navigationTitle(draft.sourceID == nil ? "Add \(draft.kind.title)" : "Edit \(draft.kind.title)")
@@ -422,6 +462,13 @@ private struct BaselineItemEditorSheet: View {
             } message: {
                 Text(errorMessage ?? "Something went wrong.")
             }
+            .task {
+                guard focusedField == nil else {
+                    return
+                }
+
+                focusedField = .name
+            }
         }
     }
 
@@ -442,53 +489,32 @@ private struct BaselineItemEditorSheet: View {
     }
 
     private var recurringCategoryTiles: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Category")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
+        HStack(spacing: 8) {
+            ForEach(RecurringExpenseCategory.allCases) { category in
+                Button {
+                    recurringCategory = category
+                } label: {
+                    VStack(spacing: 8) {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(category.color.opacity(recurringCategory == category ? 0.95 : 0.22))
+                            .frame(height: 42)
+                            .overlay {
+                                Image(systemName: category.symbolName)
+                                    .font(.system(size: 17, weight: .semibold))
+                                    .foregroundStyle(recurringCategory == category ? .white : category.color)
+                            }
 
-            LazyVGrid(
-                columns: [
-                    GridItem(.flexible(), spacing: 10),
-                    GridItem(.flexible(), spacing: 10),
-                    GridItem(.flexible(), spacing: 10)
-                ],
-                spacing: 10
-            ) {
-                ForEach(RecurringExpenseCategory.allCases) { category in
-                    Button {
-                        recurringCategory = category
-                    } label: {
-                        VStack(spacing: 6) {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(category.color)
-                                .frame(height: 34)
-                                .overlay {
-                                    if recurringCategory == category {
-                                        Image(systemName: "checkmark")
-                                            .font(.caption.weight(.bold))
-                                            .foregroundStyle(.white)
-                                    }
-                                }
-
-                            Text(category.shortTitle)
-                                .font(.caption.weight(.medium))
-                                .foregroundStyle(.primary)
-                                .multilineTextAlignment(.center)
-                                .lineLimit(2)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(8)
-                        .background(Color(uiColor: .secondarySystemBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(recurringCategory == category ? category.color : Color.clear, lineWidth: 2)
-                        }
+                        Text(category.shortTitle)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.primary)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.75)
+                            .multilineTextAlignment(.center)
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("baselineItem.recurringCategory.\(category.rawValue)")
+                    .frame(maxWidth: .infinity)
                 }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("baselineItem.recurringCategory.\(category.rawValue)")
             }
         }
     }
@@ -540,6 +566,21 @@ private extension RecurringExpenseCategory {
             return .green
         case .debt:
             return .red
+        }
+    }
+
+    var symbolName: String {
+        switch self {
+        case .housingUtilities:
+            return "house.fill"
+        case .subscriptions:
+            return "play.rectangle.fill"
+        case .insurance:
+            return "shield.fill"
+        case .savings:
+            return "banknote.fill"
+        case .debt:
+            return "creditcard.fill"
         }
     }
 }
