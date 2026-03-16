@@ -116,7 +116,7 @@ final class PocketBudgetUITests: XCTestCase {
         XCTAssertTrue(app.otherElements["stats.carryoverModule"].firstMatch.waitForExistence(timeout: 5))
     }
 
-    func testStatsAreaShowsBudgetDisciplineRank() throws {
+    func testStatsAreaShowsBudgetProgression() throws {
         let app = XCUIApplication()
         launchAndCompleteBudgetSetup(in: app)
         addExpense(named: "Coffee", amount: "5.50", categoryIdentifier: "food", in: app)
@@ -125,8 +125,8 @@ final class PocketBudgetUITests: XCTestCase {
         XCTAssertTrue(statsButton.waitForExistence(timeout: 5))
         statsButton.tap()
 
-        XCTAssertTrue(app.staticTexts["Budget Discipline"].firstMatch.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Knight"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Budget Progression"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Pawn I"].firstMatch.waitForExistence(timeout: 5))
     }
 
     func testUserCanSwitchStatsPerspective() throws {

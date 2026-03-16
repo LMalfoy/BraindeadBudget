@@ -271,6 +271,7 @@ After the first major Statistics rollout, the remaining product work should proc
    - `Budget Spending`
    - `Recurring Spending`
 5. replace the current behavior-based discipline rank with a savings-based chess progression system
+6. refine the Stats module order and recurring-spending presentation after the progression redesign
 
 This order matters because:
 
@@ -279,6 +280,7 @@ This order matters because:
 - imagery should sit on top of stable product logic
 - the new total-spending overview should be designed deliberately rather than appended onto the old fixed-cost structure
 - the new progression system should sit on top of the revised statistics architecture, not the older behavior-based model
+- later stats-order refinements should happen after the progression model is settled
 
 ### Iteration 1.0: Carryover Budgeting
 

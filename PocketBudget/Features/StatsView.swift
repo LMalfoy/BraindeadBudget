@@ -104,8 +104,8 @@ struct StatsView: View {
         )
     }
 
-    private var disciplineEvaluation: BudgetDisciplineEvaluation {
-        BudgetStore.evaluateBudgetDiscipline(
+    private var progressionEvaluation: BudgetProgressionEvaluation {
+        BudgetStore.evaluateBudgetProgression(
             monthlyBudget: monthlyBudget,
             expenses: expenses,
             initialAvailableBudget: initialAvailableBudget,
@@ -419,49 +419,87 @@ struct StatsView: View {
 
     private var budgetDisciplineCard: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Budget Discipline")
+            Text("Budget Progression")
                 .font(.headline)
 
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 10) {
-                    Image(rankAssetName(for: disciplineEvaluation.rank))
-                        .resizable()
-                        .renderingMode(.original)
-                        .scaledToFit()
-                        .frame(width: 28, height: 28)
-                        .accessibilityHidden(true)
+            HStack(alignment: .top, spacing: 14) {
+                Image(progressionEvaluation.level.piece.assetName)
+                    .resizable()
+                    .renderingMode(.original)
+                    .scaledToFit()
+                    .frame(width: 32, height: 32)
+                    .accessibilityHidden(true)
 
-                    Text(disciplineEvaluation.rank.title)
-                        .font(.system(size: 34, weight: .bold, design: .rounded))
-                        .foregroundStyle(rankColor(for: disciplineEvaluation.rank))
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(progressionEvaluation.level.displayTitle)
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                        .foregroundStyle(pieceColor(for: progressionEvaluation.level.piece))
                         .accessibilityIdentifier("stats.rankValue")
-                }
 
-                Text(disciplineEvaluation.summary)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.secondary)
-                    .accessibilityIdentifier("stats.rankSummary")
+                    Text(progressionEvaluation.level.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+
+                    Text(progressionEvaluation.summary)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("stats.rankSummary")
+                }
             }
 
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Why")
-                    .font(.subheadline.weight(.semibold))
+            VStack(alignment: .leading, spacing: 12) {
+                comparisonRow(title: "Total XP", amountText: "\(progressionEvaluation.totalXP)")
 
-                ForEach(disciplineEvaluation.reasons) { reason in
-                    HStack(alignment: .top, spacing: 10) {
-                        Text(symbol(for: reason.tone))
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(reasonColor(for: reason.tone))
+                if let xpRequiredForNextLevel = progressionEvaluation.xpRequiredForNextLevel,
+                   let xpToNextLevel = progressionEvaluation.xpToNextLevel {
+                    ProgressView(
+                        value: Double(progressionEvaluation.progressXP),
+                        total: Double(max(xpRequiredForNextLevel, 1))
+                    )
+                    .tint(pieceColor(for: progressionEvaluation.level.piece))
+                    .accessibilityIdentifier("stats.progressionBar")
 
-                        Text(reason.message)
-                            .font(.subheadline)
+                    HStack {
+                        Text("Next Level")
                             .foregroundStyle(.secondary)
+
+                        Spacer()
+
+                        Text("\(xpToNextLevel) XP to go")
+                            .fontWeight(.medium)
+                            .foregroundStyle(.primary)
+                    }
+                } else {
+                    HStack {
+                        Text("Final State")
+                            .foregroundStyle(.secondary)
+
+                        Spacer()
+
+                        Text("King Unlocked")
+                            .fontWeight(.medium)
+                            .foregroundStyle(pieceColor(for: progressionEvaluation.level.piece))
                     }
                 }
             }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("“\(progressionEvaluation.level.quote)”")
+                    .font(.footnote)
+                    .italic()
+                    .foregroundStyle(.secondary)
+
+                Text("— \(progressionEvaluation.level.author)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Text(progressionEvaluation.periodNote)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
         }
         .statsCardStyle()
-        .accessibilityIdentifier("stats.rankModule")
+        .accessibilityIdentifier("stats.progressionModule")
     }
 
     @ViewBuilder
@@ -952,8 +990,8 @@ struct StatsView: View {
         return .primary
     }
 
-    private func rankColor(for rank: BudgetDisciplineRank) -> Color {
-        switch rank {
+    private func pieceColor(for piece: ChessProgressionPiece) -> Color {
+        switch piece {
         case .pawn:
             return .secondary
         case .knight:
@@ -969,45 +1007,6 @@ struct StatsView: View {
         }
     }
 
-    private func rankAssetName(for rank: BudgetDisciplineRank) -> String {
-        switch rank {
-        case .pawn:
-            return "ChessPawn"
-        case .knight:
-            return "ChessKnight"
-        case .bishop:
-            return "ChessBishop"
-        case .rook:
-            return "ChessRook"
-        case .queen:
-            return "ChessQueen"
-        case .king:
-            return "ChessKing"
-        }
-    }
-
-    private func reasonColor(for tone: BudgetReasonTone) -> Color {
-        switch tone {
-        case .positive:
-            return .green
-        case .neutral:
-            return .secondary
-        case .warning:
-            return .orange
-        }
-    }
-
-    private func symbol(for tone: BudgetReasonTone) -> String {
-        switch tone {
-        case .positive:
-            return "✓"
-        case .neutral:
-            return "•"
-        case .warning:
-            return "!"
-        }
-    }
-
     @ViewBuilder
     private func comparisonRow(title: String, amount: Double) -> some View {
         HStack {
@@ -1019,6 +1018,20 @@ struct StatsView: View {
             Text(amount.formatted(.currency(code: currencyCode)))
                 .fontWeight(.medium)
                 .foregroundStyle(title == "Difference" && amount > 0 ? .red : .primary)
+        }
+    }
+
+    @ViewBuilder
+    private func comparisonRow(title: String, amountText: String) -> some View {
+        HStack {
+            Text(title)
+                .foregroundStyle(.secondary)
+
+            Spacer()
+
+            Text(amountText)
+                .fontWeight(.medium)
+                .foregroundStyle(.primary)
         }
     }
 }

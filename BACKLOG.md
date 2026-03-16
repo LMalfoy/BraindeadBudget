@@ -45,6 +45,19 @@ Future improvements, polish items, and larger feature notes to revisit after the
 - The Stats spending-pattern module should later use finer temporal sampling than only early/mid/late month.
 - A useful next step is splitting the month into roughly 10 periods while still producing plain-language interpretations that describe where spending is mostly concentrated.
 - The Stats month-comparison module should later expand from current-vs-previous month into a trailing 6-month comparison view.
+- Reorder `Budget Spending` stats to:
+  - Spending by Category
+  - Budget Trajectory
+  - Month Comparison
+  - Carryover
+  - Spending Pattern
+- Reorder `Recurring Spending` stats to:
+  - Fixed Cost Distribution
+  - Fixed Cost Ratio
+  - Subscription Load
+  - Savings Stability
+- Remove the standalone `Fixed Cost Structure` card once its useful information is absorbed by the reordered recurring-spending view.
+- `Savings Stability` should later become a trailing 6-month view instead of only a current-month snapshot.
 
 ## Usage Rule
 

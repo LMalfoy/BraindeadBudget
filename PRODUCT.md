@@ -257,7 +257,69 @@ That progression should:
 - avoid judging harmless spending style differences such as timing or category concentration
 
 The progression system should use:
+- cumulative progress across periods
+- piece tiers with multiple sublevels
+- savings percentage as the core input
+- no punishment for harmless spending style differences
+- no rapid visual oscillation from month to month
 
+## Chess Progression Direction
+
+The future progression system should use chess pieces as long-term achievement tiers:
+
+- Pawn
+- Knight
+- Bishop
+- Rook
+- Queen
+- King
+
+Each piece tier should contain multiple sublevels before the next piece is reached.
+
+`King` should be treated differently:
+
+- it should be a single final unlocked state
+- it should not introduce another full 5-step ladder after `Queen V`
+
+The visible progression identity should include:
+
+- the chess piece
+- a Roman numeral rank within that piece tier
+- a small thematic subtitle for that rank
+- a short italicized chess quote with attribution
+
+The core rule should be simple:
+
+- the more budget the user saves by the end of the period, the more progress they earn
+
+Important:
+
+- this should reward budget outcome, not spending aesthetics
+- spending early in the month is not inherently bad
+- spending heavily in one category is not inherently bad
+- only the end-of-period result should matter for progression
+
+The system should feel:
+
+- cumulative
+- motivating
+- explainable
+- fair
+
+It should not feel moralizing or arbitrary.
+
+## Chess Progression Presentation
+
+The progression card should feel playful but still disciplined.
+
+For each progression state, the UI should show:
+
+- current piece tier
+- current sublevel in Roman numerals
+- sublevel title
+- one short italicized chess quote with author attribution
+
+This quote layer is decorative and thematic. It should enrich the tone of the app without hiding the core progression meaning.
 - cumulative progress across periods
 - no fake numerical score shown as the primary identity
 - chess-themed piece tiers and sublevels

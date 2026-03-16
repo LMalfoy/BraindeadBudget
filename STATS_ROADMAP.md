@@ -229,6 +229,73 @@ The new progression system should:
 - reward budget savings outcome instead
 - use cumulative progress across periods
 - use chess piece tiers plus named sublevels
+- allow strong months to produce multiple level-ups when deserved
+
+### Proposed Shape
+
+- `Pawn` tier with 5 sublevels
+- `Knight` tier with 5 sublevels
+- `Bishop` tier with 5 sublevels
+- `Rook` tier with 5 sublevels
+- `Queen` tier with 5 sublevels
+- `King` as one final unlocked state
+
+The visible UI should use Roman numerals for the sublevels and attach a named chess motif to each one.
+
+Current direction:
+
+- Pawn I: Isolated Pawn
+- Pawn II: Doubled Pawn
+- Pawn III: Connected Pawn
+- Pawn IV: Passed Pawn
+- Pawn V: Pawn on the Sixth Rank
+
+- Knight I: Corner Knight
+- Knight II: Developing Knight
+- Knight III: Central Knight
+- Knight IV: Outpost Knight
+- Knight V: Royal Forking Knight
+
+- Bishop I: Locked Bishop
+- Bishop II: Bishop Outside Pawn Chain
+- Bishop III: Fianchetto Bishop
+- Bishop IV: Long Diagonal Bishop
+- Bishop V: Bishop Pair
+
+- Rook I: Sleeping Rook
+- Rook II: Connected Rooks
+- Rook III: Open File Rook
+- Rook IV: Seventh Rank Rook
+- Rook V: Rook Battery
+
+- Queen I: Undeveloped Queen
+- Queen II: Developed Queen
+- Queen III: Centralized Queen
+- Queen IV: Dominant Queen
+- Queen V: Forking Queen
+
+- King: Crowned King
+  - "The king is a fighting piece."
+  - Jose Raul Capablanca
+
+Each sublevel should also include a short chess quote with attribution.
+
+The progression input should be the saved budget percentage at period end.
+
+The early direction for thresholds is:
+
+- Pawn levels: 5% progress steps
+- Knight levels: 6% progress steps
+- Bishop levels: 7% progress steps
+- Rook levels: 8% progress steps
+- Queen levels: 9% progress steps
+- King: final top state unlocked by a 10% level threshold
+
+The exact math should be implemented clearly and defensibly in code, but the product intent is:
+
+- better savings produce more progression
+- a strong month can advance more than one sublevel
+- progression should feel cumulative, not like a volatile monthly rating
 
 This progression layer should sit below the overview rather than leading the Statistics page.
 

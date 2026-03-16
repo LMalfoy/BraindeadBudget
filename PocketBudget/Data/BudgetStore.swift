@@ -110,26 +110,7 @@ struct SavingsStabilitySummary: Equatable {
     }
 }
 
-enum BudgetSignalStrength: Equatable {
-    case strong
-    case neutral
-    case weak
-}
-
-enum BudgetReasonTone: Equatable {
-    case positive
-    case neutral
-    case warning
-}
-
-struct BudgetDisciplineReason: Identifiable, Equatable {
-    let message: String
-    let tone: BudgetReasonTone
-
-    var id: String { message }
-}
-
-enum BudgetDisciplineRank: Int, CaseIterable, Equatable {
+enum ChessProgressionPiece: Int, CaseIterable, Equatable {
     case pawn
     case knight
     case bishop
@@ -154,34 +135,69 @@ enum BudgetDisciplineRank: Int, CaseIterable, Equatable {
         }
     }
 
-    var summary: String {
+    var assetName: String {
         switch self {
         case .pawn:
-            return "Your budget needs tighter control this month."
+            return "ChessPawn"
         case .knight:
-            return "Your budgeting pattern is still settling."
+            return "ChessKnight"
         case .bishop:
-            return "Your budgeting behavior is fairly balanced."
+            return "ChessBishop"
         case .rook:
-            return "Your budgeting behavior is stable this month."
+            return "ChessRook"
         case .queen:
-            return "Your budgeting discipline is strong this month."
+            return "ChessQueen"
         case .king:
-            return "Your budgeting discipline is exceptional right now."
+            return "ChessKing"
         }
-    }
-
-    func advanced(by step: Int) -> BudgetDisciplineRank {
-        let nextValue = min(max(rawValue + step, Self.pawn.rawValue), Self.king.rawValue)
-        return Self(rawValue: nextValue) ?? self
     }
 }
 
-struct BudgetDisciplineEvaluation: Equatable {
-    let rank: BudgetDisciplineRank
+struct ChessProgressionLevel: Equatable {
+    let piece: ChessProgressionPiece
+    let sublevel: Int?
+    let title: String
+    let quote: String
+    let author: String
+    let thresholdXP: Int
+
+    var displayTitle: String {
+        guard let sublevel else {
+            return piece.title
+        }
+
+        return "\(piece.title) \(romanNumeral(for: sublevel))"
+    }
+
+    private func romanNumeral(for value: Int) -> String {
+        switch value {
+        case 1: return "I"
+        case 2: return "II"
+        case 3: return "III"
+        case 4: return "IV"
+        case 5: return "V"
+        default: return "\(value)"
+        }
+    }
+}
+
+struct SavingsProgressMonth: Identifiable, Equatable {
+    let month: Date
+    let savedPercentage: Double
+    let earnedXP: Int
+
+    var id: Date { month }
+}
+
+struct BudgetProgressionEvaluation: Equatable {
+    let level: ChessProgressionLevel
+    let totalXP: Int
+    let progressXP: Int
+    let xpToNextLevel: Int?
+    let xpRequiredForNextLevel: Int?
+    let completedTrackedMonths: Int
     let summary: String
-    let reasons: [BudgetDisciplineReason]
-    let isSparseData: Bool
+    let periodNote: String
 }
 
 enum BudgetStoreError: LocalizedError {
@@ -918,35 +934,15 @@ struct BudgetStore {
         }
     }
 
-    static func evaluateBudgetDiscipline(
+    static func evaluateBudgetProgression(
         monthlyBudget: Double,
         expenses: [Expense],
         initialAvailableBudget: Double? = nil,
         initialBudgetAnchorMonth: Date? = nil,
         calendar: Calendar = .current,
         referenceDate: Date = .now
-    ) -> BudgetDisciplineEvaluation {
-        let currentMonthExpenses = currentMonthExpenses(
-            from: expenses,
-            calendar: calendar,
-            referenceDate: referenceDate
-        )
-        let comparison = monthComparison(
-            for: expenses,
-            calendar: calendar,
-            referenceDate: referenceDate
-        )
-        let categorySpending = categorySpending(
-            for: expenses,
-            calendar: calendar,
-            referenceDate: referenceDate
-        )
-        let temporalSpendingBuckets = temporalSpendingBuckets(
-            for: expenses,
-            calendar: calendar,
-            referenceDate: referenceDate
-        )
-        let trajectory = budgetTrajectory(
+    ) -> BudgetProgressionEvaluation {
+        let progressMonths = completedSavingsProgressMonths(
             monthlyBudget: monthlyBudget,
             expenses: expenses,
             initialAvailableBudget: initialAvailableBudget,
@@ -954,335 +950,196 @@ struct BudgetStore {
             calendar: calendar,
             referenceDate: referenceDate
         )
-        let carryover = previousMonthCarryover(
-            monthlyBudget: monthlyBudget,
-            expenses: expenses,
-            initialAvailableBudget: initialAvailableBudget,
-            initialBudgetAnchorMonth: initialBudgetAnchorMonth,
-            calendar: calendar,
-            referenceDate: referenceDate
-        )
-        let adjustedBudget = adjustedMonthlyBudget(
-            monthlyBudget: monthlyBudget,
-            expenses: expenses,
-            initialAvailableBudget: initialAvailableBudget,
-            initialBudgetAnchorMonth: initialBudgetAnchorMonth,
-            calendar: calendar,
-            referenceDate: referenceDate
-        )
-        let remaining = remainingBudget(
-            monthlyBudget: monthlyBudget,
-            expenses: expenses,
-            initialAvailableBudget: initialAvailableBudget,
-            initialBudgetAnchorMonth: initialBudgetAnchorMonth,
-            calendar: calendar,
-            referenceDate: referenceDate
-        )
+        let levels = chessProgressionLevels()
+        let totalXP = progressMonths.reduce(0) { $0 + $1.earnedXP }
+        let level = currentProgressionLevel(for: totalXP, levels: levels)
+        let nextLevel = nextProgressionLevel(after: level, levels: levels)
+        let progressXP = totalXP - level.thresholdXP
+        let xpToNextLevel = nextLevel.map { max($0.thresholdXP - totalXP, 0) }
+        let xpRequiredForNextLevel = nextLevel.map { max($0.thresholdXP - level.thresholdXP, 0) }
 
-        if currentMonthExpenses.count < 3 {
-            var reasons = [
-                BudgetDisciplineReason(
-                    message: "Not enough current-month data is available for a stable rank yet.",
-                    tone: .neutral
-                )
-            ]
+        let summary: String
+        let periodNote: String
 
-            if carryover > 0 {
-                reasons.append(BudgetDisciplineReason(
-                    message: "Carryover remains healthy.",
-                    tone: .positive
-                ))
-            } else if carryover < 0 {
-                reasons.append(BudgetDisciplineReason(
-                    message: "Carryover is reducing this month's room.",
-                    tone: .warning
-                ))
-            }
-
-            return BudgetDisciplineEvaluation(
-                rank: .knight,
-                summary: "Still learning your spending pattern.",
-                reasons: reasons,
-                isSparseData: true
-            )
+        if progressMonths.isEmpty {
+            summary = "Complete a full tracked period to start your chess progression."
+            periodNote = "Progress is awarded from completed periods only."
+        } else if let lastMonth = progressMonths.last, lastMonth.earnedXP > 0 {
+            summary = "Strong savings are steadily advancing your chess progression."
+            periodNote = "Your last completed period earned \(lastMonth.earnedXP) XP."
+        } else {
+            summary = "Progress grows when a completed period finishes with budget left over."
+            periodNote = "Your last completed period did not earn progression XP."
         }
 
-        let trajectoryStrength = disciplineTrajectoryStrength(
-            monthlyBudget: adjustedBudget,
-            currentMonthExpenses: currentMonthExpenses,
-            trajectory: trajectory,
-            calendar: calendar,
-            referenceDate: referenceDate
-        )
-        let categoryStrength = disciplineCategoryStrength(
-            currentMonthExpenses: currentMonthExpenses,
-            categorySpending: categorySpending
-        )
-        let temporalStrength = disciplineTemporalStrength(
-            currentMonthExpenses: currentMonthExpenses,
-            temporalSpendingBuckets: temporalSpendingBuckets
-        )
-        let comparisonStrength = disciplineComparisonStrength(comparison)
-        let carryoverStrength = disciplineCarryoverStrength(
-            carryover: carryover,
-            monthlyBudget: monthlyBudget
-        )
-        let leftoverStrength = disciplineLeftoverStrength(
-            adjustedBudget: adjustedBudget,
-            remaining: remaining
-        )
-
-        let baseRank = resolveBaseRank(
-            strengths: [
-                trajectoryStrength,
-                categoryStrength,
-                temporalStrength,
-                comparisonStrength
-            ]
-        )
-        let finalRank = resolveModifiedRank(
-            baseRank: baseRank,
-            carryoverStrength: carryoverStrength,
-            leftoverStrength: leftoverStrength
-        )
-
-        let reasons = [
-            disciplineReason(
-                for: trajectoryStrength,
-                strong: "Spending pace is close to plan.",
-                neutral: "Spending pace is not far from plan.",
-                weak: "Spending pace is running ahead of plan."
-            ),
-            disciplineReason(
-                for: categoryStrength,
-                strong: "Category distribution is balanced.",
-                neutral: "One category is starting to dominate.",
-                weak: "One category dominates spending heavily."
-            ),
-            disciplineReason(
-                for: temporalStrength,
-                strong: "Spending pattern is stable across the month.",
-                neutral: "Spending is somewhat clustered.",
-                weak: "Spending is heavily concentrated in one part of the month."
-            ),
-            disciplineReason(
-                for: comparisonStrength,
-                strong: "Spending is lower than last month.",
-                neutral: "Spending is close to last month.",
-                weak: "Spending is higher than last month."
-            ),
-            disciplineReason(
-                for: carryoverStrength,
-                strong: "Carryover remains healthy.",
-                neutral: "Carryover is neutral.",
-                weak: "Carryover is reducing this month's room."
-            ),
-            disciplineReason(
-                for: leftoverStrength,
-                strong: "You still have meaningful budget room left.",
-                neutral: "You still have some room left this month.",
-                weak: "You have exhausted this month's budget."
-            )
-        ]
-
-        return BudgetDisciplineEvaluation(
-            rank: finalRank,
-            summary: finalRank.summary,
-            reasons: reasons,
-            isSparseData: false
+        return BudgetProgressionEvaluation(
+            level: level,
+            totalXP: totalXP,
+            progressXP: progressXP,
+            xpToNextLevel: xpToNextLevel,
+            xpRequiredForNextLevel: xpRequiredForNextLevel,
+            completedTrackedMonths: progressMonths.count,
+            summary: summary,
+            periodNote: periodNote
         )
     }
 
-    private static func disciplineTrajectoryStrength(
+    private static func completedSavingsProgressMonths(
         monthlyBudget: Double,
-        currentMonthExpenses: [Expense],
-        trajectory: [BudgetTrajectoryPoint],
+        expenses: [Expense],
+        initialAvailableBudget: Double?,
+        initialBudgetAnchorMonth: Date?,
         calendar: Calendar,
         referenceDate: Date
-    ) -> BudgetSignalStrength {
-        guard monthlyBudget > 0, !currentMonthExpenses.isEmpty, !trajectory.isEmpty else {
-            return .neutral
+    ) -> [SavingsProgressMonth] {
+        let currentMonth = monthAnchor(for: referenceDate, calendar: calendar)
+        let startMonth: Date?
+
+        if let initialBudgetAnchorMonth {
+            startMonth = monthAnchor(for: initialBudgetAnchorMonth, calendar: calendar)
+        } else if let earliestExpense = expenses.map(\.date).min() {
+            startMonth = monthAnchor(for: earliestExpense, calendar: calendar)
+        } else {
+            startMonth = nil
         }
 
-        let day = calendar.component(.day, from: referenceDate)
-        let daysInMonth = calendar.range(of: .day, in: .month, for: referenceDate)?.count ?? 30
-        let monthProgress = Double(day) / Double(max(daysInMonth, 1))
-        let spentRatio = totalSpent(for: currentMonthExpenses) / max(monthlyBudget, 1)
-        let pacingGap = spentRatio - monthProgress
-
-        if pacingGap <= 0.05 {
-            return .strong
+        guard let startMonth else {
+            return []
         }
 
-        if pacingGap <= 0.18 {
-            return .neutral
+        var progressMonths: [SavingsProgressMonth] = []
+        var month = startMonth
+
+        while month < currentMonth {
+            let monthExpenses = Self.expenses(
+                from: expenses,
+                inMonthContaining: month,
+                calendar: calendar
+            )
+            let adjustedBudget = adjustedMonthlyBudget(
+                monthlyBudget: monthlyBudget,
+                expenses: expenses,
+                initialAvailableBudget: initialAvailableBudget,
+                initialBudgetAnchorMonth: initialBudgetAnchorMonth,
+                calendar: calendar,
+                referenceDate: month
+            )
+            let remaining = remainingBudget(
+                monthlyBudget: monthlyBudget,
+                expenses: expenses,
+                initialAvailableBudget: initialAvailableBudget,
+                initialBudgetAnchorMonth: initialBudgetAnchorMonth,
+                calendar: calendar,
+                referenceDate: month
+            )
+
+            let savedPercentage: Double
+            if monthExpenses.isEmpty || adjustedBudget <= 0 || remaining <= 0 {
+                savedPercentage = 0
+            } else {
+                savedPercentage = (remaining / adjustedBudget) * 100
+            }
+
+            progressMonths.append(
+                SavingsProgressMonth(
+                    month: month,
+                    savedPercentage: max(savedPercentage, 0),
+                    earnedXP: max(Int(floor(savedPercentage)), 0)
+                )
+            )
+
+            guard let nextMonth = calendar.date(byAdding: .month, value: 1, to: month) else {
+                break
+            }
+            month = nextMonth
         }
 
-        return .weak
+        return progressMonths
     }
 
-    private static func disciplineCategoryStrength(
-        currentMonthExpenses: [Expense],
-        categorySpending: [CategorySpendingSummary]
-    ) -> BudgetSignalStrength {
-        let total = totalSpent(for: currentMonthExpenses)
-        guard total > 0, let topCategory = categorySpending.first else {
-            return .neutral
+    private static func chessProgressionLevels() -> [ChessProgressionLevel] {
+        var thresholdXP = 0
+        var levels: [ChessProgressionLevel] = []
+
+        func appendLevel(
+            piece: ChessProgressionPiece,
+            sublevel: Int?,
+            title: String,
+            quote: String,
+            author: String,
+            nextCost: Int?
+        ) {
+            levels.append(
+                ChessProgressionLevel(
+                    piece: piece,
+                    sublevel: sublevel,
+                    title: title,
+                    quote: quote,
+                    author: author,
+                    thresholdXP: thresholdXP
+                )
+            )
+
+            if let nextCost {
+                thresholdXP += nextCost
+            }
         }
 
-        let dominance = topCategory.total / total
+        appendLevel(piece: .pawn, sublevel: 1, title: "Isolated Pawn", quote: "The isolated pawn is a weakness — but also a source of dynamic play.", author: "Garry Kasparov", nextCost: 5)
+        appendLevel(piece: .pawn, sublevel: 2, title: "Doubled Pawn", quote: "Doubled pawns are often weak, but they may open important files.", author: "Siegbert Tarrasch", nextCost: 5)
+        appendLevel(piece: .pawn, sublevel: 3, title: "Connected Pawn", quote: "Connected pawns support each other like soldiers in formation.", author: "Aron Nimzowitsch", nextCost: 5)
+        appendLevel(piece: .pawn, sublevel: 4, title: "Passed Pawn", quote: "A passed pawn must be pushed.", author: "Aron Nimzowitsch", nextCost: 5)
+        appendLevel(piece: .pawn, sublevel: 5, title: "Pawn on the Sixth Rank", quote: "A pawn on the sixth rank is stronger than a knight.", author: "Aaron Nimzowitsch", nextCost: 5)
 
-        if dominance <= 0.45 {
-            return .strong
-        }
+        appendLevel(piece: .knight, sublevel: 1, title: "Corner Knight", quote: "A knight on the rim is dim.", author: "Reuben Fine", nextCost: 6)
+        appendLevel(piece: .knight, sublevel: 2, title: "Developing Knight", quote: "Develop your knights before the bishops.", author: "Chess Opening Principle", nextCost: 6)
+        appendLevel(piece: .knight, sublevel: 3, title: "Central Knight", quote: "A knight in the center is a powerful piece.", author: "Jose Raul Capablanca", nextCost: 6)
+        appendLevel(piece: .knight, sublevel: 4, title: "Outpost Knight", quote: "A knight firmly posted in the enemy camp is a bone in the throat.", author: "Aron Nimzowitsch", nextCost: 6)
+        appendLevel(piece: .knight, sublevel: 5, title: "Royal Forking Knight", quote: "The knight is the most cunning piece.", author: "Savielly Tartakower", nextCost: 6)
 
-        if dominance <= 0.65 {
-            return .neutral
-        }
+        appendLevel(piece: .bishop, sublevel: 1, title: "Locked Bishop", quote: "Bad bishops defend good pawns.", author: "Chess Proverb", nextCost: 7)
+        appendLevel(piece: .bishop, sublevel: 2, title: "Bishop Outside Pawn Chain", quote: "A bishop outside the pawn chain breathes freely.", author: "Chess Strategy Principle", nextCost: 7)
+        appendLevel(piece: .bishop, sublevel: 3, title: "Fianchetto Bishop", quote: "The fianchettoed bishop is a powerful defender and attacker.", author: "Bobby Fischer", nextCost: 7)
+        appendLevel(piece: .bishop, sublevel: 4, title: "Long Diagonal Bishop", quote: "A bishop on the long diagonal controls the board.", author: "Chess Strategy Principle", nextCost: 7)
+        appendLevel(piece: .bishop, sublevel: 5, title: "Bishop Pair", quote: "The two bishops are a formidable force.", author: "Wilhelm Steinitz", nextCost: 7)
 
-        return .weak
+        appendLevel(piece: .rook, sublevel: 1, title: "Sleeping Rook", quote: "Rooks belong behind passed pawns.", author: "Siegbert Tarrasch", nextCost: 8)
+        appendLevel(piece: .rook, sublevel: 2, title: "Connected Rooks", quote: "Connected rooks double their strength.", author: "Chess Principle", nextCost: 8)
+        appendLevel(piece: .rook, sublevel: 3, title: "Open File Rook", quote: "Place your rooks on open files.", author: "Jose Raul Capablanca", nextCost: 8)
+        appendLevel(piece: .rook, sublevel: 4, title: "Seventh Rank Rook", quote: "A rook on the seventh rank is worth a pawn.", author: "Chess Maxim", nextCost: 8)
+        appendLevel(piece: .rook, sublevel: 5, title: "Rook Battery", quote: "Doubling rooks creates irresistible pressure.", author: "Chess Strategy Principle", nextCost: 8)
+
+        appendLevel(piece: .queen, sublevel: 1, title: "Undeveloped Queen", quote: "Do not bring your queen out too early.", author: "Chess Opening Principle", nextCost: 9)
+        appendLevel(piece: .queen, sublevel: 2, title: "Developed Queen", quote: "The queen is strongest when supported by the army.", author: "Emanuel Lasker", nextCost: 9)
+        appendLevel(piece: .queen, sublevel: 3, title: "Centralized Queen", quote: "A centralized queen commands the board.", author: "Chess Strategy Principle", nextCost: 9)
+        appendLevel(piece: .queen, sublevel: 4, title: "Dominant Queen", quote: "The queen combines the power of rook and bishop.", author: "Chess Maxim", nextCost: 9)
+        appendLevel(piece: .queen, sublevel: 5, title: "Forking Queen", quote: "A queen fork can decide the game instantly.", author: "Chess Tactic Principle", nextCost: 10)
+
+        appendLevel(piece: .king, sublevel: nil, title: "Crowned King", quote: "The king is a fighting piece.", author: "Jose Raul Capablanca", nextCost: nil)
+
+        return levels
     }
 
-    private static func disciplineTemporalStrength(
-        currentMonthExpenses: [Expense],
-        temporalSpendingBuckets: [TemporalSpendingBucket]
-    ) -> BudgetSignalStrength {
-        let total = totalSpent(for: currentMonthExpenses)
-        guard total > 0,
-              temporalSpendingBuckets.count >= 2,
-              let strongestBucket = temporalSpendingBuckets.max(by: { $0.total < $1.total }) else {
-            return .neutral
-        }
-
-        let concentration = strongestBucket.total / total
-
-        if concentration <= 0.22 {
-            return .strong
-        }
-
-        if concentration <= 0.35 {
-            return .neutral
-        }
-
-        return .weak
+    private static func currentProgressionLevel(
+        for totalXP: Int,
+        levels: [ChessProgressionLevel]
+    ) -> ChessProgressionLevel {
+        levels.last(where: { totalXP >= $0.thresholdXP }) ?? levels[0]
     }
 
-    private static func disciplineComparisonStrength(_ comparison: MonthComparisonSummary) -> BudgetSignalStrength {
-        guard comparison.previousMonthTotal > 0 else {
-            return .neutral
+    private static func nextProgressionLevel(
+        after currentLevel: ChessProgressionLevel,
+        levels: [ChessProgressionLevel]
+    ) -> ChessProgressionLevel? {
+        guard let currentIndex = levels.firstIndex(of: currentLevel), currentIndex + 1 < levels.count else {
+            return nil
         }
 
-        let relativeChange = comparison.difference / max(comparison.previousMonthTotal, 1)
-
-        if relativeChange <= -0.1 {
-            return .strong
-        }
-
-        if relativeChange < 0.1 {
-            return .neutral
-        }
-
-        return .weak
+        return levels[currentIndex + 1]
     }
 
-    private static func disciplineCarryoverStrength(
-        carryover: Double,
-        monthlyBudget: Double
-    ) -> BudgetSignalStrength {
-        let threshold = max(abs(monthlyBudget) * 0.05, 1)
-
-        if carryover > threshold {
-            return .strong
-        }
-
-        if carryover < -threshold {
-            return .weak
-        }
-
-        return .neutral
-    }
-
-    private static func disciplineLeftoverStrength(
-        adjustedBudget: Double,
-        remaining: Double
-    ) -> BudgetSignalStrength {
-        guard adjustedBudget > 0 else {
-            return remaining >= 0 ? .neutral : .weak
-        }
-
-        let leftoverRatio = remaining / adjustedBudget
-
-        if leftoverRatio >= 0.2 {
-            return .strong
-        }
-
-        if leftoverRatio >= 0 {
-            return .neutral
-        }
-
-        return .weak
-    }
-
-    private static func resolveBaseRank(strengths: [BudgetSignalStrength]) -> BudgetDisciplineRank {
-        let strongCount = strengths.filter { $0 == .strong }.count
-        let weakCount = strengths.filter { $0 == .weak }.count
-
-        if weakCount >= 2 {
-            return .pawn
-        }
-
-        if strongCount == 4 {
-            return .queen
-        }
-
-        if strongCount == 3 && weakCount == 0 {
-            return .rook
-        }
-
-        if strongCount >= 1 && weakCount == 0 {
-            return .bishop
-        }
-
-        return .knight
-    }
-
-    private static func resolveModifiedRank(
-        baseRank: BudgetDisciplineRank,
-        carryoverStrength: BudgetSignalStrength,
-        leftoverStrength: BudgetSignalStrength
-    ) -> BudgetDisciplineRank {
-        let positiveModifiers = [carryoverStrength, leftoverStrength].filter { $0 == .strong }.count
-        let negativeModifiers = [carryoverStrength, leftoverStrength].filter { $0 == .weak }.count
-
-        if positiveModifiers >= 2 && baseRank == .queen {
-            return .king
-        }
-
-        if positiveModifiers >= 1 && negativeModifiers == 0 {
-            return baseRank.advanced(by: 1)
-        }
-
-        if negativeModifiers >= 1 && positiveModifiers == 0 {
-            return baseRank.advanced(by: -1)
-        }
-
-        return baseRank
-    }
-
-    private static func disciplineReason(
-        for strength: BudgetSignalStrength,
-        strong: String,
-        neutral: String,
-        weak: String
-    ) -> BudgetDisciplineReason {
-        switch strength {
-        case .strong:
-            return BudgetDisciplineReason(message: strong, tone: .positive)
-        case .neutral:
-            return BudgetDisciplineReason(message: neutral, tone: .neutral)
-        case .weak:
-            return BudgetDisciplineReason(message: weak, tone: .warning)
-        }
+    private static func monthAnchor(for date: Date, calendar: Calendar) -> Date {
+        calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? date
     }
 
     func currentMonthExpenses(from expenses: [Expense], referenceDate: Date = .now) -> [Expense] {

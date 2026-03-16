@@ -492,7 +492,7 @@ final class BudgetCalculationTests: XCTestCase {
         }
     }
 
-    func testBudgetDisciplineFallsBackToKnightWhenDataIsSparse() {
+    func testBudgetProgressionStartsAtPawnIWithoutCompletedTrackedPeriods() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
 
@@ -501,62 +501,77 @@ final class BudgetCalculationTests: XCTestCase {
             Expense(title: "Coffee", category: .food, amount: 12, date: makeDate(year: 2026, month: 6, day: 4, calendar: calendar))
         ]
 
-        let evaluation = BudgetStore.evaluateBudgetDiscipline(
+        let evaluation = BudgetStore.evaluateBudgetProgression(
             monthlyBudget: 100,
             expenses: expenses,
             calendar: calendar,
             referenceDate: referenceDate
         )
 
-        XCTAssertEqual(evaluation.rank, .knight)
-        XCTAssertTrue(evaluation.isSparseData)
-        XCTAssertEqual(evaluation.summary, "Still learning your spending pattern.")
+        XCTAssertEqual(evaluation.level.piece, .pawn)
+        XCTAssertEqual(evaluation.level.sublevel, 1)
+        XCTAssertEqual(evaluation.totalXP, 0)
+        XCTAssertEqual(evaluation.completedTrackedMonths, 0)
+        XCTAssertEqual(evaluation.summary, "Complete a full tracked period to start your chess progression.")
     }
 
-    func testBudgetDisciplineCanReachKingForStrongStableBehavior() {
+    func testBudgetProgressionCanAdvanceTwoPawnLevelsFromOneStrongMonth() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
 
         let referenceDate = makeDate(year: 2026, month: 6, day: 26, calendar: calendar)
         let expenses = [
-            Expense(title: "May Groceries", category: .food, amount: 80, date: makeDate(year: 2026, month: 5, day: 10, calendar: calendar)),
-            Expense(title: "Coffee", category: .food, amount: 10, date: makeDate(year: 2026, month: 6, day: 5, calendar: calendar)),
-            Expense(title: "Train", category: .transport, amount: 15, date: makeDate(year: 2026, month: 6, day: 15, calendar: calendar)),
-            Expense(title: "Soap", category: .household, amount: 20, date: makeDate(year: 2026, month: 6, day: 25, calendar: calendar))
+            Expense(title: "May Groceries", category: .food, amount: 90, date: makeDate(year: 2026, month: 5, day: 10, calendar: calendar))
         ]
 
-        let evaluation = BudgetStore.evaluateBudgetDiscipline(
+        let evaluation = BudgetStore.evaluateBudgetProgression(
             monthlyBudget: 100,
             expenses: expenses,
             calendar: calendar,
             referenceDate: referenceDate
         )
 
-        XCTAssertEqual(evaluation.rank, .king)
-        XCTAssertFalse(evaluation.isSparseData)
+        XCTAssertEqual(evaluation.level.piece, .pawn)
+        XCTAssertEqual(evaluation.level.sublevel, 3)
+        XCTAssertEqual(evaluation.totalXP, 10)
+        XCTAssertEqual(evaluation.completedTrackedMonths, 1)
     }
 
-    func testBudgetDisciplineDropsToPawnForUnhealthyPattern() {
+    func testBudgetProgressionCanReachKingAfterSustainedSavings() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
 
-        let referenceDate = makeDate(year: 2026, month: 6, day: 8, calendar: calendar)
-        let expenses = [
-            Expense(title: "May Dinner", category: .food, amount: 90, date: makeDate(year: 2026, month: 5, day: 12, calendar: calendar)),
-            Expense(title: "Concert", category: .fun, amount: 70, date: makeDate(year: 2026, month: 6, day: 2, calendar: calendar)),
-            Expense(title: "Games", category: .fun, amount: 60, date: makeDate(year: 2026, month: 6, day: 3, calendar: calendar)),
-            Expense(title: "Bar", category: .fun, amount: 50, date: makeDate(year: 2026, month: 6, day: 4, calendar: calendar))
-        ]
+        let referenceDate = makeDate(year: 2026, month: 7, day: 12, calendar: calendar)
+        let startMonth = makeDate(year: 2025, month: 1, day: 1, calendar: calendar)
+        let expenses = (0..<18).compactMap { offset -> Expense? in
+            guard let month = calendar.date(byAdding: .month, value: offset, to: startMonth) else {
+                return nil
+            }
 
-        let evaluation = BudgetStore.evaluateBudgetDiscipline(
+            return Expense(
+                title: "Tracked \(offset)",
+                category: .food,
+                amount: 90,
+                date: makeDate(
+                    year: calendar.component(.year, from: month),
+                    month: calendar.component(.month, from: month),
+                    day: 10,
+                    calendar: calendar
+                )
+            )
+        }
+
+        let evaluation = BudgetStore.evaluateBudgetProgression(
             monthlyBudget: 100,
             expenses: expenses,
             calendar: calendar,
             referenceDate: referenceDate
         )
 
-        XCTAssertEqual(evaluation.rank, .pawn)
-        XCTAssertFalse(evaluation.isSparseData)
+        XCTAssertEqual(evaluation.level.piece, .king)
+        XCTAssertNil(evaluation.level.sublevel)
+        XCTAssertGreaterThanOrEqual(evaluation.totalXP, 176)
+        XCTAssertNil(evaluation.xpToNextLevel)
     }
 
     func testTemporalSpendingBucketsSplitMonthIntoFinerSampling() {
