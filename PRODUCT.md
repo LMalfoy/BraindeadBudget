@@ -241,6 +241,45 @@ That means:
 
 Smart input ideas such as single-line parsing may still be considered later, but they are not a near-term priority unless real usage clearly demands them.
 
+## Statistics Direction
+
+The second major product pillar of PocketBudget should be a dedicated Statistics area.
+
+This area should not exist as decorative analytics. It should function as a behavioral feedback system that helps the user:
+
+- understand spending behavior
+- detect patterns early
+- regulate spending more intentionally
+- compare current behavior against recent periods
+
+The Statistics area should follow these principles:
+
+- prioritize behavioral usefulness over analytical complexity
+- keep charts and insights easy to understand
+- require a short plain-language interpretation for every module
+- build iteratively in small, low-risk steps
+- reuse the existing data model whenever possible
+
+The long-term Statistics modules are:
+
+- Budget Trajectory / Remaining Budget Trend
+- Spending by Category
+- Spending by Day / Temporal Pattern
+- Month-over-Month Comparison
+- Budget Discipline Score
+
+The Budget Discipline Score should be a lightweight gamified summary rather than a heavy scoring system.
+
+The intended thematic progression is:
+
+- Pawn
+- Knight
+- Bishop
+- Queen
+- King
+
+That chess-role layer should only be introduced after the underlying statistics modules are already meaningful enough to support a score.
+
 ## Stabilization Direction
 
 Before expanding the app with larger new surfaces such as settings or expense history, the product should go through an explicit stabilization pass.

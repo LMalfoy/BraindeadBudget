@@ -392,6 +392,34 @@ Validation:
 - UI tests for opening and using history after the presentation change
 - regression checks that edit/delete behavior remains unchanged
 
+### Iteration 1.5: Statistics Foundation
+
+Goal:
+Create the Statistics area and deliver the first useful behavioral module without overextending the feature.
+
+Scope:
+
+- add a dedicated Stats surface to the app structure
+- implement only current-month Spending by Category
+- include a short plain-language interpretation
+- handle empty states cleanly
+- keep the design aligned with the rest of the app
+
+Why this matters:
+
+- it opens the second major product pillar
+- it validates the statistics screen structure and interpretation pattern
+- it adds insight without committing to the full analytics roadmap at once
+
+Risk:
+Medium
+
+Validation:
+
+- unit tests for any extracted statistics helpers
+- UI test for reaching the Stats area
+- manual review of chart readability and interpretation clarity
+
 Validation:
 
 - manual review of onboarding-to-settings behavior

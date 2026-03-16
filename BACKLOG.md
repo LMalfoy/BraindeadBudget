@@ -32,6 +32,9 @@ Future improvements, polish items, and larger feature notes to revisit after the
 - The app should adopt a clear versioning scheme that matches actual product maturity rather than the informal iteration labels used during development.
 - Settings should always show the real current app version from the active release scheme, not a placeholder like `1.0`.
 - Decide how internal iteration numbers map to public versions before the first real release.
+- The future Budget Discipline Score should use chess-role progression: Pawn, Knight, Bishop, Queen, King.
+- Chess-role gamification should only be added after the core statistics modules are stable and meaningful.
+- Before shipping chess-piece artwork, verify the exact license and attribution requirements for the chosen asset files.
 - In expense history, the left/right month arrows should always navigate to adjacent months even when no entries exist there.
 - Empty months should still be reachable and display as valid periods; data for that month only exists once the user records entries there.
 

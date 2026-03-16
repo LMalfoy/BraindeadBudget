@@ -18,6 +18,13 @@ struct ContentView: View {
             }
 
             NavigationStack {
+                StatsView()
+            }
+            .tabItem {
+                Label("Stats", systemImage: "chart.pie")
+            }
+
+            NavigationStack {
                 SettingsSheet()
             }
             .tabItem {
