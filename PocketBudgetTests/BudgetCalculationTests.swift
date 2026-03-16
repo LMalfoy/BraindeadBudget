@@ -562,6 +562,30 @@ final class BudgetCalculationTests: XCTestCase {
         }
     }
 
+    func testFixedCostRatioAndDistributionUseRecurringCostCategories() {
+        let incomeItems = [
+            IncomeItem(name: "Salary", amount: 3000)
+        ]
+        let recurringExpenseItems = [
+            RecurringExpenseItem(name: "Rent", amount: 1200, category: .housingUtilities),
+            RecurringExpenseItem(name: "Netflix", amount: 20, category: .subscriptions),
+            RecurringExpenseItem(name: "Insurance", amount: 80, category: .insurance),
+            RecurringExpenseItem(name: "Savings", amount: 200, category: .savings)
+        ]
+
+        let ratio = BudgetStore.fixedCostRatio(
+            incomeItems: incomeItems,
+            recurringExpenseItems: recurringExpenseItems
+        )
+        let distribution = BudgetStore.fixedCostDistribution(for: recurringExpenseItems)
+
+        XCTAssertEqual(ratio.monthlyIncome, 3000, accuracy: 0.001)
+        XCTAssertEqual(ratio.recurringTotal, 1500, accuracy: 0.001)
+        XCTAssertEqual(ratio.recurringShare, 0.5, accuracy: 0.001)
+        XCTAssertEqual(distribution.first, FixedCostCategorySummary(category: .housingUtilities, total: 1200))
+        XCTAssertEqual(distribution.count, 4)
+    }
+
     private func makeDate(year: Int, month: Int, day: Int, calendar: Calendar) -> Date {
         calendar.date(from: DateComponents(year: year, month: month, day: day))!
     }

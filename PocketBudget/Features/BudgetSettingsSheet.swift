@@ -105,12 +105,17 @@ struct BudgetSettingsSheet: View {
                 }
             }
             .sheet(item: $activeEditor) { draft in
-                BaselineItemEditorSheet(draft: draft, currencyCode: currencyCode) { name, amount in
+                BaselineItemEditorSheet(draft: draft, currencyCode: currencyCode) { name, amount, category in
                     switch draft.kind {
                     case .income:
                         try store.saveIncomeItem(id: draft.sourceID, name: name, amount: amount)
                     case .recurringExpense:
-                        try store.saveRecurringExpenseItem(id: draft.sourceID, name: name, amount: amount)
+                        try store.saveRecurringExpenseItem(
+                            id: draft.sourceID,
+                            name: name,
+                            amount: amount,
+                            category: category ?? .housingUtilities
+                        )
                     }
                 }
             }
@@ -295,12 +300,14 @@ private struct BaselineItemDraft: Identifiable {
     let sourceID: UUID?
     let name: String
     let amount: Double?
+    let recurringCategory: RecurringExpenseCategory?
 
     init(kind: BaselineItemKind) {
         self.kind = kind
         sourceID = nil
         name = ""
         amount = nil
+        recurringCategory = kind == .recurringExpense ? .housingUtilities : nil
     }
 
     init(item: IncomeItem) {
@@ -308,6 +315,7 @@ private struct BaselineItemDraft: Identifiable {
         sourceID = item.id
         name = item.name
         amount = item.amount
+        recurringCategory = nil
     }
 
     init(item: RecurringExpenseItem) {
@@ -315,6 +323,7 @@ private struct BaselineItemDraft: Identifiable {
         sourceID = item.id
         name = item.name
         amount = item.amount
+        recurringCategory = item.category
     }
 }
 
@@ -323,22 +332,24 @@ private struct BaselineItemEditorSheet: View {
 
     let draft: BaselineItemDraft
     let currencyCode: String
-    let onSave: (String, Double) throws -> Void
+    let onSave: (String, Double, RecurringExpenseCategory?) throws -> Void
 
     @State private var name: String
     @State private var amountText: String
+    @State private var recurringCategory: RecurringExpenseCategory
     @State private var errorMessage: String?
 
     init(
         draft: BaselineItemDraft,
         currencyCode: String,
-        onSave: @escaping (String, Double) throws -> Void
+        onSave: @escaping (String, Double, RecurringExpenseCategory?) throws -> Void
     ) {
         self.draft = draft
         self.currencyCode = currencyCode
         self.onSave = onSave
         _name = State(initialValue: draft.name)
         _amountText = State(initialValue: Self.startingText(for: draft.amount))
+        _recurringCategory = State(initialValue: draft.recurringCategory ?? .housingUtilities)
     }
 
     private var parsedAmount: Double? {
@@ -371,6 +382,15 @@ private struct BaselineItemEditorSheet: View {
                     TextField("Amount", text: $amountText)
                         .keyboardType(.decimalPad)
                         .accessibilityIdentifier("baselineItem.amountField")
+
+                    if draft.kind == .recurringExpense {
+                        Picker("Category", selection: $recurringCategory) {
+                            ForEach(RecurringExpenseCategory.allCases) { category in
+                                Text(category.title).tag(category)
+                            }
+                        }
+                        .accessibilityIdentifier("baselineItem.recurringCategoryPicker")
+                    }
                 } header: {
                     Text(draft.kind.title)
                 } footer: {
@@ -413,7 +433,7 @@ private struct BaselineItemEditorSheet: View {
         }
 
         do {
-            try onSave(name, amount)
+            try onSave(name, amount, draft.kind == .recurringExpense ? recurringCategory : nil)
             dismiss()
         } catch {
             errorMessage = error.localizedDescription

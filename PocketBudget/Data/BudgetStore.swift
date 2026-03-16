@@ -78,6 +78,23 @@ struct MonthlySpendingPoint: Identifiable, Equatable {
     var id: Date { month }
 }
 
+struct FixedCostCategorySummary: Identifiable, Equatable {
+    let category: RecurringExpenseCategory
+    let total: Double
+
+    var id: RecurringExpenseCategory { category }
+}
+
+struct FixedCostRatioSummary: Equatable {
+    let monthlyIncome: Double
+    let recurringTotal: Double
+
+    var recurringShare: Double {
+        guard monthlyIncome > 0 else { return 0 }
+        return recurringTotal / monthlyIncome
+    }
+}
+
 enum BudgetSignalStrength: Equatable {
     case strong
     case neutral
@@ -316,7 +333,12 @@ struct BudgetStore {
         try context.save()
     }
 
-    func saveRecurringExpenseItem(id: UUID? = nil, name: String, amount: Double) throws {
+    func saveRecurringExpenseItem(
+        id: UUID? = nil,
+        name: String,
+        amount: Double,
+        category: RecurringExpenseCategory = .housingUtilities
+    ) throws {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !trimmedName.isEmpty else {
@@ -332,11 +354,12 @@ struct BudgetStore {
             if let item = try context.fetch(descriptor).first {
                 item.name = trimmedName
                 item.amount = amount
+                item.category = category
             } else {
-                context.insert(RecurringExpenseItem(id: id, name: trimmedName, amount: amount))
+                context.insert(RecurringExpenseItem(id: id, name: trimmedName, amount: amount, category: category))
             }
         } else {
-            context.insert(RecurringExpenseItem(name: trimmedName, amount: amount))
+            context.insert(RecurringExpenseItem(name: trimmedName, amount: amount, category: category))
         }
 
         try context.save()
@@ -393,6 +416,37 @@ struct BudgetStore {
 
     static func totalRecurringExpenses(for recurringExpenseItems: [RecurringExpenseItem]) -> Double {
         recurringExpenseItems.reduce(0) { $0 + $1.amount }
+    }
+
+    static func fixedCostRatio(
+        incomeItems: [IncomeItem],
+        recurringExpenseItems: [RecurringExpenseItem]
+    ) -> FixedCostRatioSummary {
+        FixedCostRatioSummary(
+            monthlyIncome: totalIncome(for: incomeItems),
+            recurringTotal: totalRecurringExpenses(for: recurringExpenseItems)
+        )
+    }
+
+    static func fixedCostDistribution(
+        for recurringExpenseItems: [RecurringExpenseItem]
+    ) -> [FixedCostCategorySummary] {
+        RecurringExpenseCategory.allCases.compactMap { category in
+            let total = recurringExpenseItems
+                .filter { $0.category == category }
+                .reduce(0) { $0 + $1.amount }
+
+            guard total > 0 else { return nil }
+
+            return FixedCostCategorySummary(category: category, total: total)
+        }
+        .sorted { lhs, rhs in
+            if lhs.total == rhs.total {
+                return lhs.category.title < rhs.category.title
+            }
+
+            return lhs.total > rhs.total
+        }
     }
 
     static func availableMonthlyBudget(

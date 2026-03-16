@@ -52,6 +52,22 @@ final class BudgetStoreTests: XCTestCase {
         XCTAssertTrue(recurringItems.isEmpty)
     }
 
+    func testSaveRecurringExpenseItemPersistsCategory() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let store = BudgetStore(context: context)
+
+        try store.saveRecurringExpenseItem(
+            name: "Rent",
+            amount: 1200,
+            category: .housingUtilities
+        )
+
+        let recurringItem = try XCTUnwrap(context.fetch(FetchDescriptor<RecurringExpenseItem>()).first)
+
+        XCTAssertEqual(recurringItem.category, .housingUtilities)
+    }
+
     func testAddExpensePersistsExpense() throws {
         let container = try makeContainer()
         let context = ModelContext(container)

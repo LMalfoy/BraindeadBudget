@@ -137,8 +137,44 @@ final class PocketBudgetUITests: XCTestCase {
         XCTAssertTrue(totalSpendingButton.waitForExistence(timeout: 5))
         totalSpendingButton.tap()
 
-        XCTAssertTrue(app.staticTexts["Total Spending"].firstMatch.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Coming Next"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Fixed Cost Ratio"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Fixed Cost Distribution"].firstMatch.waitForExistence(timeout: 5))
+    }
+
+    func testTotalSpendingShowsFixedCostModules() throws {
+        let app = XCUIApplication()
+        launchAndCompleteBudgetSetup(in: app)
+
+        app.tabBars.buttons["Settings"].tap()
+        let manageBudgetButton = app.buttons["settings.manageBudgetButton"].firstMatch
+        XCTAssertTrue(manageBudgetButton.waitForExistence(timeout: 5))
+        manageBudgetButton.tap()
+
+        let addRecurringButton = app.buttons["budgetSetup.addRecurringButton"].firstMatch
+        XCTAssertTrue(addRecurringButton.waitForExistence(timeout: 5))
+        addRecurringButton.tap()
+
+        let nameField = app.textFields["baselineItem.nameField"].firstMatch
+        XCTAssertTrue(nameField.waitForExistence(timeout: 5))
+        nameField.tap()
+        nameField.typeText("Rent")
+
+        let amountField = app.textFields["baselineItem.amountField"].firstMatch
+        XCTAssertTrue(amountField.waitForExistence(timeout: 5))
+        amountField.tap()
+        amountField.typeText("1200")
+
+        let saveButton = app.buttons["baselineItem.saveButton"].firstMatch
+        XCTAssertTrue(saveButton.waitForExistence(timeout: 5))
+        saveButton.tap()
+
+        app.buttons["Close"].tap()
+
+        app.tabBars.buttons["Stats"].tap()
+        app.buttons["Total Spending"].firstMatch.tap()
+
+        XCTAssertTrue(app.staticTexts["Fixed Cost Ratio"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Fixed Cost Distribution"].firstMatch.waitForExistence(timeout: 5))
     }
 
     func testUserCanOpenExpenseHistory() throws {

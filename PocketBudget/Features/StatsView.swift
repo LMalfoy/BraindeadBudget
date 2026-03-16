@@ -85,6 +85,17 @@ struct StatsView: View {
         )
     }
 
+    private var fixedCostRatio: FixedCostRatioSummary {
+        BudgetStore.fixedCostRatio(
+            incomeItems: incomeItems,
+            recurringExpenseItems: recurringExpenseItems
+        )
+    }
+
+    private var fixedCostDistribution: [FixedCostCategorySummary] {
+        BudgetStore.fixedCostDistribution(for: recurringExpenseItems)
+    }
+
     private var trajectoryInterpretation: String {
         guard let firstPoint = trajectory.first, let lastPoint = trajectory.last else {
             return "Add a few expenses to see how your budget pace changes through the month."
@@ -172,6 +183,32 @@ struct StatsView: View {
         }
 
         return "You started this month with no carryover."
+    }
+
+    private var fixedCostRatioInterpretation: String {
+        guard fixedCostRatio.monthlyIncome > 0 else {
+            return "Add monthly income to see how heavy your fixed commitments are."
+        }
+
+        let share = fixedCostRatio.recurringShare
+
+        if share >= 0.6 {
+            return "More than half of your monthly income is already committed to fixed costs."
+        }
+
+        if share >= 0.35 {
+            return "A meaningful share of your monthly income is committed before daily spending begins."
+        }
+
+        return "Your recurring costs still leave solid room for variable spending."
+    }
+
+    private var fixedCostDistributionInterpretation: String {
+        guard let topCategory = fixedCostDistribution.first else {
+            return "Add recurring costs to see which fixed commitments shape your monthly finances."
+        }
+
+        return "\(topCategory.category.title) dominates your fixed financial structure."
     }
 
     var body: some View {
@@ -485,42 +522,104 @@ struct StatsView: View {
     private var totalSpendingSections: some View {
         Section {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Total Spending")
+                Text("Fixed Cost Ratio")
                     .font(.headline)
 
-                Text("This perspective will expand Stats to include recurring monthly commitments like housing, subscriptions, insurance, savings, and debt.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                if fixedCostRatio.monthlyIncome <= 0 {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("No monthly income is available yet.")
+                            .foregroundStyle(.secondary)
 
-                Text("The behavioral budget analysis remains under Budget Spending. Total Spending will focus on financial structure and monthly constraints.")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.secondary)
+                        Text(fixedCostRatioInterpretation)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    Gauge(value: min(max(fixedCostRatio.recurringShare, 0), 1)) {
+                        EmptyView()
+                    } currentValueLabel: {
+                        Text(fixedCostRatio.recurringShare.formatted(.percent.precision(.fractionLength(0))))
+                            .font(.system(size: 34, weight: .bold, design: .rounded))
+                    } minimumValueLabel: {
+                        Text("0%")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } maximumValueLabel: {
+                        Text("100%")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .gaugeStyle(.accessoryCircularCapacity)
+                    .tint(fixedCostRatio.recurringShare >= 0.6 ? .orange : .accentColor)
+                    .frame(maxWidth: .infinity)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        comparisonRow(title: "Monthly Income", amount: fixedCostRatio.monthlyIncome)
+                        comparisonRow(title: "Recurring Costs", amount: fixedCostRatio.recurringTotal)
+                    }
+
+                    Text(fixedCostRatioInterpretation)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
             }
             .statsCardStyle()
-            .accessibilityIdentifier("stats.totalSpendingIntro")
+            .accessibilityIdentifier("stats.fixedCostRatioModule")
         }
 
         Section {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Coming Next")
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Fixed Cost Distribution")
                     .font(.headline)
 
-                Text("Fixed Cost Ratio")
-                    .font(.subheadline.weight(.semibold))
-                Text("See what share of monthly income is already committed before daily spending begins.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                if fixedCostDistribution.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("No recurring-cost distribution yet.")
+                            .foregroundStyle(.secondary)
 
-                Divider()
+                        Text(fixedCostDistributionInterpretation)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    Chart(fixedCostDistribution) { summary in
+                        SectorMark(
+                            angle: .value("Amount", summary.total),
+                            innerRadius: .ratio(0.58),
+                            angularInset: 2
+                        )
+                        .foregroundStyle(summary.category.color)
+                    }
+                    .chartLegend(.hidden)
+                    .frame(height: 220)
+                    .accessibilityIdentifier("stats.fixedCostDistributionChart")
 
-                Text("Fixed Cost Distribution")
-                    .font(.subheadline.weight(.semibold))
-                Text("Understand how recurring costs are split across housing, subscriptions, insurance, savings, and debt.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    Text(fixedCostDistributionInterpretation)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+
+                    VStack(spacing: 10) {
+                        ForEach(fixedCostDistribution) { summary in
+                            HStack(spacing: 10) {
+                                Circle()
+                                    .fill(summary.category.color)
+                                    .frame(width: 10, height: 10)
+
+                                Text(summary.category.title)
+                                    .foregroundStyle(.primary)
+
+                                Spacer()
+
+                                Text(summary.total.formatted(.currency(code: currencyCode)))
+                                    .fontWeight(.medium)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
             }
             .statsCardStyle()
-            .accessibilityIdentifier("stats.totalSpendingPlaceholder")
+            .accessibilityIdentifier("stats.fixedCostDistributionModule")
         }
     }
 
@@ -601,6 +700,23 @@ private extension ExpenseCategory {
             return .orange
         case .fun:
             return .pink
+        }
+    }
+}
+
+private extension RecurringExpenseCategory {
+    var color: Color {
+        switch self {
+        case .housingUtilities:
+            return .blue
+        case .subscriptions:
+            return .purple
+        case .insurance:
+            return .teal
+        case .savings:
+            return .green
+        case .debt:
+            return .red
         }
     }
 }
