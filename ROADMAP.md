@@ -266,14 +266,19 @@ After the first major Statistics rollout, the remaining product work should proc
 1. finish the current recurring-cost statistics perspective cleanly
 2. redesign onboarding around a required current-budget anchor for the first active period
 3. add visual identity work such as app icon and chess piece imagery
-4. only then revisit `Total Spending` as a true combined-spending perspective
+4. redesign Statistics around three perspectives:
+   - `Total Spending`
+   - `Budget Spending`
+   - `Recurring Spending`
+5. replace the current behavior-based discipline rank with a savings-based chess progression system
 
 This order matters because:
 
 - recurring-cost statistics are already partially built and should be completed coherently
 - first-period onboarding is a correctness issue that affects real users immediately
 - imagery should sit on top of stable product logic
-- true total spending likely requires a broader statistics redesign and should not be forced prematurely
+- the new total-spending overview should be designed deliberately rather than appended onto the old fixed-cost structure
+- the new progression system should sit on top of the revised statistics architecture, not the older behavior-based model
 
 ### Iteration 1.0: Carryover Budgeting
 

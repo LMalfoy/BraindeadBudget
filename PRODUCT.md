@@ -192,7 +192,22 @@ The keyboard flow should reduce manual interaction:
 
 ## Statistics Perspective Direction
 
-PocketBudget now has two statistics directions with different purposes.
+PocketBudget should now evolve the Statistics area into three perspectives with different jobs.
+
+### Total Spending
+
+This should become the default Statistics landing page.
+
+Its job is to give the user a broad monthly financial overview at a glance.
+
+It should focus on:
+
+- combined monthly outflow
+- one large combined spending chart
+- top total spending area
+- a short high-level interpretation
+
+This page should stay lighter than the other two perspectives. It is the overview layer, not the full analytics layer.
 
 ### Budget Spending
 
@@ -206,13 +221,14 @@ It focuses on:
 - temporal pattern
 - month comparison
 - carryover
-- discipline rank
 
-### Total Spending
+These modules explain spending behavior, but they should no longer define the main gamification system directly.
 
-The current `Total Spending` perspective is a structural recurring-cost view.
+### Recurring Spending
 
-It helps the user understand:
+This is the structural fixed-cost view.
+
+It focuses on:
 
 - how much monthly income is already committed
 - how recurring costs are distributed
@@ -221,11 +237,30 @@ It helps the user understand:
 
 This view should remain simple and explainable.
 
-Important:
+## Progression Direction
 
-- it should not interfere with the behavioral rank system
-- it does not yet represent literal combined total spending
-- a later redesign may merge variable and recurring spending into a true all-in spending perspective
+PocketBudget should separate statistics from progression.
+
+Behavioral and structural statistics should describe what happened.
+
+Progression should reward the budgeting outcome that matters most:
+
+- whether the user stayed within budget
+- and how much budget was actually saved by the end of the period
+
+This means the old behavior-based discipline rank should be replaced with a savings-based chess progression system.
+
+That progression should:
+
+- sit below the top total-spending overview
+- remain clearly secondary to the financial overview itself
+- avoid judging harmless spending style differences such as timing or category concentration
+
+The progression system should use:
+
+- cumulative progress across periods
+- no fake numerical score shown as the primary identity
+- chess-themed piece tiers and sublevels
 
 ## Expense History Requirements
 

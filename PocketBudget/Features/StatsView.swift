@@ -3,16 +3,24 @@ import Foundation
 import SwiftData
 import SwiftUI
 
+private struct CombinedSpendingSlice: Identifiable {
+    let title: String
+    let total: Double
+    let color: Color
+
+    var id: String { title }
+}
+
 struct StatsView: View {
-    private enum Perspective: String, CaseIterable, Identifiable {
+    private enum StatsSubpage: String, CaseIterable, Identifiable {
         case budgetSpending = "Budget Spending"
-        case totalSpending = "Total Spending"
+        case recurringSpending = "Recurring Spending"
 
         var id: String { rawValue }
     }
 
     private let calendar = Calendar.current
-    @State private var selectedPerspective: Perspective = .budgetSpending
+    @State private var selectedSubpage: StatsSubpage = .budgetSpending
     @Query(sort: \Expense.date, order: .reverse) private var expenses: [Expense]
     @Query(sort: \BudgetSettings.updatedAt, order: .reverse) private var budgets: [BudgetSettings]
     @Query(sort: \IncomeItem.createdAt) private var incomeItems: [IncomeItem]
@@ -131,8 +139,41 @@ struct StatsView: View {
         recurringExpenseItems.reduce(0) { $0 + $1.amount }
     }
 
+    private var currentVariableSpending: Double {
+        BudgetStore.totalSpent(
+            for: BudgetStore.currentMonthExpenses(from: expenses)
+        )
+    }
+
+    private var totalMonthlyOutflow: Double {
+        currentVariableSpending + totalRecurringCost
+    }
+
     private var hasFixedCostData: Bool {
         !recurringExpenseItems.isEmpty
+    }
+
+    private var combinedSpendingSlices: [CombinedSpendingSlice] {
+        let budgetSlices = categorySpending.map {
+            CombinedSpendingSlice(title: $0.category.title, total: $0.total, color: $0.category.color)
+        }
+        let recurringSlices = fixedCostDistribution.map {
+            CombinedSpendingSlice(title: $0.category.title, total: $0.total, color: $0.category.color)
+        }
+
+        return (budgetSlices + recurringSlices)
+            .filter { $0.total > 0 }
+            .sorted { lhs, rhs in
+                if lhs.total == rhs.total {
+                    return lhs.title < rhs.title
+                }
+
+                return lhs.total > rhs.total
+            }
+    }
+
+    private var topCombinedSpendingSlice: CombinedSpendingSlice? {
+        combinedSpendingSlices.first
     }
 
     private var trajectoryInterpretation: String {
@@ -274,22 +315,38 @@ struct StatsView: View {
         return "Savings are present in your monthly structure."
     }
 
+    private var totalSpendingInterpretation: String {
+        guard let topCombinedSpendingSlice else {
+            return "Add expenses or recurring costs to start seeing your full monthly outflow."
+        }
+
+        return "\(topCombinedSpendingSlice.title) is currently your largest total spending area."
+    }
+
     var body: some View {
         List {
             Section {
-                Picker("Statistics Perspective", selection: $selectedPerspective) {
-                    ForEach(Perspective.allCases) { perspective in
-                        Text(perspective.rawValue).tag(perspective)
+                totalSpendingOverviewCard
+            }
+
+            Section {
+                budgetDisciplineCard
+            }
+
+            Section {
+                Picker("Statistics Subpage", selection: $selectedSubpage) {
+                    ForEach(StatsSubpage.allCases) { subpage in
+                        Text(subpage.rawValue).tag(subpage)
                     }
                 }
                 .pickerStyle(.segmented)
-                .accessibilityIdentifier("stats.perspectivePicker")
+                .accessibilityIdentifier("stats.subpagePicker")
             }
 
-            if selectedPerspective == .budgetSpending {
+            if selectedSubpage == .budgetSpending {
                 budgetSpendingSections
             } else {
-                totalSpendingSections
+                recurringSpendingSections
             }
         }
         .contentMargins(.top, 0, for: .scrollContent)
@@ -297,54 +354,118 @@ struct StatsView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    @ViewBuilder
-    private var budgetSpendingSections: some View {
-        Section {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Budget Discipline")
-                    .font(.headline)
+    private var totalSpendingOverviewCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Total Spending")
+                .font(.headline)
+
+            if combinedSpendingSlices.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("No total spending data yet for this month.")
+                        .foregroundStyle(.secondary)
+
+                    Text(totalSpendingInterpretation)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("stats.totalSpendingInterpretation")
+                }
+            } else {
+                Chart(combinedSpendingSlices) { slice in
+                    SectorMark(
+                        angle: .value("Amount", slice.total),
+                        innerRadius: .ratio(0.58),
+                        angularInset: 2
+                    )
+                    .foregroundStyle(slice.color)
+                }
+                .chartLegend(.hidden)
+                .frame(height: 240)
+                .accessibilityIdentifier("stats.totalSpendingChart")
 
                 VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 10) {
-                        Image(rankAssetName(for: disciplineEvaluation.rank))
-                            .resizable()
-                            .renderingMode(.original)
-                            .scaledToFit()
-                            .frame(width: 28, height: 28)
-                            .accessibilityHidden(true)
-
-                        Text(disciplineEvaluation.rank.title)
-                            .font(.system(size: 34, weight: .bold, design: .rounded))
-                            .foregroundStyle(rankColor(for: disciplineEvaluation.rank))
-                            .accessibilityIdentifier("stats.rankValue")
-                    }
-
-                    Text(disciplineEvaluation.summary)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.secondary)
-                        .accessibilityIdentifier("stats.rankSummary")
+                    comparisonRow(title: "Variable Spending", amount: currentVariableSpending)
+                    comparisonRow(title: "Recurring Spending", amount: totalRecurringCost)
+                    comparisonRow(title: "Total Monthly Outflow", amount: totalMonthlyOutflow)
                 }
 
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Why")
-                        .font(.subheadline.weight(.semibold))
+                Text(totalSpendingInterpretation)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("stats.totalSpendingInterpretation")
 
-                    ForEach(disciplineEvaluation.reasons) { reason in
-                        HStack(alignment: .top, spacing: 10) {
-                            Text(symbol(for: reason.tone))
-                                .font(.subheadline.weight(.bold))
-                                .foregroundStyle(reasonColor(for: reason.tone))
+                VStack(spacing: 10) {
+                    ForEach(combinedSpendingSlices) { slice in
+                        HStack(spacing: 10) {
+                            Circle()
+                                .fill(slice.color)
+                                .frame(width: 10, height: 10)
 
-                            Text(reason.message)
-                                .font(.subheadline)
+                            Text(slice.title)
+                                .foregroundStyle(.primary)
+
+                            Spacer()
+
+                            Text(slice.total.formatted(.currency(code: currencyCode)))
+                                .fontWeight(.medium)
                                 .foregroundStyle(.secondary)
                         }
                     }
                 }
             }
-            .statsCardStyle()
-            .accessibilityIdentifier("stats.rankModule")
         }
+        .statsCardStyle()
+        .accessibilityIdentifier("stats.totalSpendingModule")
+    }
+
+    private var budgetDisciplineCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Budget Discipline")
+                .font(.headline)
+
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 10) {
+                    Image(rankAssetName(for: disciplineEvaluation.rank))
+                        .resizable()
+                        .renderingMode(.original)
+                        .scaledToFit()
+                        .frame(width: 28, height: 28)
+                        .accessibilityHidden(true)
+
+                    Text(disciplineEvaluation.rank.title)
+                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                        .foregroundStyle(rankColor(for: disciplineEvaluation.rank))
+                        .accessibilityIdentifier("stats.rankValue")
+                }
+
+                Text(disciplineEvaluation.summary)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("stats.rankSummary")
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Why")
+                    .font(.subheadline.weight(.semibold))
+
+                ForEach(disciplineEvaluation.reasons) { reason in
+                    HStack(alignment: .top, spacing: 10) {
+                        Text(symbol(for: reason.tone))
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(reasonColor(for: reason.tone))
+
+                        Text(reason.message)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+        .statsCardStyle()
+        .accessibilityIdentifier("stats.rankModule")
+    }
+
+    @ViewBuilder
+    private var budgetSpendingSections: some View {
 
         Section {
             VStack(alignment: .leading, spacing: 16) {
@@ -591,7 +712,7 @@ struct StatsView: View {
     }
 
     @ViewBuilder
-    private var totalSpendingSections: some View {
+    private var recurringSpendingSections: some View {
         Section {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Fixed Cost Structure")

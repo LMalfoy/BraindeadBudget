@@ -19,13 +19,25 @@ Its purpose is not to add generic analytics. Its purpose is to help the user:
 - avoid dense dashboards
 - keep each iteration explainable and testable
 
-## Two Perspectives
+## Three Perspectives
 
-The Statistics area should eventually contain two separate perspectives:
+The Statistics area should now evolve into three separate perspectives:
+
+### Total Spending
+
+This should become the default Statistics landing page.
+
+It should provide:
+
+- a complete monthly financial overview
+- a combined spending chart that includes both variable and recurring costs
+- one or two high-level synthesis cards only
+
+This page should feel broad and simple, not overloaded.
 
 ### Budget Spending
 
-This is the existing behavioral statistics view.
+This is the behavioral statistics view.
 
 It focuses on:
 
@@ -35,13 +47,12 @@ It focuses on:
 - temporal pattern
 - month comparisons
 - carryover and rollover
-- discipline rank
 
-### Total Spending
+### Recurring Spending
 
-This is a structural monthly-finance view.
+This is the structural monthly-finance view.
 
-It should focus on recurring commitments and fixed monthly costs rather than day-to-day behavior.
+It focuses on recurring commitments and fixed monthly costs.
 
 It should include only a very small recurring-cost category model:
 
@@ -51,7 +62,7 @@ It should include only a very small recurring-cost category model:
 - Savings
 - Debt
 
-This perspective should not affect the behavioral rank system directly.
+It should remain separate from behavioral performance judgment.
 
 ## Planned Rollout
 
@@ -126,27 +137,20 @@ Why fifth:
 - carryover is already part of the real budget model
 - it should become visible before it is folded into the final score
 
-### Stats v6: Budget Discipline Rank
+### Stats v6: Savings-Based Chess Progression
 
 Scope:
 
-- create one lightweight summary rank based on the earlier statistics modules
-- include the carryover signal as an explicit input
-- include leftover budget percentage as an explicit input
-- keep the model rule-based and transparent
-- show the reasons behind the rank directly in the UI
-- include a chess-themed role progression:
-  - Pawn
-  - Knight
-  - Bishop
-  - Rook
-  - Queen
-  - King
+- replace the current behavior-based discipline summary
+- move progression lower on the page beneath the top overview
+- base progression on budget outcome rather than spending style
+- reward how much budget is saved by the end of the period
+- use chess-themed piece tiers and sublevels
 
 Why last:
 
-- the rank should summarize real behavioral signals
-- it should not precede the modules it depends on
+- progression should sit on top of a stable statistics architecture
+- it should reward real budgeting results, not arbitrary style metrics
 
 ## Immediate Refinement Step
 
@@ -157,17 +161,17 @@ After the first complete rollout is in place, the next practical step is not a b
 
 These changes should sharpen the quality of behavioral feedback while keeping the Stats area understandable.
 
-## Planned Total Spending Rollout
+## Planned Recurring Spending Rollout
 
-### Total Spending v1: Perspective Split
+### Recurring Spending v1: Perspective Split
 
 Scope:
 
-- add a top switch between `Budget Spending` and `Total Spending`
-- preserve the existing behavioral view as-is
-- create the structural shell for fixed-cost statistics
+- create a separate structural view for recurring costs
+- preserve the behavioral view as-is
+- keep the recurring-cost statistics isolated from the future total-overview page
 
-### Total Spending v2: Fixed Cost Ratio And Distribution
+### Recurring Spending v2: Fixed Cost Ratio And Distribution
 
 Scope:
 
@@ -175,7 +179,7 @@ Scope:
 - show how fixed costs are distributed across the recurring-cost categories
 - include short interpretations
 
-### Total Spending v3: Subscription Load And Savings Stability
+### Recurring Spending v3: Subscription Load And Savings Stability
 
 Scope:
 
@@ -184,7 +188,7 @@ Scope:
 - include short interpretations
 - support the Total Spending rollout with a clearer recurring-cost setup flow
 
-### Total Spending v4: Recurring Cost Entry Redesign
+### Recurring Spending v4: Recurring Cost Entry Redesign
 
 Scope:
 
@@ -192,11 +196,11 @@ Scope:
 - keep 5 recurring-cost categories visible in one row
 - preserve the faster, category-first interaction pattern
 
-### Total Spending v5: Perspective Completion
+### Recurring Spending v5: Perspective Completion
 
 Scope:
 
-- treat the current `Total Spending` tab as a finished recurring-cost structure view
+- treat the current recurring-cost perspective as a finished structure view
 - tighten wording, interpretations, and empty states where needed
 - make the perspective feel complete and intentional before larger product shifts
 
@@ -205,17 +209,28 @@ Important:
 - this still does not represent true combined total spending
 - variable spending should be folded into a future redesign only after onboarding and image work
 
-## Later Structural Redesign
+## Next Structural Redesign
 
-After the recurring-cost perspective, mid-period onboarding, and the image/icon pass are complete, the product should revisit the statistics information architecture.
+After the recurring-cost perspective, mid-period onboarding, and the image/icon pass are complete, the product should revisit the statistics information architecture directly.
 
-At that point, `Total Spending` may need to evolve into one of these forms:
+The target structure should be:
 
-- a true combined-spending perspective
-- a three-way split such as `Budget Spending`, `Fixed Costs`, and `Total Spending`
-- another structure that keeps behavioral and structural insights clear
+- `Total Spending` as the default overview
+- `Budget Spending` as the behavioral sub-page
+- `Recurring Spending` as the structural sub-page
 
-That redesign should be planned deliberately rather than appended onto the current fixed-cost rollout.
+## Progression Redesign
+
+The old discipline-rank approach should be replaced.
+
+The new progression system should:
+
+- ignore harmless style differences such as early spending or category concentration
+- reward budget savings outcome instead
+- use cumulative progress across periods
+- use chess piece tiers plus named sublevels
+
+This progression layer should sit below the overview rather than leading the Statistics page.
 
 ## Non-Goals For Early Stats
 

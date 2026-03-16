@@ -55,7 +55,7 @@ final class PocketBudgetUITests: XCTestCase {
         XCTAssertTrue(statsButton.waitForExistence(timeout: 5))
         statsButton.tap()
 
-        XCTAssertTrue(app.staticTexts["Budget Trajectory"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Total Spending"].firstMatch.waitForExistence(timeout: 5))
     }
 
     func testStatsAreaShowsBudgetTrajectory() throws {
@@ -66,6 +66,7 @@ final class PocketBudgetUITests: XCTestCase {
         let statsButton = app.tabBars.buttons["Stats"].firstMatch
         XCTAssertTrue(statsButton.waitForExistence(timeout: 5))
         statsButton.tap()
+        app.buttons["Budget Spending"].firstMatch.tap()
 
         XCTAssertTrue(app.otherElements["stats.trajectoryModule"].firstMatch.waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["You still have strong budget room for the rest of the month."].firstMatch.waitForExistence(timeout: 5))
@@ -79,6 +80,7 @@ final class PocketBudgetUITests: XCTestCase {
         let statsButton = app.tabBars.buttons["Stats"].firstMatch
         XCTAssertTrue(statsButton.waitForExistence(timeout: 5))
         statsButton.tap()
+        app.buttons["Budget Spending"].firstMatch.tap()
         app.swipeUp()
         app.swipeUp()
 
@@ -93,6 +95,7 @@ final class PocketBudgetUITests: XCTestCase {
         let statsButton = app.tabBars.buttons["Stats"].firstMatch
         XCTAssertTrue(statsButton.waitForExistence(timeout: 5))
         statsButton.tap()
+        app.buttons["Budget Spending"].firstMatch.tap()
         app.swipeUp()
         app.swipeUp()
 
@@ -107,6 +110,7 @@ final class PocketBudgetUITests: XCTestCase {
         let statsButton = app.tabBars.buttons["Stats"].firstMatch
         XCTAssertTrue(statsButton.waitForExistence(timeout: 5))
         statsButton.tap()
+        app.buttons["Budget Spending"].firstMatch.tap()
 
         XCTAssertTrue(app.staticTexts["Carryover"].firstMatch.waitForExistence(timeout: 5))
         XCTAssertTrue(app.otherElements["stats.carryoverModule"].firstMatch.waitForExistence(timeout: 5))
@@ -133,9 +137,9 @@ final class PocketBudgetUITests: XCTestCase {
         XCTAssertTrue(statsButton.waitForExistence(timeout: 5))
         statsButton.tap()
 
-        let totalSpendingButton = app.buttons["Total Spending"].firstMatch
-        XCTAssertTrue(totalSpendingButton.waitForExistence(timeout: 5))
-        totalSpendingButton.tap()
+        let recurringSpendingButton = app.buttons["Recurring Spending"].firstMatch
+        XCTAssertTrue(recurringSpendingButton.waitForExistence(timeout: 5))
+        recurringSpendingButton.tap()
 
         XCTAssertTrue(app.staticTexts["Fixed Cost Ratio"].firstMatch.waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Fixed Cost Distribution"].firstMatch.waitForExistence(timeout: 5))
@@ -175,7 +179,7 @@ final class PocketBudgetUITests: XCTestCase {
         app.buttons["Close"].tap()
 
         app.tabBars.buttons["Stats"].tap()
-        app.buttons["Total Spending"].firstMatch.tap()
+        app.buttons["Recurring Spending"].firstMatch.tap()
 
         XCTAssertTrue(app.staticTexts["Fixed Cost Ratio"].firstMatch.waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Fixed Cost Distribution"].firstMatch.waitForExistence(timeout: 5))
@@ -196,7 +200,7 @@ final class PocketBudgetUITests: XCTestCase {
         app.buttons["Close"].tap()
 
         app.tabBars.buttons["Stats"].tap()
-        app.buttons["Total Spending"].firstMatch.tap()
+        app.buttons["Recurring Spending"].firstMatch.tap()
         app.swipeUp()
 
         XCTAssertTrue(app.staticTexts["Subscription Load"].firstMatch.waitForExistence(timeout: 5))
