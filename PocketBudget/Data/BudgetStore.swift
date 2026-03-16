@@ -95,6 +95,21 @@ struct FixedCostRatioSummary: Equatable {
     }
 }
 
+struct SubscriptionLoadSummary: Equatable {
+    let count: Int
+    let totalMonthlyCost: Double
+}
+
+struct SavingsStabilitySummary: Equatable {
+    let monthlyIncome: Double
+    let savingsAmount: Double
+
+    var savingsShare: Double {
+        guard monthlyIncome > 0 else { return 0 }
+        return savingsAmount / monthlyIncome
+    }
+}
+
 enum BudgetSignalStrength: Equatable {
     case strong
     case neutral
@@ -447,6 +462,30 @@ struct BudgetStore {
 
             return lhs.total > rhs.total
         }
+    }
+
+    static func subscriptionLoad(
+        for recurringExpenseItems: [RecurringExpenseItem]
+    ) -> SubscriptionLoadSummary {
+        let subscriptionItems = recurringExpenseItems.filter { $0.category == .subscriptions }
+        return SubscriptionLoadSummary(
+            count: subscriptionItems.count,
+            totalMonthlyCost: subscriptionItems.reduce(0) { $0 + $1.amount }
+        )
+    }
+
+    static func savingsStability(
+        incomeItems: [IncomeItem],
+        recurringExpenseItems: [RecurringExpenseItem]
+    ) -> SavingsStabilitySummary {
+        let savingsAmount = recurringExpenseItems
+            .filter { $0.category == .savings }
+            .reduce(0) { $0 + $1.amount }
+
+        return SavingsStabilitySummary(
+            monthlyIncome: totalIncome(for: incomeItems),
+            savingsAmount: savingsAmount
+        )
     }
 
     static func availableMonthlyBudget(

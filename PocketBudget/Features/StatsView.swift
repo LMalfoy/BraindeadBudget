@@ -96,6 +96,17 @@ struct StatsView: View {
         BudgetStore.fixedCostDistribution(for: recurringExpenseItems)
     }
 
+    private var subscriptionLoad: SubscriptionLoadSummary {
+        BudgetStore.subscriptionLoad(for: recurringExpenseItems)
+    }
+
+    private var savingsStability: SavingsStabilitySummary {
+        BudgetStore.savingsStability(
+            incomeItems: incomeItems,
+            recurringExpenseItems: recurringExpenseItems
+        )
+    }
+
     private var trajectoryInterpretation: String {
         guard let firstPoint = trajectory.first, let lastPoint = trajectory.last else {
             return "Add a few expenses to see how your budget pace changes through the month."
@@ -209,6 +220,30 @@ struct StatsView: View {
         }
 
         return "\(topCategory.category.title) dominates your fixed financial structure."
+    }
+
+    private var subscriptionLoadInterpretation: String {
+        if subscriptionLoad.count == 0 {
+            return "You have no recurring subscriptions recorded yet."
+        }
+
+        if subscriptionLoad.count >= 5 || subscriptionLoad.totalMonthlyCost >= 100 {
+            return "Your subscription stack is currently quite large."
+        }
+
+        return "Subscriptions are a manageable part of your fixed monthly structure."
+    }
+
+    private var savingsStabilityInterpretation: String {
+        if savingsStability.savingsAmount <= 0 {
+            return "Savings are not yet a meaningful part of your monthly structure."
+        }
+
+        if savingsStability.monthlyIncome > 0, savingsStability.savingsShare >= 0.1 {
+            return "You consistently invest part of your income."
+        }
+
+        return "Savings are present in your monthly structure."
     }
 
     var body: some View {
@@ -620,6 +655,69 @@ struct StatsView: View {
             }
             .statsCardStyle()
             .accessibilityIdentifier("stats.fixedCostDistributionModule")
+        }
+
+        Section {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Subscription Load")
+                    .font(.headline)
+
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("\(subscriptionLoad.count)")
+                            .font(.system(size: 30, weight: .bold, design: .rounded))
+                        Text("Subscriptions")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    VStack(alignment: .trailing, spacing: 4) {
+                        Text(subscriptionLoad.totalMonthlyCost.formatted(.currency(code: currencyCode)))
+                            .font(.title3.weight(.semibold))
+                        Text("Monthly Cost")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Text(subscriptionLoadInterpretation)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+            .statsCardStyle()
+            .accessibilityIdentifier("stats.subscriptionLoadModule")
+        }
+
+        Section {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Savings Stability")
+                    .font(.headline)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    comparisonRow(title: "Monthly Savings", amount: savingsStability.savingsAmount)
+
+                    if savingsStability.monthlyIncome > 0 {
+                        HStack {
+                            Text("Savings Share")
+                                .foregroundStyle(.secondary)
+
+                            Spacer()
+
+                            Text(savingsStability.savingsShare.formatted(.percent.precision(.fractionLength(0))))
+                                .fontWeight(.medium)
+                                .foregroundStyle(.primary)
+                        }
+                    }
+                }
+
+                Text(savingsStabilityInterpretation)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+            .statsCardStyle()
+            .accessibilityIdentifier("stats.savingsStabilityModule")
         }
     }
 

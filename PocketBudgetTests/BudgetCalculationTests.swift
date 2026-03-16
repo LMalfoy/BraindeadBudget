@@ -586,6 +586,28 @@ final class BudgetCalculationTests: XCTestCase {
         XCTAssertEqual(distribution.count, 4)
     }
 
+    func testSubscriptionLoadAndSavingsStabilityUseRecurringCategories() {
+        let incomeItems = [
+            IncomeItem(name: "Salary", amount: 3000)
+        ]
+        let recurringExpenseItems = [
+            RecurringExpenseItem(name: "Netflix", amount: 20, category: .subscriptions),
+            RecurringExpenseItem(name: "Music", amount: 15, category: .subscriptions),
+            RecurringExpenseItem(name: "Savings", amount: 300, category: .savings)
+        ]
+
+        let subscriptionLoad = BudgetStore.subscriptionLoad(for: recurringExpenseItems)
+        let savingsStability = BudgetStore.savingsStability(
+            incomeItems: incomeItems,
+            recurringExpenseItems: recurringExpenseItems
+        )
+
+        XCTAssertEqual(subscriptionLoad.count, 2)
+        XCTAssertEqual(subscriptionLoad.totalMonthlyCost, 35, accuracy: 0.001)
+        XCTAssertEqual(savingsStability.savingsAmount, 300, accuracy: 0.001)
+        XCTAssertEqual(savingsStability.savingsShare, 0.1, accuracy: 0.001)
+    }
+
     private func makeDate(year: Int, month: Int, day: Int, calendar: Calendar) -> Date {
         calendar.date(from: DateComponents(year: year, month: month, day: day))!
     }

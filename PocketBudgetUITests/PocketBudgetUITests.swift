@@ -159,6 +159,10 @@ final class PocketBudgetUITests: XCTestCase {
         nameField.tap()
         nameField.typeText("Rent")
 
+        let housingTile = app.buttons["baselineItem.recurringCategory.housingUtilities"].firstMatch
+        XCTAssertTrue(housingTile.waitForExistence(timeout: 5))
+        housingTile.tap()
+
         let amountField = app.textFields["baselineItem.amountField"].firstMatch
         XCTAssertTrue(amountField.waitForExistence(timeout: 5))
         amountField.tap()
@@ -175,6 +179,28 @@ final class PocketBudgetUITests: XCTestCase {
 
         XCTAssertTrue(app.staticTexts["Fixed Cost Ratio"].firstMatch.waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Fixed Cost Distribution"].firstMatch.waitForExistence(timeout: 5))
+    }
+
+    func testTotalSpendingShowsSubscriptionAndSavingsModules() throws {
+        let app = XCUIApplication()
+        launchAndCompleteBudgetSetup(in: app)
+
+        app.tabBars.buttons["Settings"].tap()
+        let manageBudgetButton = app.buttons["settings.manageBudgetButton"].firstMatch
+        XCTAssertTrue(manageBudgetButton.waitForExistence(timeout: 5))
+        manageBudgetButton.tap()
+
+        addRecurringCost(named: "Netflix", amount: "20", categoryIdentifier: "subscriptions", in: app)
+        addRecurringCost(named: "Savings", amount: "300", categoryIdentifier: "savings", in: app)
+
+        app.buttons["Close"].tap()
+
+        app.tabBars.buttons["Stats"].tap()
+        app.buttons["Total Spending"].firstMatch.tap()
+        app.swipeUp()
+
+        XCTAssertTrue(app.staticTexts["Subscription Load"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Savings Stability"].firstMatch.waitForExistence(timeout: 5))
     }
 
     func testUserCanOpenExpenseHistory() throws {
@@ -300,6 +326,35 @@ final class PocketBudgetUITests: XCTestCase {
         amountField.typeText(amount)
 
         let saveButton = app.buttons["addExpense.saveButton"].firstMatch
+        XCTAssertTrue(saveButton.waitForExistence(timeout: 5))
+        saveButton.tap()
+    }
+
+    private func addRecurringCost(
+        named title: String,
+        amount: String,
+        categoryIdentifier: String,
+        in app: XCUIApplication
+    ) {
+        let addRecurringButton = app.buttons["budgetSetup.addRecurringButton"].firstMatch
+        XCTAssertTrue(addRecurringButton.waitForExistence(timeout: 5))
+        addRecurringButton.tap()
+
+        let nameField = app.textFields["baselineItem.nameField"].firstMatch
+        XCTAssertTrue(nameField.waitForExistence(timeout: 5))
+        nameField.tap()
+        nameField.typeText(title)
+
+        let categoryButton = app.buttons["baselineItem.recurringCategory.\(categoryIdentifier)"].firstMatch
+        XCTAssertTrue(categoryButton.waitForExistence(timeout: 5))
+        categoryButton.tap()
+
+        let amountField = app.textFields["baselineItem.amountField"].firstMatch
+        XCTAssertTrue(amountField.waitForExistence(timeout: 5))
+        amountField.tap()
+        amountField.typeText(amount)
+
+        let saveButton = app.buttons["baselineItem.saveButton"].firstMatch
         XCTAssertTrue(saveButton.waitForExistence(timeout: 5))
         saveButton.tap()
     }

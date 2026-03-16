@@ -265,7 +265,13 @@ private struct BaselineItemRow: View {
                 Text(amount.formatted(.currency(code: currencyCode)))
                     .fontWeight(.medium)
                     .foregroundStyle(.secondary)
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
             }
+            .contentShape(Rectangle())
+            .padding(.vertical, 4)
         }
         .buttonStyle(.plain)
     }
@@ -384,12 +390,7 @@ private struct BaselineItemEditorSheet: View {
                         .accessibilityIdentifier("baselineItem.amountField")
 
                     if draft.kind == .recurringExpense {
-                        Picker("Category", selection: $recurringCategory) {
-                            ForEach(RecurringExpenseCategory.allCases) { category in
-                                Text(category.title).tag(category)
-                            }
-                        }
-                        .accessibilityIdentifier("baselineItem.recurringCategoryPicker")
+                        recurringCategoryTiles
                     }
                 } header: {
                     Text(draft.kind.title)
@@ -440,6 +441,58 @@ private struct BaselineItemEditorSheet: View {
         }
     }
 
+    private var recurringCategoryTiles: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Category")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            LazyVGrid(
+                columns: [
+                    GridItem(.flexible(), spacing: 10),
+                    GridItem(.flexible(), spacing: 10),
+                    GridItem(.flexible(), spacing: 10)
+                ],
+                spacing: 10
+            ) {
+                ForEach(RecurringExpenseCategory.allCases) { category in
+                    Button {
+                        recurringCategory = category
+                    } label: {
+                        VStack(spacing: 6) {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(category.color)
+                                .frame(height: 34)
+                                .overlay {
+                                    if recurringCategory == category {
+                                        Image(systemName: "checkmark")
+                                            .font(.caption.weight(.bold))
+                                            .foregroundStyle(.white)
+                                    }
+                                }
+
+                            Text(category.shortTitle)
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(.primary)
+                                .multilineTextAlignment(.center)
+                                .lineLimit(2)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(8)
+                        .background(Color(uiColor: .secondarySystemBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(recurringCategory == category ? category.color : Color.clear, lineWidth: 2)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("baselineItem.recurringCategory.\(category.rawValue)")
+                }
+            }
+        }
+    }
+
     private static func parseAmount(_ text: String) -> Double? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -456,5 +509,37 @@ private struct BaselineItemEditorSheet: View {
         }
 
         return String(format: "%.2f", amount)
+    }
+}
+
+private extension RecurringExpenseCategory {
+    var shortTitle: String {
+        switch self {
+        case .housingUtilities:
+            return "Housing"
+        case .subscriptions:
+            return "Subscriptions"
+        case .insurance:
+            return "Insurance"
+        case .savings:
+            return "Savings"
+        case .debt:
+            return "Debt"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .housingUtilities:
+            return .blue
+        case .subscriptions:
+            return .purple
+        case .insurance:
+            return .teal
+        case .savings:
+            return .green
+        case .debt:
+            return .red
+        }
     }
 }
