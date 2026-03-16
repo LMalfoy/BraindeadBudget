@@ -19,12 +19,16 @@ Future improvements, polish items, and larger feature notes to revisit after the
 - In that future settings area, the budget setup screen should still open automatically when no budget information exists.
 - Use that future settings area for version info, author/app info, and later customization options.
 - The settings entry point on the dashboard can later stay hidden by default and only reveal itself when the user pulls the dashboard down.
-- When a valid numeric amount has been entered, pressing Return or Send in the expense flow should submit the expense directly instead of requiring a separate tap on Save.
 - In a future period-based budgeting version, a negative remainder from one month should carry over into the next month’s available budget.
 - Example: if March ends at `-200`, April should begin with that `200` deducted from the new month’s budget.
 - Future branding direction: rename the app to `Budget Rook` or simply `Rook`.
 - Future app icon direction: use a black rook on a white background.
 - Future symbol direction: use the Lichess rook style if the asset/license is confirmed safe for app use.
+- In monthly history, tapping the month header should later open a direct month/year picker while the adjacent-month arrows remain available.
+- Monthly history should later include a compact digest for the selected month, including total spent, carryover, and category totals.
+- Editing an expense from monthly history should later reuse the same add-expense style sheet, including the colored category tiles.
+- The `Monthly Expenses` section title in history is redundant and can be removed in a later cleanup pass.
+- The month/year picker opened from the history header should later feel smaller and lighter; the current full-page presentation is too visually large for only two controls.
 
 ## Usage Rule
 

@@ -162,6 +162,27 @@ The keyboard flow should reduce manual interaction:
 - when the add-expense screen opens, the item description field should be ready for input immediately
 - submitting the item description should move focus to the amount field
 - the amount field should use a numeric keypad
+- once a valid numeric amount has been entered, pressing Return or Send should submit the expense directly
+
+## Expense History Requirements
+
+The app should provide a dedicated monthly history view that supports review and correction without crowding the dashboard.
+
+That history view should:
+
+- show all expenses for a selected month
+- allow fast navigation between adjacent months
+- support direct month/year selection from the month header
+- allow editing and deleting expenses there
+- include a compact monthly digest
+
+The monthly digest should help the user understand the selected period at a glance, including:
+
+- total spent for the month
+- carryover affecting that month
+- category spending totals
+
+The dashboard should remain a lightweight overview. The full inspection and correction workflow belongs in monthly history.
 
 ## Categories
 

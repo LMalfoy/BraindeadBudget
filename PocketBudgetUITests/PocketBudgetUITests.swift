@@ -55,12 +55,50 @@ final class PocketBudgetUITests: XCTestCase {
         XCTAssertTrue(historyButton.waitForExistence(timeout: 5))
         historyButton.tap()
 
-        let monthLabel = app.staticTexts["history.monthLabel"].firstMatch
+        let monthLabel = app.buttons["history.monthLabel"].firstMatch
         XCTAssertTrue(monthLabel.waitForExistence(timeout: 5))
 
         let previousMonthButton = app.buttons["history.previousMonthButton"].firstMatch
         XCTAssertTrue(previousMonthButton.waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["history.nextMonthButton"].firstMatch.waitForExistence(timeout: 5))
+    }
+
+    func testUserCanSelectMonthFromHistoryHeader() throws {
+        let app = XCUIApplication()
+        launchAndCompleteBudgetSetup(in: app)
+        app.tabBars.buttons["History"].tap()
+
+        let monthLabelButton = app.buttons["history.monthLabel"].firstMatch
+        XCTAssertTrue(monthLabelButton.waitForExistence(timeout: 5))
+        monthLabelButton.tap()
+
+        let doneButton = app.buttons["history.monthPicker.doneButton"].firstMatch
+        XCTAssertTrue(doneButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Select Month"].firstMatch.waitForExistence(timeout: 5))
+        doneButton.tap()
+
+        XCTAssertTrue(monthLabelButton.waitForExistence(timeout: 5))
+    }
+
+    func testUserCanSubmitExpenseFromAmountField() throws {
+        let app = XCUIApplication()
+        launchAndCompleteBudgetSetup(in: app)
+
+        let addExpenseButton = app.buttons["dashboard.addExpenseButton"].firstMatch
+        XCTAssertTrue(addExpenseButton.waitForExistence(timeout: 5))
+        addExpenseButton.tap()
+
+        let titleField = app.textFields["addExpense.titleField"].firstMatch
+        XCTAssertTrue(titleField.waitForExistence(timeout: 5))
+        titleField.tap()
+        titleField.typeText("Tea")
+
+        let amountField = app.textFields["addExpense.amountField"].firstMatch
+        XCTAssertTrue(amountField.waitForExistence(timeout: 5))
+        amountField.tap()
+        amountField.typeText("3.50\n")
+
+        XCTAssertTrue(app.staticTexts["Tea"].waitForExistence(timeout: 5))
     }
 
     private func launchAndCompleteBudgetSetup(in app: XCUIApplication) {

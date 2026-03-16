@@ -259,6 +259,113 @@ Why this matters:
 Risk:
 Low to medium
 
+### Iteration 1.0: Carryover Budgeting
+
+Goal:
+Carry monthly budget state forward so each month reflects the true leftover balance from the previous one.
+
+Scope:
+
+- roll positive remainder forward
+- roll negative overspending forward
+- calculate the active month as baseline plus previous month carryover
+- keep dashboard totals understandable after this model change
+
+Why this matters:
+
+- it makes the budget more realistic
+- it gives continuity between months instead of hard resets
+
+Risk:
+Medium
+
+Validation:
+
+- unit tests for positive carryover, negative carryover, and zero-carryover cases
+- manual checks around month boundaries
+- confirm dashboard wording still matches the calculation model
+
+### Iteration 1.1: Monthly Expense History
+
+Goal:
+Provide a full month-based expense view for review, editing, and deletion.
+
+Scope:
+
+- dedicated history screen
+- adjacent month navigation
+- full expense list for the selected month
+- edit and delete from that view
+- keep dashboard totals and carryover in sync after changes
+
+Why this matters:
+
+- the dashboard only shows a lightweight preview
+- users need a reliable correction and review surface
+
+Risk:
+Medium
+
+Validation:
+
+- unit tests for month filtering and expense updates
+- UI tests for opening history and correcting expenses there
+- manual verification that dashboard numbers react correctly after edits
+
+### Iteration 1.2: Bottom Navigation
+
+Goal:
+Give the app a clearer structure now that it has multiple primary surfaces.
+
+Scope:
+
+- slim bottom navigation bar
+- Home, History, and Settings tabs
+- keep the dashboard read-only
+- limit dashboard expense preview to the 10 most recent items
+- keep editing and deletion inside monthly history
+
+Why this matters:
+
+- it separates overview, correction, and configuration cleanly
+- it reduces dashboard clutter without hiding important functionality
+
+Risk:
+Low to medium
+
+Validation:
+
+- UI tests for tab navigation
+- regression tests for add, edit, delete, and settings access
+- manual review of tab-bar size and visual weight on iPhone
+
+### Iteration 1.3: History Upgrade And Entry-Flow Polish
+
+Goal:
+Make monthly history substantially more informative while smoothing one small but frequent expense-entry interaction.
+
+Scope:
+
+- allow direct month/year selection from the history month header
+- add a compact monthly digest to history
+- show period totals that help explain the selected month
+- keep edit/delete in history as-is
+- let Return or Send submit an expense once the amount is valid
+
+Why this matters:
+
+- history becomes a stronger decision surface instead of just a long list
+- expense entry removes one unnecessary confirmation tap in a common path
+
+Risk:
+Medium
+
+Validation:
+
+- unit tests for any new month-selection helpers or digest calculations
+- UI tests for opening the picker and navigating history
+- UI/manual validation for keyboard submit behavior in the add-expense flow
+
 Validation:
 
 - manual review of onboarding-to-settings behavior

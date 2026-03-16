@@ -61,7 +61,15 @@ struct AddExpenseSheet: View {
 
                     TextField("Amount", text: $amountText)
                         .keyboardType(.decimalPad)
+                        .submitLabel(.done)
                         .focused($focusedField, equals: .amount)
+                        .onSubmit {
+                            guard !isSaveDisabled else {
+                                return
+                            }
+
+                            saveExpense()
+                        }
                         .accessibilityIdentifier("addExpense.amountField")
                 } header: {
                     Text("Expense")

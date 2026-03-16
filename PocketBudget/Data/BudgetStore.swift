@@ -8,6 +8,12 @@ struct CategorySpendingSummary: Identifiable, Equatable {
     var id: ExpenseCategory { category }
 }
 
+struct MonthlyHistoryDigest: Equatable {
+    let totalSpent: Double
+    let carryover: Double
+    let categorySpending: [CategorySpendingSummary]
+}
+
 enum BudgetStoreError: LocalizedError {
     case invalidExpenseCategory
     case invalidExpenseTitle
@@ -350,6 +356,34 @@ struct BudgetStore {
         ) - totalSpent(
             for: currentMonthExpenses(
                 from: expenses,
+                calendar: calendar,
+                referenceDate: referenceDate
+            )
+        )
+    }
+
+    static func monthlyHistoryDigest(
+        monthlyBudget: Double,
+        expenses: [Expense],
+        calendar: Calendar = .current,
+        referenceDate: Date = .now
+    ) -> MonthlyHistoryDigest {
+        let selectedMonthExpenses = currentMonthExpenses(
+            from: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        return MonthlyHistoryDigest(
+            totalSpent: totalSpent(for: selectedMonthExpenses),
+            carryover: previousMonthCarryover(
+                monthlyBudget: monthlyBudget,
+                expenses: expenses,
+                calendar: calendar,
+                referenceDate: referenceDate
+            ),
+            categorySpending: categorySpending(
+                for: expenses,
                 calendar: calendar,
                 referenceDate: referenceDate
             )

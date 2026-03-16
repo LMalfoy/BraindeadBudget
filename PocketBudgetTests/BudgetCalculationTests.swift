@@ -308,6 +308,38 @@ final class BudgetCalculationTests: XCTestCase {
         XCTAssertEqual(remaining, 407.5, accuracy: 0.001)
     }
 
+    func testMonthlyHistoryDigestSummarizesSelectedMonth() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 3, day: 14, calendar: calendar)
+        let previousMonthExpense = Expense(
+            title: "Train Pass",
+            category: .transport,
+            amount: 40,
+            date: makeDate(year: 2026, month: 2, day: 8, calendar: calendar)
+        )
+        let currentMonthExpense = Expense(
+            title: "Groceries",
+            category: .food,
+            amount: 25,
+            date: makeDate(year: 2026, month: 3, day: 9, calendar: calendar)
+        )
+
+        let digest = BudgetStore.monthlyHistoryDigest(
+            monthlyBudget: 100,
+            expenses: [previousMonthExpense, currentMonthExpense],
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertEqual(digest.totalSpent, 25, accuracy: 0.001)
+        XCTAssertEqual(digest.carryover, 60, accuracy: 0.001)
+        XCTAssertEqual(digest.categorySpending, [
+            CategorySpendingSummary(category: .food, total: 25)
+        ])
+    }
+
     private func makeDate(year: Int, month: Int, day: Int, calendar: Calendar) -> Date {
         calendar.date(from: DateComponents(year: year, month: month, day: day))!
     }
