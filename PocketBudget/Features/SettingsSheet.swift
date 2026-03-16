@@ -2,12 +2,15 @@ import SwiftData
 import SwiftUI
 
 struct SettingsSheet: View {
+    private let budgetPeriodColumns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 7)
+
     @AppStorage("appAppearance") private var appAppearance = AppAppearanceOption.system.rawValue
     @AppStorage("hasCompletedBaselineSetup") private var hasCompletedSetup = false
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \BudgetSettings.updatedAt, order: .reverse) private var budgets: [BudgetSettings]
 
     @State private var showingBudgetSettings = false
+    @State private var showingBudgetPeriodAnchorPicker = false
     @State private var showingResetConfirmation = false
     @State private var errorMessage: String?
 
@@ -58,13 +61,22 @@ struct SettingsSheet: View {
 
     var body: some View {
         Form {
-            Section("Preferences") {
-                Picker("Appearance", selection: $appAppearance) {
-                    ForEach(AppAppearanceOption.allCases) { option in
-                        Text(option.title).tag(option.rawValue)
+            Section("Budget") {
+                Button {
+                    showingBudgetSettings = true
+                } label: {
+                    HStack {
+                        Text("Manage Budget")
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.tertiary)
                     }
                 }
-                .accessibilityIdentifier("settings.appearancePicker")
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("settings.manageBudgetButton")
 
                 Picker("Currency", selection: selectedCurrencyCode) {
                     ForEach(availableCurrencies, id: \.self) { code in
@@ -72,23 +84,34 @@ struct SettingsSheet: View {
                     }
                 }
                 .accessibilityIdentifier("settings.currencyPicker")
-            }
 
-            Section("Budget") {
-                Stepper(value: selectedBudgetPeriodAnchorDay, in: 1...28) {
-                    VStack(alignment: .leading, spacing: 4) {
+                Button {
+                    showingBudgetPeriodAnchorPicker = true
+                } label: {
+                    HStack {
                         Text("Budget Period Starts")
-                        Text("Day \(selectedBudgetPeriodAnchorDay.wrappedValue) of each month")
-                            .font(.footnote)
+
+                        Spacer()
+
+                        Text("Day \(selectedBudgetPeriodAnchorDay.wrappedValue)")
                             .foregroundStyle(.secondary)
+
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.tertiary)
                     }
                 }
-                .accessibilityIdentifier("settings.budgetPeriodAnchorStepper")
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("settings.budgetPeriodAnchorButton")
+            }
 
-                Button("Manage Budget") {
-                    showingBudgetSettings = true
+            Section("Appearance") {
+                Picker("Appearance", selection: $appAppearance) {
+                    ForEach(AppAppearanceOption.allCases) { option in
+                        Text(option.title).tag(option.rawValue)
+                    }
                 }
-                .accessibilityIdentifier("settings.manageBudgetButton")
+                .accessibilityIdentifier("settings.appearancePicker")
             }
 
             Section("Danger Zone") {
@@ -116,12 +139,61 @@ struct SettingsSheet: View {
                     Text("Codex (GPT-5)")
                 }
                 .accessibilityIdentifier("settings.authorSection")
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Chess Icons")
+                        .foregroundStyle(.secondary)
+
+                    Text("Cburnett chess set via Wikimedia Commons / Wikipedia")
+                    Text("Dark transparent piece variants used in-app")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                .accessibilityIdentifier("settings.chessIconsSection")
             }
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingBudgetSettings) {
             BudgetSettingsSheet(mode: .manage)
+        }
+        .sheet(isPresented: $showingBudgetPeriodAnchorPicker) {
+            NavigationStack {
+                ScrollView {
+                    LazyVGrid(columns: budgetPeriodColumns, spacing: 10) {
+                        ForEach(1..<31) { day in
+                            Button {
+                                selectedBudgetPeriodAnchorDay.wrappedValue = day
+                                showingBudgetPeriodAnchorPicker = false
+                            } label: {
+                                Text("\(day)")
+                                    .font(.subheadline.weight(.semibold))
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 42)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                            .fill(selectedBudgetPeriodAnchorDay.wrappedValue == day ? Color.accentColor : Color(uiColor: .secondarySystemBackground))
+                                    )
+                                    .foregroundStyle(selectedBudgetPeriodAnchorDay.wrappedValue == day ? Color.white : Color.primary)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("settings.budgetPeriodAnchorDay.\(day)")
+                        }
+                    }
+                    .padding(20)
+                }
+                .navigationTitle("Budget Period")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Close") {
+                            showingBudgetPeriodAnchorPicker = false
+                        }
+                    }
+                }
+            }
+            .presentationDetents([.height(320)])
+            .presentationDragIndicator(.visible)
         }
         .alert("Erase All Data?", isPresented: $showingResetConfirmation) {
             Button("Cancel", role: .cancel) {}

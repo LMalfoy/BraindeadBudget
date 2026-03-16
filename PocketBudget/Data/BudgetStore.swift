@@ -266,7 +266,7 @@ struct BudgetStore {
         if let settings = budgets.first {
             settings.currencyCode = currencyCode
             if let budgetPeriodAnchorDay {
-                settings.budgetPeriodAnchorDay = max(1, min(28, budgetPeriodAnchorDay))
+                settings.budgetPeriodAnchorDay = max(1, min(30, budgetPeriodAnchorDay))
             }
             if let initialAvailableBudget {
                 settings.initialAvailableBudget = initialAvailableBudget
@@ -282,7 +282,7 @@ struct BudgetStore {
         } else {
             context.insert(BudgetSettings(
                 currencyCode: currencyCode,
-                budgetPeriodAnchorDay: budgetPeriodAnchorDay ?? 1,
+                budgetPeriodAnchorDay: min(max(budgetPeriodAnchorDay ?? 1, 1), 30),
                 initialAvailableBudget: initialAvailableBudget,
                 initialBudgetAnchorMonth: initialBudgetAnchorMonth
             ))
@@ -293,7 +293,7 @@ struct BudgetStore {
 
     func saveBudgetPeriodAnchorDay(_ day: Int) throws {
         let budgets = try context.fetch(FetchDescriptor<BudgetSettings>())
-        let normalizedDay = max(1, min(28, day))
+        let normalizedDay = max(1, min(30, day))
 
         if let settings = budgets.first {
             settings.budgetPeriodAnchorDay = normalizedDay
