@@ -259,16 +259,42 @@ That future area should:
 
 The dashboard’s recent-expense area can later serve as the natural entry point into that broader monthly expense view.
 
-## Gesture Navigation Direction
+## App Navigation Direction
 
-After monthly expense history exists, the dashboard can evolve toward more fluid gesture-based navigation.
+After monthly expense history exists, the app should move toward a clearer multi-surface structure.
 
-The intended direction is:
+The preferred direction is a slim bottom navigation bar with three destinations:
 
-- pulling downward into the recent-expense area can open the full monthly expense-history view
-- a separate dashboard pull interaction can reveal settings when that behavior feels natural in the real UI
+- Home
+- History
+- Settings
 
-These interactions should come after the underlying destinations already exist. They are polish on top of stable screens, not substitutes for them.
+This should help separate the product into three clear layers:
+
+- dashboard for quick monthly overview
+- monthly history for full review and correction
+- settings for budget management and app information
+
+The bottom bar should:
+
+- be large enough to use comfortably
+- stay visually quiet
+- avoid stealing focus from the actual page content
+
+Gesture-based navigation can still be explored later, but only after the bottom-navigation structure proves stable.
+
+## Dashboard List Direction
+
+The dashboard should stay an overview, not a working database screen.
+
+That means:
+
+- keep a recent-expense preview on the dashboard
+- limit that preview to a small recent set, such as the 10 latest expenses
+- keep those rows read-only on the dashboard
+- make the dashboard rows slightly smaller and lighter than the monthly history rows
+
+Editing and deletion should belong to the monthly history view, not to the dashboard overview.
 
 ## Dashboard Analytics
 

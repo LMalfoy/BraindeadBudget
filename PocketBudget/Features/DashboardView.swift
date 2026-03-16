@@ -12,9 +12,6 @@ struct DashboardView: View {
     @Query(sort: \RecurringExpenseItem.createdAt) private var recurringExpenseItems: [RecurringExpenseItem]
 
     @State private var showingAddExpense = false
-    @State private var showingExpenseHistory = false
-    @State private var showingSettings = false
-    @State private var errorMessage: String?
 
     private var store: BudgetStore {
         BudgetStore(context: modelContext)
@@ -30,6 +27,10 @@ struct DashboardView: View {
 
     private var currentMonthExpenses: [Expense] {
         store.currentMonthExpenses(from: expenses)
+    }
+
+    private var recentExpenses: [Expense] {
+        Array(expenses.prefix(10))
     }
 
     private var totalSpent: Double {
@@ -83,17 +84,6 @@ struct DashboardView: View {
         )
     }
 
-    private var errorAlertBinding: Binding<Bool> {
-        Binding(
-            get: { errorMessage != nil },
-            set: { isPresented in
-                if !isPresented {
-                    errorMessage = nil
-                }
-            }
-        )
-    }
-
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             List {
@@ -121,28 +111,19 @@ struct DashboardView: View {
                 }
 
                 Section {
-                    if expenses.isEmpty {
+                    if recentExpenses.isEmpty {
                         Text(hasBaselineData
                              ? "No expenses yet. Tap Add Expense to log your first purchase."
                              : "Complete your budget setup first, then start logging daily expenses.")
                             .foregroundStyle(.secondary)
                             .padding(.vertical, 10)
                     } else {
-                        ForEach(expenses) { expense in
+                        ForEach(recentExpenses) { expense in
                             ExpenseRowView(expense: expense, currencyCode: currencyCode)
                         }
-                        .onDelete(perform: deleteExpenses)
                     }
                 } header: {
-                    HStack {
-                        Text("Expenses")
-                        Spacer()
-                        Button("View Month") {
-                            showingExpenseHistory = true
-                        }
-                        .font(.subheadline.weight(.medium))
-                        .accessibilityIdentifier("dashboard.expenseHistoryButton")
-                    }
+                    Text("Recent Expenses")
                 }
             }
 
@@ -164,17 +145,6 @@ struct DashboardView: View {
             .accessibilityIdentifier("dashboard.addExpenseButton")
         }
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    showingSettings = true
-                } label: {
-                    Image(systemName: "gearshape")
-                }
-                .accessibilityLabel("Settings")
-                .accessibilityIdentifier("dashboard.settingsButton")
-            }
-        }
         .sheet(isPresented: $showingAddExpense) {
             AddExpenseSheet(currencyCode: currencyCode) { title, category, amount, date, note in
                 try store.addExpense(
@@ -186,33 +156,8 @@ struct DashboardView: View {
                 )
             }
         }
-        .sheet(isPresented: $showingSettings) {
-            SettingsSheet()
-        }
-        .sheet(isPresented: $showingExpenseHistory) {
-            ExpenseHistorySheet(currencyCode: currencyCode)
-        }
         .fullScreenCover(isPresented: setupCoverBinding) {
             BudgetSettingsSheet(mode: .onboarding)
-        }
-        .alert("Couldn’t Delete Expense", isPresented: errorAlertBinding) {
-            Button("OK", role: .cancel) {
-                errorMessage = nil
-            }
-        } message: {
-            Text(errorMessage ?? "Something went wrong.")
-        }
-    }
-
-    private func deleteExpenses(at offsets: IndexSet) {
-        do {
-            let itemsToDelete = offsets.map { expenses[$0] }
-
-            for expense in itemsToDelete {
-                try store.deleteExpense(expense)
-            }
-        } catch {
-            errorMessage = error.localizedDescription
         }
     }
 
@@ -284,21 +229,21 @@ private struct ExpenseRowView: View {
     let currencyCode: String
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .top, spacing: 10) {
             RoundedRectangle(cornerRadius: 4, style: .continuous)
                 .fill(expense.category.color)
-                .frame(width: 6)
+                .frame(width: 5)
 
-            VStack(alignment: .leading, spacing: 5) {
+            VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 8) {
                     Text(expense.title)
-                        .font(.body.weight(.medium))
+                        .font(.subheadline.weight(.medium))
                         .lineLimit(1)
 
                     Text(expense.category.title)
                         .font(.caption2.weight(.semibold))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 2)
                         .background(expense.category.color.opacity(0.12))
                         .foregroundStyle(expense.category.color)
                         .clipShape(Capsule())
@@ -318,9 +263,9 @@ private struct ExpenseRowView: View {
             Spacer(minLength: 12)
 
             Text(expense.amount.formatted(.currency(code: currencyCode)))
-                .font(.body.weight(.semibold))
+                .font(.subheadline.weight(.semibold))
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, 4)
     }
 }
 

@@ -2,8 +2,6 @@ import Foundation
 import SwiftUI
 
 struct SettingsSheet: View {
-    @Environment(\.dismiss) private var dismiss
-
     @State private var showingBudgetSettings = false
 
     private var appVersion: String {
@@ -18,41 +16,32 @@ struct SettingsSheet: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section("Budget") {
-                    Button("Manage Budget") {
-                        showingBudgetSettings = true
-                    }
-                    .accessibilityIdentifier("settings.manageBudgetButton")
+        Form {
+            Section("Budget") {
+                Button("Manage Budget") {
+                    showingBudgetSettings = true
                 }
+                .accessibilityIdentifier("settings.manageBudgetButton")
+            }
 
-                Section("About") {
-                    LabeledContent("Version", value: appVersion)
-                        .accessibilityIdentifier("settings.versionValue")
+            Section("About") {
+                LabeledContent("Version", value: appVersion)
+                    .accessibilityIdentifier("settings.versionValue")
 
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Authors")
-                            .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Authors")
+                        .foregroundStyle(.secondary)
 
-                        Text("Dr. Kevin Sicking")
-                        Text("Codex (GPT-5)")
-                    }
-                    .accessibilityIdentifier("settings.authorSection")
+                    Text("Dr. Kevin Sicking")
+                    Text("Codex (GPT-5)")
                 }
+                .accessibilityIdentifier("settings.authorSection")
             }
-            .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") {
-                        dismiss()
-                    }
-                }
-            }
-            .sheet(isPresented: $showingBudgetSettings) {
-                BudgetSettingsSheet(mode: .manage)
-            }
+        }
+        .navigationTitle("Settings")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showingBudgetSettings) {
+            BudgetSettingsSheet(mode: .manage)
         }
     }
 }

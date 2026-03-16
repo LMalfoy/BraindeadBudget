@@ -3,12 +3,10 @@ import SwiftData
 import SwiftUI
 
 struct ExpenseHistorySheet: View {
-    @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
 
     @Query(sort: \Expense.date, order: .reverse) private var expenses: [Expense]
-    
-    let currencyCode: String
+    @Query(sort: \BudgetSettings.updatedAt, order: .reverse) private var budgets: [BudgetSettings]
 
     @State private var selectedMonth = Date.now
     @State private var editingExpense: Expense?
@@ -16,6 +14,10 @@ struct ExpenseHistorySheet: View {
 
     private var store: BudgetStore {
         BudgetStore(context: modelContext)
+    }
+
+    private var currencyCode: String {
+        budgets.first?.currencyCode ?? Locale.current.currency?.identifier ?? "USD"
     }
 
     private var monthExpenses: [Expense] {
@@ -38,59 +40,50 @@ struct ExpenseHistorySheet: View {
     }
 
     var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    monthNavigator
-                }
+        List {
+            Section {
+                monthNavigator
+            }
 
-                Section {
-                    if monthExpenses.isEmpty {
-                        Text("No expenses recorded for this month.")
-                            .foregroundStyle(.secondary)
-                            .padding(.vertical, 10)
-                    } else {
-                        ForEach(monthExpenses) { expense in
-                            ExpenseHistoryRowView(expense: expense, currencyCode: currencyCode)
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    editingExpense = expense
-                                }
-                        }
-                        .onDelete(perform: deleteExpenses)
+            Section {
+                if monthExpenses.isEmpty {
+                    Text("No expenses recorded for this month.")
+                        .foregroundStyle(.secondary)
+                        .padding(.vertical, 10)
+                } else {
+                    ForEach(monthExpenses) { expense in
+                        ExpenseHistoryRowView(expense: expense, currencyCode: currencyCode)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                editingExpense = expense
+                            }
                     }
-                } header: {
-                    Text("Monthly Expenses")
+                    .onDelete(perform: deleteExpenses)
                 }
+            } header: {
+                Text("Monthly Expenses")
             }
-            .navigationTitle("Expense History")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") {
-                        dismiss()
-                    }
-                }
+        }
+        .navigationTitle("Expense History")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $editingExpense) { expense in
+            ExpenseEditorSheet(expense: expense, currencyCode: currencyCode) { expense, title, category, amount, date, note in
+                try store.updateExpense(
+                    expense,
+                    title: title,
+                    category: category,
+                    amount: amount,
+                    date: date,
+                    note: note
+                )
             }
-            .sheet(item: $editingExpense) { expense in
-                ExpenseEditorSheet(expense: expense, currencyCode: currencyCode) { expense, title, category, amount, date, note in
-                    try store.updateExpense(
-                        expense,
-                        title: title,
-                        category: category,
-                        amount: amount,
-                        date: date,
-                        note: note
-                    )
-                }
+        }
+        .alert("Couldn’t Update Expense", isPresented: errorAlertBinding) {
+            Button("OK", role: .cancel) {
+                errorMessage = nil
             }
-            .alert("Couldn’t Update Expense", isPresented: errorAlertBinding) {
-                Button("OK", role: .cancel) {
-                    errorMessage = nil
-                }
-            } message: {
-                Text(errorMessage ?? "Something went wrong.")
-            }
+        } message: {
+            Text(errorMessage ?? "Something went wrong.")
         }
     }
 

@@ -318,22 +318,49 @@ Validation:
 - verification that edits and deletes update related dashboard values correctly
 - confirm the history navigation remains easy to understand
 
-### Iteration 1.2: Gesture Navigation Polish
+### Iteration 1.2: Bottom Navigation Structure
 
 Goal:
-Make navigation between dashboard, history, and settings feel smoother and more physical.
+Introduce a slim bottom navigation bar that cleanly separates overview, history, and settings.
 
 Scope:
 
-- explore opening monthly expense history from a dashboard pull/scroll gesture
-- explore hiding and revealing settings through a dashboard pull interaction
-- keep gesture behavior discoverable and low-risk
-- avoid replacing clear tap-based navigation unless the gesture feels reliably better
+- add bottom navigation with Home, History, and Settings
+- keep the bar small and visually quiet
+- keep the dashboard focused on summary plus recent expenses
+- limit the dashboard recent-expense preview to a small recent set
+- keep dashboard recent expenses read-only
+- keep edit/delete behavior inside monthly history only
+- slightly reduce the visual weight of dashboard expense rows
 
 Why this matters:
 
-- once history exists, the dashboard can feel less like a static list and more like a layered control surface
-- smooth interaction polish can improve everyday use without adding new product complexity
+- the app now has multiple real surfaces and needs clearer navigation
+- separating overview, history, and settings should make the product easier to understand and extend
+
+Risk:
+Medium
+
+Validation:
+
+- manual navigation checks across all three tabs
+- verify monthly history remains the only correction surface
+- confirm the dashboard feels cleaner and less crowded
+
+### Iteration 1.3: Gesture Navigation Polish
+
+Goal:
+Explore whether navigation between dashboard, history, and settings can later feel even smoother through gesture polish.
+
+Scope:
+
+- consider history-opening gestures from the dashboard
+- consider less persistent settings exposure if it remains clear
+- only build on top of the stable bottom-navigation structure
+
+Why this matters:
+
+- gesture polish is more sensible once the app structure is already clear
 
 Risk:
 Medium
@@ -341,8 +368,8 @@ Medium
 Validation:
 
 - manual real-device testing on iPhone
-- confirm gesture behavior does not conflict with normal scrolling
-- keep direct navigation fallback if the gesture feels ambiguous
+- confirm gestures do not conflict with ordinary scrolling
+- retain clear explicit navigation if gestures feel ambiguous
 
 ### Post-1.0 Candidates
 

@@ -14,10 +14,12 @@ final class PocketBudgetUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["dashboard.remainingBudgetValue"].waitForExistence(timeout: 2))
     }
 
-    func testUserCanDeleteExpenseFromDashboard() throws {
+    func testUserCanDeleteExpenseFromHistory() throws {
         let app = XCUIApplication()
         launchAndCompleteBudgetSetup(in: app)
         addExpense(named: "Coffee", amount: "5.50", categoryIdentifier: "food", in: app)
+
+        app.tabBars.buttons["History"].tap()
 
         let coffeeText = app.staticTexts["Coffee"]
         XCTAssertTrue(coffeeText.waitForExistence(timeout: 2))
@@ -32,7 +34,7 @@ final class PocketBudgetUITests: XCTestCase {
         let app = XCUIApplication()
         launchAndCompleteBudgetSetup(in: app)
 
-        let settingsButton = app.buttons["dashboard.settingsButton"].firstMatch
+        let settingsButton = app.tabBars.buttons["Settings"].firstMatch
         XCTAssertTrue(settingsButton.waitForExistence(timeout: 5))
         settingsButton.tap()
 
@@ -49,7 +51,7 @@ final class PocketBudgetUITests: XCTestCase {
         launchAndCompleteBudgetSetup(in: app)
         addExpense(named: "Coffee", amount: "5.50", categoryIdentifier: "food", in: app)
 
-        let historyButton = app.buttons["dashboard.expenseHistoryButton"].firstMatch
+        let historyButton = app.tabBars.buttons["History"].firstMatch
         XCTAssertTrue(historyButton.waitForExistence(timeout: 5))
         historyButton.tap()
 
