@@ -318,6 +318,32 @@ Validation:
 - verification that edits and deletes update related dashboard values correctly
 - confirm the history navigation remains easy to understand
 
+### Iteration 1.2: Gesture Navigation Polish
+
+Goal:
+Make navigation between dashboard, history, and settings feel smoother and more physical.
+
+Scope:
+
+- explore opening monthly expense history from a dashboard pull/scroll gesture
+- explore hiding and revealing settings through a dashboard pull interaction
+- keep gesture behavior discoverable and low-risk
+- avoid replacing clear tap-based navigation unless the gesture feels reliably better
+
+Why this matters:
+
+- once history exists, the dashboard can feel less like a static list and more like a layered control surface
+- smooth interaction polish can improve everyday use without adding new product complexity
+
+Risk:
+Medium
+
+Validation:
+
+- manual real-device testing on iPhone
+- confirm gesture behavior does not conflict with normal scrolling
+- keep direct navigation fallback if the gesture feels ambiguous
+
 ### Post-1.0 Candidates
 
 Potential next feature directions after stabilization:

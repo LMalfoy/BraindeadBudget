@@ -96,6 +96,38 @@ final class BudgetStoreTests: XCTestCase {
         XCTAssertTrue(expenses.isEmpty)
     }
 
+    func testUpdateExpensePersistsEditedValues() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let store = BudgetStore(context: context)
+
+        try store.addExpense(
+            title: "Coffee",
+            category: .food,
+            amount: 5.5,
+            date: .now,
+            note: ""
+        )
+
+        let expense = try XCTUnwrap(context.fetch(FetchDescriptor<Expense>()).first)
+
+        try store.updateExpense(
+            expense,
+            title: "Train Ticket",
+            category: .transport,
+            amount: 14,
+            date: .now.addingTimeInterval(-86400),
+            note: "Edited"
+        )
+
+        let updatedExpense = try XCTUnwrap(context.fetch(FetchDescriptor<Expense>()).first)
+
+        XCTAssertEqual(updatedExpense.title, "Train Ticket")
+        XCTAssertEqual(updatedExpense.category, .transport)
+        XCTAssertEqual(updatedExpense.amount, 14)
+        XCTAssertEqual(updatedExpense.note, "Edited")
+    }
+
     private func makeContainer() throws -> ModelContainer {
         let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
         return try ModelContainer(

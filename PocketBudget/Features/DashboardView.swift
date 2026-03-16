@@ -12,6 +12,7 @@ struct DashboardView: View {
     @Query(sort: \RecurringExpenseItem.createdAt) private var recurringExpenseItems: [RecurringExpenseItem]
 
     @State private var showingAddExpense = false
+    @State private var showingExpenseHistory = false
     @State private var showingSettings = false
     @State private var errorMessage: String?
 
@@ -133,7 +134,15 @@ struct DashboardView: View {
                         .onDelete(perform: deleteExpenses)
                     }
                 } header: {
-                    Text("Expenses")
+                    HStack {
+                        Text("Expenses")
+                        Spacer()
+                        Button("View Month") {
+                            showingExpenseHistory = true
+                        }
+                        .font(.subheadline.weight(.medium))
+                        .accessibilityIdentifier("dashboard.expenseHistoryButton")
+                    }
                 }
             }
 
@@ -179,6 +188,9 @@ struct DashboardView: View {
         }
         .sheet(isPresented: $showingSettings) {
             SettingsSheet()
+        }
+        .sheet(isPresented: $showingExpenseHistory) {
+            ExpenseHistorySheet(currencyCode: currencyCode)
         }
         .fullScreenCover(isPresented: setupCoverBinding) {
             BudgetSettingsSheet(mode: .onboarding)

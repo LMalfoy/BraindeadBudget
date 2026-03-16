@@ -10,6 +10,7 @@
 		72A18DEC2F66D20B00F78675 /* IncomeItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72A18DEB2F66D20B00F78675 /* IncomeItem.swift */; };
 		72A18DEE2F66D20B00F78675 /* RecurringExpenseItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72A18DED2F66D20B00F78675 /* RecurringExpenseItem.swift */; };
 		72A18DF02F677D6E00F78675 /* SettingsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72A18DEF2F677D6E00F78675 /* SettingsSheet.swift */; };
+		72A18DF22F6784DC00F78675 /* ExpenseHistorySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72A18DF12F6784DC00F78675 /* ExpenseHistorySheet.swift */; };
 		A10000000000000000000210 /* PocketBudgetApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000110 /* PocketBudgetApp.swift */; };
 		A10000000000000000000211 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000111 /* ContentView.swift */; };
 		A10000000000000000000212 /* BudgetSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000112 /* BudgetSettings.swift */; };
@@ -45,6 +46,7 @@
 		72A18DEB2F66D20B00F78675 /* IncomeItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncomeItem.swift; sourceTree = "<group>"; };
 		72A18DED2F66D20B00F78675 /* RecurringExpenseItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringExpenseItem.swift; sourceTree = "<group>"; };
 		72A18DEF2F677D6E00F78675 /* SettingsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSheet.swift; sourceTree = "<group>"; };
+		72A18DF12F6784DC00F78675 /* ExpenseHistorySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseHistorySheet.swift; sourceTree = "<group>"; };
 		A10000000000000000000100 /* PocketBudget.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PocketBudget.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A10000000000000000000101 /* PocketBudgetTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PocketBudgetTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A10000000000000000000102 /* PocketBudgetUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PocketBudgetUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -154,6 +156,7 @@
 				A10000000000000000000116 /* AddExpenseSheet.swift */,
 				A10000000000000000000117 /* BudgetSettingsSheet.swift */,
 				72A18DEF2F677D6E00F78675 /* SettingsSheet.swift */,
+				72A18DF12F6784DC00F78675 /* ExpenseHistorySheet.swift */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -304,6 +307,7 @@
 				A10000000000000000000210 /* PocketBudgetApp.swift in Sources */,
 				72A18DEE2F66D20B00F78675 /* RecurringExpenseItem.swift in Sources */,
 				A10000000000000000000211 /* ContentView.swift in Sources */,
+				72A18DF22F6784DC00F78675 /* ExpenseHistorySheet.swift in Sources */,
 				A10000000000000000000212 /* BudgetSettings.swift in Sources */,
 				72A18DEC2F66D20B00F78675 /* IncomeItem.swift in Sources */,
 				A10000000000000000000213 /* Expense.swift in Sources */,

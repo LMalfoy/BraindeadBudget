@@ -272,6 +272,24 @@ final class BudgetCalculationTests: XCTestCase {
         XCTAssertEqual(filtered.first?.title, "Coffee")
     }
 
+    func testExpensesForMonthContainingReturnsOnlySelectedMonth() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 2, day: 14, calendar: calendar)
+        let februaryExpense = Expense(title: "Rent", amount: 700, date: makeDate(year: 2026, month: 2, day: 1, calendar: calendar))
+        let marchExpense = Expense(title: "Coffee", amount: 5.5, date: makeDate(year: 2026, month: 3, day: 10, calendar: calendar))
+
+        let filtered = BudgetStore.expenses(
+            from: [februaryExpense, marchExpense],
+            inMonthContaining: referenceDate,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(filtered.count, 1)
+        XCTAssertEqual(filtered.first?.title, "Rent")
+    }
+
     func testRemainingBudgetIncludesPreviousMonthCarryoverWhileIgnoringOlderMonths() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!

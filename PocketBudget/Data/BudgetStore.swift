@@ -101,6 +101,38 @@ struct BudgetStore {
         try context.save()
     }
 
+    func updateExpense(
+        _ expense: Expense,
+        title: String,
+        category: ExpenseCategory,
+        amount: Double,
+        date: Date,
+        note: String = ""
+    ) throws {
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard ExpenseCategory.allCases.contains(category) else {
+            throw BudgetStoreError.invalidExpenseCategory
+        }
+
+        guard !trimmedTitle.isEmpty else {
+            throw BudgetStoreError.invalidExpenseTitle
+        }
+
+        guard amount > 0 else {
+            throw BudgetStoreError.invalidExpenseAmount
+        }
+
+        expense.title = trimmedTitle
+        expense.category = category
+        expense.amount = amount
+        expense.date = date
+        expense.note = trimmedNote
+
+        try context.save()
+    }
+
     func incomeItems() throws -> [IncomeItem] {
         try context.fetch(FetchDescriptor<IncomeItem>(sortBy: [SortDescriptor(\.createdAt)]))
     }
@@ -171,14 +203,22 @@ struct BudgetStore {
         try context.save()
     }
 
+    static func expenses(
+        from expenses: [Expense],
+        inMonthContaining referenceDate: Date,
+        calendar: Calendar = .current
+    ) -> [Expense] {
+        expenses.filter {
+            calendar.isDate($0.date, equalTo: referenceDate, toGranularity: .month)
+        }
+    }
+
     static func currentMonthExpenses(
         from expenses: [Expense],
         calendar: Calendar = .current,
         referenceDate: Date = .now
     ) -> [Expense] {
-        expenses.filter {
-            calendar.isDate($0.date, equalTo: referenceDate, toGranularity: .month)
-        }
+        self.expenses(from: expenses, inMonthContaining: referenceDate, calendar: calendar)
     }
 
     static func previousMonthExpenses(
@@ -318,5 +358,9 @@ struct BudgetStore {
 
     func currentMonthExpenses(from expenses: [Expense], referenceDate: Date = .now) -> [Expense] {
         Self.currentMonthExpenses(from: expenses, calendar: calendar, referenceDate: referenceDate)
+    }
+
+    func expenses(from expenses: [Expense], inMonthContaining referenceDate: Date) -> [Expense] {
+        Self.expenses(from: expenses, inMonthContaining: referenceDate, calendar: calendar)
     }
 }

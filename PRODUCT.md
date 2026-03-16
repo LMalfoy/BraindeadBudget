@@ -259,6 +259,17 @@ That future area should:
 
 The dashboard’s recent-expense area can later serve as the natural entry point into that broader monthly expense view.
 
+## Gesture Navigation Direction
+
+After monthly expense history exists, the dashboard can evolve toward more fluid gesture-based navigation.
+
+The intended direction is:
+
+- pulling downward into the recent-expense area can open the full monthly expense-history view
+- a separate dashboard pull interaction can reveal settings when that behavior feels natural in the real UI
+
+These interactions should come after the underlying destinations already exist. They are polish on top of stable screens, not substitutes for them.
+
 ## Dashboard Analytics
 
 PocketBudget should provide lightweight visual insight without becoming a heavy analytics app.
