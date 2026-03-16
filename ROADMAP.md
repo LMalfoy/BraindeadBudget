@@ -265,7 +265,34 @@ Validation:
 - verify budget editing still works correctly
 - ensure the dashboard becomes simpler rather than harder to navigate
 
-### Iteration 1.0: Expense History
+### Iteration 1.0: Full Carryover Budgeting
+
+Goal:
+Carry the previous month’s remaining balance into the next month’s available budget.
+
+Scope:
+
+- calculate prior-month remainder
+- carry both positive and negative balances into the next month
+- update the dashboard budget number to reflect baseline plus carryover
+- keep the carryover rule limited and explicit
+- verify the rule works across month boundaries without changing the rest of the product surface
+
+Why this matters:
+
+- this changes the meaning of the app’s most important number
+- it makes the budgeting model more realistic and continuous across months
+
+Risk:
+Medium
+
+Validation:
+
+- unit tests for positive and negative carryover
+- unit tests for month-boundary calculations
+- manual verification with realistic month-to-month scenarios
+
+### Iteration 1.1: Expense History
 
 Goal:
 Let the user browse and manage expenses by month.
@@ -280,7 +307,7 @@ Scope:
 Why this matters:
 
 - users need a complete view of a given month, not only recent dashboard rows
-- this is the most practical next expansion after stabilization
+- this becomes more valuable once carryover makes month boundaries more important
 
 Risk:
 Medium

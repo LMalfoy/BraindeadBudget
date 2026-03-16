@@ -181,6 +181,22 @@ struct BudgetStore {
         }
     }
 
+    static func previousMonthExpenses(
+        from expenses: [Expense],
+        calendar: Calendar = .current,
+        referenceDate: Date = .now
+    ) -> [Expense] {
+        guard let previousMonthReferenceDate = calendar.date(byAdding: .month, value: -1, to: referenceDate) else {
+            return []
+        }
+
+        return currentMonthExpenses(
+            from: expenses,
+            calendar: calendar,
+            referenceDate: previousMonthReferenceDate
+        )
+    }
+
     static func totalSpent(for expenses: [Expense]) -> Double {
         expenses.reduce(0) { partialResult, expense in
             partialResult + expense.amount
@@ -200,6 +216,41 @@ struct BudgetStore {
         recurringExpenseItems: [RecurringExpenseItem]
     ) -> Double {
         totalIncome(for: incomeItems) - totalRecurringExpenses(for: recurringExpenseItems)
+    }
+
+    static func previousMonthCarryover(
+        monthlyBudget: Double,
+        expenses: [Expense],
+        calendar: Calendar = .current,
+        referenceDate: Date = .now
+    ) -> Double {
+        let previousMonthExpenses = previousMonthExpenses(
+            from: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        guard !previousMonthExpenses.isEmpty else {
+            return 0
+        }
+
+        return monthlyBudget - totalSpent(
+            for: previousMonthExpenses
+        )
+    }
+
+    static func adjustedMonthlyBudget(
+        monthlyBudget: Double,
+        expenses: [Expense],
+        calendar: Calendar = .current,
+        referenceDate: Date = .now
+    ) -> Double {
+        monthlyBudget + previousMonthCarryover(
+            monthlyBudget: monthlyBudget,
+            expenses: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
     }
 
     static func categorySpending(
@@ -251,7 +302,12 @@ struct BudgetStore {
         calendar: Calendar = .current,
         referenceDate: Date = .now
     ) -> Double {
-        monthlyBudget - totalSpent(
+        adjustedMonthlyBudget(
+            monthlyBudget: monthlyBudget,
+            expenses: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        ) - totalSpent(
             for: currentMonthExpenses(
                 from: expenses,
                 calendar: calendar,

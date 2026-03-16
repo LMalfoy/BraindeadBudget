@@ -34,6 +34,91 @@ final class BudgetCalculationTests: XCTestCase {
         XCTAssertEqual(availableBudget, -300, accuracy: 0.001)
     }
 
+    func testPreviousMonthCarryoverUsesPositiveRemainder() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 3, day: 14, calendar: calendar)
+        let expenses = [
+            Expense(title: "Dinner", category: .food, amount: 60, date: makeDate(year: 2026, month: 2, day: 10, calendar: calendar))
+        ]
+
+        let carryover = BudgetStore.previousMonthCarryover(
+            monthlyBudget: 100,
+            expenses: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertEqual(carryover, 40, accuracy: 0.001)
+    }
+
+    func testPreviousMonthCarryoverUsesNegativeRemainder() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 3, day: 14, calendar: calendar)
+        let expenses = [
+            Expense(title: "Trip", category: .fun, amount: 180, date: makeDate(year: 2026, month: 2, day: 18, calendar: calendar))
+        ]
+
+        let carryover = BudgetStore.previousMonthCarryover(
+            monthlyBudget: 100,
+            expenses: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertEqual(carryover, -80, accuracy: 0.001)
+    }
+
+    func testPreviousMonthCarryoverIsZeroWhenPreviousMonthHasNoExpenses() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 3, day: 14, calendar: calendar)
+        let expenses = [
+            Expense(title: "Old", category: .food, amount: 30, date: makeDate(year: 2026, month: 1, day: 10, calendar: calendar))
+        ]
+
+        let carryover = BudgetStore.previousMonthCarryover(
+            monthlyBudget: 100,
+            expenses: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertEqual(carryover, 0, accuracy: 0.001)
+    }
+
+    func testRemainingBudgetIncludesPreviousMonthCarryover() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 3, day: 14, calendar: calendar)
+        let previousMonthExpense = Expense(
+            title: "Groceries",
+            category: .food,
+            amount: 60,
+            date: makeDate(year: 2026, month: 2, day: 10, calendar: calendar)
+        )
+        let currentMonthExpense = Expense(
+            title: "Train",
+            category: .transport,
+            amount: 20,
+            date: makeDate(year: 2026, month: 3, day: 12, calendar: calendar)
+        )
+
+        let remaining = BudgetStore.remainingBudget(
+            monthlyBudget: 100,
+            expenses: [previousMonthExpense, currentMonthExpense],
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertEqual(remaining, 120, accuracy: 0.001)
+    }
+
     func testCategorySpendingAggregatesCurrentMonthExpensesByCategory() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -187,7 +272,7 @@ final class BudgetCalculationTests: XCTestCase {
         XCTAssertEqual(filtered.first?.title, "Coffee")
     }
 
-    func testRemainingBudgetSubtractsOnlyCurrentMonthExpenses() {
+    func testRemainingBudgetIncludesPreviousMonthCarryoverWhileIgnoringOlderMonths() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
 
@@ -202,7 +287,7 @@ final class BudgetCalculationTests: XCTestCase {
             referenceDate: referenceDate
         )
 
-        XCTAssertEqual(remaining, 237.5, accuracy: 0.001)
+        XCTAssertEqual(remaining, 407.5, accuracy: 0.001)
     }
 
     private func makeDate(year: Int, month: Int, day: Int, calendar: Calendar) -> Date {

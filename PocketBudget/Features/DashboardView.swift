@@ -42,6 +42,20 @@ struct DashboardView: View {
         )
     }
 
+    private var previousMonthCarryover: Double {
+        BudgetStore.previousMonthCarryover(
+            monthlyBudget: monthlyBudget,
+            expenses: expenses
+        )
+    }
+
+    private var adjustedMonthlyBudget: Double {
+        BudgetStore.adjustedMonthlyBudget(
+            monthlyBudget: monthlyBudget,
+            expenses: expenses
+        )
+    }
+
     private var remainingBudget: Double {
         BudgetStore.remainingBudget(
             monthlyBudget: monthlyBudget,
@@ -85,7 +99,9 @@ struct DashboardView: View {
                 Section {
                     SummaryCardView(
                         monthLabel: Date.now.formatted(.dateTime.month(.wide)),
-                        monthlyBudget: monthlyBudget,
+                        baselineMonthlyBudget: monthlyBudget,
+                        carryoverAmount: previousMonthCarryover,
+                        adjustedMonthlyBudget: adjustedMonthlyBudget,
                         totalSpent: totalSpent,
                         remainingBudget: remainingBudget,
                         currencyCode: currencyCode,
@@ -193,7 +209,9 @@ struct DashboardView: View {
 
 private struct SummaryCardView: View {
     let monthLabel: String
-    let monthlyBudget: Double
+    let baselineMonthlyBudget: Double
+    let carryoverAmount: Double
+    let adjustedMonthlyBudget: Double
     let totalSpent: Double
     let remainingBudget: Double
     let currencyCode: String
@@ -203,6 +221,8 @@ private struct SummaryCardView: View {
         VStack(alignment: .leading, spacing: 16) {
             if hasCompletedSetup {
                 VStack(alignment: .leading, spacing: 12) {
+                    summaryRow(title: "Baseline Budget", value: formatted(baselineMonthlyBudget))
+                    summaryRow(title: "Carryover", value: formatted(carryoverAmount))
                     summaryRow(title: "Spent in \(monthLabel)", value: formatted(totalSpent))
 
                     VStack(alignment: .leading, spacing: 4) {
@@ -216,7 +236,7 @@ private struct SummaryCardView: View {
                             .accessibilityIdentifier("dashboard.remainingBudgetValue")
                     }
 
-                    summaryRow(title: "Available to Spend", value: formatted(monthlyBudget))
+                    summaryRow(title: "Available This Month", value: formatted(adjustedMonthlyBudget))
                 }
             } else {
                 VStack(alignment: .leading, spacing: 8) {

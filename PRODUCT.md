@@ -84,9 +84,22 @@ These are subtracted from the calculated monthly spending budget to produce the 
 
 The current product centers on monthly budgeting.
 
-In a later version with month-based history and period management, the product may support carryover between months so overspending in one month reduces the next month’s available budget.
+The next major budgeting rule should be monthly carryover.
 
-This should be treated as a future budgeting rule, not a near-term requirement, because it changes how month transitions behave and should be introduced deliberately.
+That means the app should eventually treat each new month as inheriting the prior month’s leftover balance, whether that balance is positive or negative.
+
+The rule should be:
+
+`available budget for month N = baseline monthly budget + carryover from month N-1`
+
+Where carryover can be:
+
+- positive if the user underspent in the prior month
+- negative if the user overspent in the prior month
+
+This shifts PocketBudget from a hard-reset monthly tracker toward a rolling monthly budget with continuity between periods.
+
+That change should be introduced deliberately, because it affects the meaning of the dashboard’s main budget number.
 
 ## Primary User Flow
 
@@ -235,7 +248,7 @@ For the current product direction, the author information can explicitly credit:
 
 ## Expense History Direction
 
-After settings, the next major feature surface should be a dedicated monthly expense-history view.
+After carryover budgeting, the next major feature surface should be a dedicated monthly expense-history view.
 
 That future area should:
 
