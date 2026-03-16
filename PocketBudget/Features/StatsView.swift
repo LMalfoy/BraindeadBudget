@@ -301,10 +301,19 @@ struct StatsView: View {
                     .font(.headline)
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(disciplineEvaluation.rank.title)
-                        .font(.system(size: 34, weight: .bold, design: .rounded))
-                        .foregroundStyle(rankColor(for: disciplineEvaluation.rank))
-                        .accessibilityIdentifier("stats.rankValue")
+                    HStack(spacing: 10) {
+                        Image(rankAssetName(for: disciplineEvaluation.rank))
+                            .resizable()
+                            .renderingMode(.original)
+                            .scaledToFit()
+                            .frame(width: 28, height: 28)
+                            .accessibilityHidden(true)
+
+                        Text(disciplineEvaluation.rank.title)
+                            .font(.system(size: 34, weight: .bold, design: .rounded))
+                            .foregroundStyle(rankColor(for: disciplineEvaluation.rank))
+                            .accessibilityIdentifier("stats.rankValue")
+                    }
 
                     Text(disciplineEvaluation.summary)
                         .font(.subheadline.weight(.medium))
@@ -832,6 +841,23 @@ struct StatsView: View {
             return .purple
         case .king:
             return .orange
+        }
+    }
+
+    private func rankAssetName(for rank: BudgetDisciplineRank) -> String {
+        switch rank {
+        case .pawn:
+            return "ChessPawn"
+        case .knight:
+            return "ChessKnight"
+        case .bishop:
+            return "ChessBishop"
+        case .rook:
+            return "ChessRook"
+        case .queen:
+            return "ChessQueen"
+        case .king:
+            return "ChessKing"
         }
     }
 
