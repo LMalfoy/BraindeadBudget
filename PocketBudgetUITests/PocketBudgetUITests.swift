@@ -40,6 +40,7 @@ final class PocketBudgetUITests: XCTestCase {
 
         let manageBudgetButton = app.buttons["settings.manageBudgetButton"].firstMatch
         XCTAssertTrue(manageBudgetButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.steppers["settings.budgetPeriodAnchorStepper"].firstMatch.waitForExistence(timeout: 5))
         manageBudgetButton.tap()
 
         let finishButton = app.buttons["budgetSetup.finishButton"].firstMatch

@@ -11,6 +11,7 @@ final class BudgetStoreTests: XCTestCase {
 
         try store.saveSettings(
             currencyCode: "USD",
+            budgetPeriodAnchorDay: nil,
             initialAvailableBudget: 400,
             initialBudgetAnchorMonth: Date(timeIntervalSince1970: 0)
         )

@@ -39,6 +39,19 @@ struct SettingsSheet: View {
         )
     }
 
+    private var selectedBudgetPeriodAnchorDay: Binding<Int> {
+        Binding(
+            get: { budgets.first?.budgetPeriodAnchorDay ?? 1 },
+            set: { newValue in
+                do {
+                    try store.saveBudgetPeriodAnchorDay(newValue)
+                } catch {
+                    errorMessage = error.localizedDescription
+                }
+            }
+        )
+    }
+
     private var availableCurrencies: [String] {
         Locale.commonISOCurrencyCodes.sorted()
     }
@@ -62,6 +75,16 @@ struct SettingsSheet: View {
             }
 
             Section("Budget") {
+                Stepper(value: selectedBudgetPeriodAnchorDay, in: 1...28) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Budget Period Starts")
+                        Text("Day \(selectedBudgetPeriodAnchorDay.wrappedValue) of each month")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .accessibilityIdentifier("settings.budgetPeriodAnchorStepper")
+
                 Button("Manage Budget") {
                     showingBudgetSettings = true
                 }

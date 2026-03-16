@@ -796,6 +796,12 @@ The next utility settings should be:
 
 Settings should not become a broad customization area.
 
+After the core settings utilities are in place, the next meaningful settings control is:
+
+- budget period anchor day
+
+This should stay simple: one monthly reset day, not a flexible budgeting calendar system.
+
 ## Non-Functional Requirements
 
 - The main flows should use standard iOS interactions and stay easy to maintain.

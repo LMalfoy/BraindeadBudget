@@ -167,6 +167,48 @@ final class BudgetCalculationTests: XCTestCase {
         XCTAssertEqual(carryover, 55, accuracy: 0.001)
     }
 
+    func testCurrentMonthExpensesRespectBudgetPeriodAnchorDay() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 3, day: 20, calendar: calendar)
+        let expenses = [
+            Expense(title: "Before Anchor", category: .food, amount: 10, date: makeDate(year: 2026, month: 3, day: 10, calendar: calendar)),
+            Expense(title: "After Anchor", category: .food, amount: 20, date: makeDate(year: 2026, month: 3, day: 16, calendar: calendar)),
+            Expense(title: "Prev Period Tail", category: .food, amount: 30, date: makeDate(year: 2026, month: 2, day: 20, calendar: calendar))
+        ]
+
+        let filtered = BudgetStore.currentMonthExpenses(
+            from: expenses,
+            budgetPeriodAnchorDay: 15,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertEqual(filtered.map(\.title).sorted(), ["After Anchor", "Prev Period Tail"])
+    }
+
+    func testRemainingBudgetUsesAnchoredPreviousPeriodCarryover() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 3, day: 20, calendar: calendar)
+        let expenses = [
+            Expense(title: "Prev Period", category: .food, amount: 60, date: makeDate(year: 2026, month: 2, day: 20, calendar: calendar)),
+            Expense(title: "Current Period", category: .food, amount: 10, date: makeDate(year: 2026, month: 3, day: 16, calendar: calendar))
+        ]
+
+        let remaining = BudgetStore.remainingBudget(
+            monthlyBudget: 100,
+            expenses: expenses,
+            budgetPeriodAnchorDay: 15,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertEqual(remaining, 30, accuracy: 0.001)
+    }
+
     func testCategorySpendingAggregatesCurrentMonthExpensesByCategory() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!

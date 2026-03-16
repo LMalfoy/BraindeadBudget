@@ -12,7 +12,7 @@ struct ExpenseHistorySheet: View {
     @Query(sort: \IncomeItem.createdAt) private var incomeItems: [IncomeItem]
     @Query(sort: \RecurringExpenseItem.createdAt) private var recurringExpenseItems: [RecurringExpenseItem]
 
-    @State private var selectedMonth = ExpenseHistorySheet.monthAnchor(for: .now)
+    @State private var selectedMonth = Date.now
     @State private var editingExpense: Expense?
     @State private var showingMonthPicker = false
     @State private var errorMessage: String?
@@ -33,8 +33,16 @@ struct ExpenseHistorySheet: View {
         budgets.first?.initialBudgetAnchorMonth
     }
 
+    private var budgetPeriodAnchorDay: Int {
+        budgets.first?.budgetPeriodAnchorDay ?? 1
+    }
+
     private var monthExpenses: [Expense] {
-        store.expenses(from: expenses, inMonthContaining: selectedMonth)
+        BudgetStore.expenses(
+            from: expenses,
+            inMonthContaining: selectedMonth,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay
+        )
     }
 
     private var monthlyBudget: Double {
@@ -48,6 +56,7 @@ struct ExpenseHistorySheet: View {
         BudgetStore.monthlyHistoryDigest(
             monthlyBudget: monthlyBudget,
             expenses: expenses,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
             initialAvailableBudget: initialAvailableBudget,
             initialBudgetAnchorMonth: initialBudgetAnchorMonth,
             referenceDate: selectedMonth
@@ -177,7 +186,7 @@ struct ExpenseHistorySheet: View {
 
     private func shiftMonth(by value: Int) {
         if let shiftedMonth = Self.historyCalendar.date(byAdding: .month, value: value, to: selectedMonth) {
-            selectedMonth = Self.monthAnchor(for: shiftedMonth)
+            selectedMonth = shiftedMonth
         }
     }
 

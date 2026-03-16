@@ -900,3 +900,5 @@ Validation:
   - erase all data / reset flow
   - settings polish and version display cleanup
 - `v3.1`: budget period anchor setting
+  - choose the monthly budget reset day
+  - keep the interaction simple and explicit

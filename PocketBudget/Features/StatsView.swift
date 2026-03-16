@@ -42,8 +42,12 @@ struct StatsView: View {
         budgetSettings?.initialBudgetAnchorMonth
     }
 
+    private var budgetPeriodAnchorDay: Int {
+        budgetSettings?.budgetPeriodAnchorDay ?? 1
+    }
+
     private var categorySpending: [CategorySpendingSummary] {
-        BudgetStore.categorySpending(for: expenses)
+        BudgetStore.categorySpending(for: expenses, budgetPeriodAnchorDay: budgetPeriodAnchorDay)
     }
 
     private var monthlyBudget: Double {
@@ -54,7 +58,7 @@ struct StatsView: View {
     }
 
     private var topCategory: CategorySpendingSummary? {
-        BudgetStore.topSpendingCategory(for: expenses)
+        BudgetStore.topSpendingCategory(for: expenses, budgetPeriodAnchorDay: budgetPeriodAnchorDay)
     }
 
     private var categoryInterpretation: String {
@@ -69,27 +73,29 @@ struct StatsView: View {
         BudgetStore.budgetTrajectory(
             monthlyBudget: monthlyBudget,
             expenses: expenses,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
             initialAvailableBudget: initialAvailableBudget,
             initialBudgetAnchorMonth: initialBudgetAnchorMonth
         )
     }
 
     private var temporalSpendingBuckets: [TemporalSpendingBucket] {
-        BudgetStore.temporalSpendingBuckets(for: expenses)
+        BudgetStore.temporalSpendingBuckets(for: expenses, budgetPeriodAnchorDay: budgetPeriodAnchorDay)
     }
 
     private var monthComparison: MonthComparisonSummary {
-        BudgetStore.monthComparison(for: expenses)
+        BudgetStore.monthComparison(for: expenses, budgetPeriodAnchorDay: budgetPeriodAnchorDay)
     }
 
     private var monthComparisonHistory: [MonthlySpendingPoint] {
-        BudgetStore.monthComparisonHistory(for: expenses)
+        BudgetStore.monthComparisonHistory(for: expenses, budgetPeriodAnchorDay: budgetPeriodAnchorDay)
     }
 
     private var carryoverAmount: Double {
         BudgetStore.previousMonthCarryover(
             monthlyBudget: monthlyBudget,
             expenses: expenses,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
             initialAvailableBudget: initialAvailableBudget,
             initialBudgetAnchorMonth: initialBudgetAnchorMonth
         )
@@ -99,6 +105,7 @@ struct StatsView: View {
         BudgetStore.carryoverHistory(
             monthlyBudget: monthlyBudget,
             expenses: expenses,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
             initialAvailableBudget: initialAvailableBudget,
             initialBudgetAnchorMonth: initialBudgetAnchorMonth
         )
@@ -108,6 +115,7 @@ struct StatsView: View {
         BudgetStore.evaluateBudgetProgression(
             monthlyBudget: monthlyBudget,
             expenses: expenses,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
             initialAvailableBudget: initialAvailableBudget,
             initialBudgetAnchorMonth: initialBudgetAnchorMonth
         )
@@ -145,7 +153,7 @@ struct StatsView: View {
 
     private var currentVariableSpending: Double {
         BudgetStore.totalSpent(
-            for: BudgetStore.currentMonthExpenses(from: expenses)
+            for: BudgetStore.currentMonthExpenses(from: expenses, budgetPeriodAnchorDay: budgetPeriodAnchorDay)
         )
     }
 

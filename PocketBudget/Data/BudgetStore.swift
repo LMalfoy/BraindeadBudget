@@ -249,6 +249,7 @@ struct BudgetStore {
     func saveSettings(currencyCode: String) throws {
         try saveSettings(
             currencyCode: currencyCode,
+            budgetPeriodAnchorDay: nil,
             initialAvailableBudget: nil,
             initialBudgetAnchorMonth: nil
         )
@@ -256,6 +257,7 @@ struct BudgetStore {
 
     func saveSettings(
         currencyCode: String,
+        budgetPeriodAnchorDay: Int?,
         initialAvailableBudget: Double?,
         initialBudgetAnchorMonth: Date?
     ) throws {
@@ -263,6 +265,9 @@ struct BudgetStore {
 
         if let settings = budgets.first {
             settings.currencyCode = currencyCode
+            if let budgetPeriodAnchorDay {
+                settings.budgetPeriodAnchorDay = max(1, min(28, budgetPeriodAnchorDay))
+            }
             if let initialAvailableBudget {
                 settings.initialAvailableBudget = initialAvailableBudget
             }
@@ -277,9 +282,28 @@ struct BudgetStore {
         } else {
             context.insert(BudgetSettings(
                 currencyCode: currencyCode,
+                budgetPeriodAnchorDay: budgetPeriodAnchorDay ?? 1,
                 initialAvailableBudget: initialAvailableBudget,
                 initialBudgetAnchorMonth: initialBudgetAnchorMonth
             ))
+        }
+
+        try context.save()
+    }
+
+    func saveBudgetPeriodAnchorDay(_ day: Int) throws {
+        let budgets = try context.fetch(FetchDescriptor<BudgetSettings>())
+        let normalizedDay = max(1, min(28, day))
+
+        if let settings = budgets.first {
+            settings.budgetPeriodAnchorDay = normalizedDay
+            settings.updatedAt = .now
+
+            for duplicate in budgets.dropFirst() {
+                context.delete(duplicate)
+            }
+        } else {
+            context.insert(BudgetSettings(budgetPeriodAnchorDay: normalizedDay))
         }
 
         try context.save()
@@ -441,34 +465,47 @@ struct BudgetStore {
     static func expenses(
         from expenses: [Expense],
         inMonthContaining referenceDate: Date,
+        budgetPeriodAnchorDay: Int = 1,
         calendar: Calendar = .current
     ) -> [Expense] {
-        expenses.filter {
-            calendar.isDate($0.date, equalTo: referenceDate, toGranularity: .month)
+        let periodStart = periodStart(containing: referenceDate, budgetPeriodAnchorDay: budgetPeriodAnchorDay, calendar: calendar)
+        let nextPeriodStart = nextPeriodStart(after: periodStart, budgetPeriodAnchorDay: budgetPeriodAnchorDay, calendar: calendar)
+
+        return expenses.filter {
+            $0.date >= periodStart && $0.date < nextPeriodStart
         }
     }
 
     static func currentMonthExpenses(
         from expenses: [Expense],
+        budgetPeriodAnchorDay: Int = 1,
         calendar: Calendar = .current,
         referenceDate: Date = .now
     ) -> [Expense] {
-        self.expenses(from: expenses, inMonthContaining: referenceDate, calendar: calendar)
+        self.expenses(
+            from: expenses,
+            inMonthContaining: referenceDate,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
+            calendar: calendar
+        )
     }
 
     static func previousMonthExpenses(
         from expenses: [Expense],
+        budgetPeriodAnchorDay: Int = 1,
         calendar: Calendar = .current,
         referenceDate: Date = .now
     ) -> [Expense] {
-        guard let previousMonthReferenceDate = calendar.date(byAdding: .month, value: -1, to: referenceDate) else {
+        let currentPeriodStart = periodStart(containing: referenceDate, budgetPeriodAnchorDay: budgetPeriodAnchorDay, calendar: calendar)
+        guard let previousPeriodReferenceDate = calendar.date(byAdding: .day, value: -1, to: currentPeriodStart) else {
             return []
         }
 
         return currentMonthExpenses(
             from: expenses,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
             calendar: calendar,
-            referenceDate: previousMonthReferenceDate
+            referenceDate: previousPeriodReferenceDate
         )
     }
 
@@ -575,6 +612,7 @@ struct BudgetStore {
     static func previousMonthCarryover(
         monthlyBudget: Double,
         expenses: [Expense],
+        budgetPeriodAnchorDay: Int = 1,
         initialAvailableBudget: Double? = nil,
         initialBudgetAnchorMonth: Date? = nil,
         calendar: Calendar = .current,
@@ -582,6 +620,7 @@ struct BudgetStore {
     ) -> Double {
         let previousMonthExpenses = previousMonthExpenses(
             from: expenses,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
             calendar: calendar,
             referenceDate: referenceDate
         )
@@ -608,6 +647,7 @@ struct BudgetStore {
     static func adjustedMonthlyBudget(
         monthlyBudget: Double,
         expenses: [Expense],
+        budgetPeriodAnchorDay: Int = 1,
         initialAvailableBudget: Double? = nil,
         initialBudgetAnchorMonth: Date? = nil,
         calendar: Calendar = .current,
@@ -625,6 +665,7 @@ struct BudgetStore {
         return monthlyBudget + previousMonthCarryover(
             monthlyBudget: monthlyBudget,
             expenses: expenses,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
             initialAvailableBudget: initialAvailableBudget,
             initialBudgetAnchorMonth: initialBudgetAnchorMonth,
             calendar: calendar,
@@ -634,11 +675,13 @@ struct BudgetStore {
 
     static func categorySpending(
         for expenses: [Expense],
+        budgetPeriodAnchorDay: Int = 1,
         calendar: Calendar = .current,
         referenceDate: Date = .now
     ) -> [CategorySpendingSummary] {
         let currentMonthExpenses = currentMonthExpenses(
             from: expenses,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
             calendar: calendar,
             referenceDate: referenceDate
         )
@@ -665,11 +708,13 @@ struct BudgetStore {
 
     static func topSpendingCategory(
         for expenses: [Expense],
+        budgetPeriodAnchorDay: Int = 1,
         calendar: Calendar = .current,
         referenceDate: Date = .now
     ) -> CategorySpendingSummary? {
         categorySpending(
             for: expenses,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
             calendar: calendar,
             referenceDate: referenceDate
         ).first
@@ -678,6 +723,7 @@ struct BudgetStore {
     static func remainingBudget(
         monthlyBudget: Double,
         expenses: [Expense],
+        budgetPeriodAnchorDay: Int = 1,
         initialAvailableBudget: Double? = nil,
         initialBudgetAnchorMonth: Date? = nil,
         calendar: Calendar = .current,
@@ -686,6 +732,7 @@ struct BudgetStore {
         adjustedMonthlyBudget(
             monthlyBudget: monthlyBudget,
             expenses: expenses,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
             initialAvailableBudget: initialAvailableBudget,
             initialBudgetAnchorMonth: initialBudgetAnchorMonth,
             calendar: calendar,
@@ -693,6 +740,7 @@ struct BudgetStore {
         ) - totalSpent(
             for: currentMonthExpenses(
                 from: expenses,
+                budgetPeriodAnchorDay: budgetPeriodAnchorDay,
                 calendar: calendar,
                 referenceDate: referenceDate
             )
@@ -702,6 +750,7 @@ struct BudgetStore {
     static func monthlyHistoryDigest(
         monthlyBudget: Double,
         expenses: [Expense],
+        budgetPeriodAnchorDay: Int = 1,
         initialAvailableBudget: Double? = nil,
         initialBudgetAnchorMonth: Date? = nil,
         calendar: Calendar = .current,
@@ -709,6 +758,7 @@ struct BudgetStore {
     ) -> MonthlyHistoryDigest {
         let selectedMonthExpenses = currentMonthExpenses(
             from: expenses,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
             calendar: calendar,
             referenceDate: referenceDate
         )
@@ -718,6 +768,7 @@ struct BudgetStore {
             carryover: previousMonthCarryover(
                 monthlyBudget: monthlyBudget,
                 expenses: expenses,
+                budgetPeriodAnchorDay: budgetPeriodAnchorDay,
                 initialAvailableBudget: initialAvailableBudget,
                 initialBudgetAnchorMonth: initialBudgetAnchorMonth,
                 calendar: calendar,
@@ -725,6 +776,7 @@ struct BudgetStore {
             ),
             categorySpending: categorySpending(
                 for: expenses,
+                budgetPeriodAnchorDay: budgetPeriodAnchorDay,
                 calendar: calendar,
                 referenceDate: referenceDate
             )
@@ -734,6 +786,7 @@ struct BudgetStore {
     static func budgetTrajectory(
         monthlyBudget: Double,
         expenses: [Expense],
+        budgetPeriodAnchorDay: Int = 1,
         initialAvailableBudget: Double? = nil,
         initialBudgetAnchorMonth: Date? = nil,
         calendar: Calendar = .current,
@@ -741,6 +794,7 @@ struct BudgetStore {
     ) -> [BudgetTrajectoryPoint] {
         let currentMonthExpenses = currentMonthExpenses(
             from: expenses,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
             calendar: calendar,
             referenceDate: referenceDate
         )
@@ -749,6 +803,7 @@ struct BudgetStore {
         let startingBudget = adjustedMonthlyBudget(
             monthlyBudget: monthlyBudget,
             expenses: expenses,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
             initialAvailableBudget: initialAvailableBudget,
             initialBudgetAnchorMonth: initialBudgetAnchorMonth,
             calendar: calendar,
@@ -772,11 +827,13 @@ struct BudgetStore {
 
     static func temporalSpending(
         for expenses: [Expense],
+        budgetPeriodAnchorDay: Int = 1,
         calendar: Calendar = .current,
         referenceDate: Date = .now
     ) -> [TemporalSpendingSummary] {
         let currentMonthExpenses = currentMonthExpenses(
             from: expenses,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
             calendar: calendar,
             referenceDate: referenceDate
         )
@@ -800,6 +857,7 @@ struct BudgetStore {
     static func temporalSpendingBuckets(
         for expenses: [Expense],
         bucketCount: Int = 10,
+        budgetPeriodAnchorDay: Int = 1,
         calendar: Calendar = .current,
         referenceDate: Date = .now
     ) -> [TemporalSpendingBucket] {
@@ -809,6 +867,7 @@ struct BudgetStore {
 
         let currentMonthExpenses = currentMonthExpenses(
             from: expenses,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
             calendar: calendar,
             referenceDate: referenceDate
         )
@@ -885,12 +944,14 @@ struct BudgetStore {
 
     static func monthComparison(
         for expenses: [Expense],
+        budgetPeriodAnchorDay: Int = 1,
         calendar: Calendar = .current,
         referenceDate: Date = .now
     ) -> MonthComparisonSummary {
         let currentTotal = totalSpent(
             for: currentMonthExpenses(
                 from: expenses,
+                budgetPeriodAnchorDay: budgetPeriodAnchorDay,
                 calendar: calendar,
                 referenceDate: referenceDate
             )
@@ -898,6 +959,7 @@ struct BudgetStore {
         let previousTotal = totalSpent(
             for: previousMonthExpenses(
                 from: expenses,
+                budgetPeriodAnchorDay: budgetPeriodAnchorDay,
                 calendar: calendar,
                 referenceDate: referenceDate
             )
@@ -912,6 +974,7 @@ struct BudgetStore {
     static func monthComparisonHistory(
         for expenses: [Expense],
         months: Int = 6,
+        budgetPeriodAnchorDay: Int = 1,
         calendar: Calendar = .current,
         referenceDate: Date = .now
     ) -> [MonthlySpendingPoint] {
@@ -919,7 +982,7 @@ struct BudgetStore {
             return []
         }
 
-        let referenceMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: referenceDate)) ?? referenceDate
+        let referenceMonth = periodStart(containing: referenceDate, budgetPeriodAnchorDay: budgetPeriodAnchorDay, calendar: calendar)
 
         return (0..<months).compactMap { offset in
             guard let month = calendar.date(byAdding: .month, value: offset - (months - 1), to: referenceMonth) else {
@@ -931,6 +994,7 @@ struct BudgetStore {
                 total: totalSpent(
                     for: currentMonthExpenses(
                         from: expenses,
+                        budgetPeriodAnchorDay: budgetPeriodAnchorDay,
                         calendar: calendar,
                         referenceDate: month
                     )
@@ -942,6 +1006,7 @@ struct BudgetStore {
     static func carryoverHistory(
         monthlyBudget: Double,
         expenses: [Expense],
+        budgetPeriodAnchorDay: Int = 1,
         initialAvailableBudget: Double? = nil,
         initialBudgetAnchorMonth: Date? = nil,
         months: Int = 6,
@@ -952,7 +1017,7 @@ struct BudgetStore {
             return []
         }
 
-        let referenceMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: referenceDate)) ?? referenceDate
+        let referenceMonth = periodStart(containing: referenceDate, budgetPeriodAnchorDay: budgetPeriodAnchorDay, calendar: calendar)
 
         return (0..<months).compactMap { offset in
             guard let month = calendar.date(byAdding: .month, value: offset - (months - 1), to: referenceMonth) else {
@@ -964,6 +1029,7 @@ struct BudgetStore {
                 amount: previousMonthCarryover(
                     monthlyBudget: monthlyBudget,
                     expenses: expenses,
+                    budgetPeriodAnchorDay: budgetPeriodAnchorDay,
                     initialAvailableBudget: initialAvailableBudget,
                     initialBudgetAnchorMonth: initialBudgetAnchorMonth,
                     calendar: calendar,
@@ -976,6 +1042,7 @@ struct BudgetStore {
     static func evaluateBudgetProgression(
         monthlyBudget: Double,
         expenses: [Expense],
+        budgetPeriodAnchorDay: Int = 1,
         initialAvailableBudget: Double? = nil,
         initialBudgetAnchorMonth: Date? = nil,
         calendar: Calendar = .current,
@@ -984,6 +1051,7 @@ struct BudgetStore {
         let progressMonths = completedSavingsProgressMonths(
             monthlyBudget: monthlyBudget,
             expenses: expenses,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
             initialAvailableBudget: initialAvailableBudget,
             initialBudgetAnchorMonth: initialBudgetAnchorMonth,
             calendar: calendar,
@@ -1026,18 +1094,19 @@ struct BudgetStore {
     private static func completedSavingsProgressMonths(
         monthlyBudget: Double,
         expenses: [Expense],
+        budgetPeriodAnchorDay: Int,
         initialAvailableBudget: Double?,
         initialBudgetAnchorMonth: Date?,
         calendar: Calendar,
         referenceDate: Date
     ) -> [SavingsProgressMonth] {
-        let currentMonth = monthAnchor(for: referenceDate, calendar: calendar)
+        let currentMonth = periodStart(containing: referenceDate, budgetPeriodAnchorDay: budgetPeriodAnchorDay, calendar: calendar)
         let startMonth: Date?
 
         if let initialBudgetAnchorMonth {
-            startMonth = monthAnchor(for: initialBudgetAnchorMonth, calendar: calendar)
+            startMonth = periodStart(containing: initialBudgetAnchorMonth, budgetPeriodAnchorDay: budgetPeriodAnchorDay, calendar: calendar)
         } else if let earliestExpense = expenses.map(\.date).min() {
-            startMonth = monthAnchor(for: earliestExpense, calendar: calendar)
+            startMonth = periodStart(containing: earliestExpense, budgetPeriodAnchorDay: budgetPeriodAnchorDay, calendar: calendar)
         } else {
             startMonth = nil
         }
@@ -1053,11 +1122,13 @@ struct BudgetStore {
             let monthExpenses = Self.expenses(
                 from: expenses,
                 inMonthContaining: month,
+                budgetPeriodAnchorDay: budgetPeriodAnchorDay,
                 calendar: calendar
             )
             let adjustedBudget = adjustedMonthlyBudget(
                 monthlyBudget: monthlyBudget,
                 expenses: expenses,
+                budgetPeriodAnchorDay: budgetPeriodAnchorDay,
                 initialAvailableBudget: initialAvailableBudget,
                 initialBudgetAnchorMonth: initialBudgetAnchorMonth,
                 calendar: calendar,
@@ -1066,6 +1137,7 @@ struct BudgetStore {
             let remaining = remainingBudget(
                 monthlyBudget: monthlyBudget,
                 expenses: expenses,
+                budgetPeriodAnchorDay: budgetPeriodAnchorDay,
                 initialAvailableBudget: initialAvailableBudget,
                 initialBudgetAnchorMonth: initialBudgetAnchorMonth,
                 calendar: calendar,
@@ -1087,10 +1159,11 @@ struct BudgetStore {
                 )
             )
 
-            guard let nextMonth = calendar.date(byAdding: .month, value: 1, to: month) else {
-                break
-            }
-            month = nextMonth
+            month = nextPeriodStart(
+                after: month,
+                budgetPeriodAnchorDay: budgetPeriodAnchorDay,
+                calendar: calendar
+            )
         }
 
         return progressMonths
@@ -1179,6 +1252,52 @@ struct BudgetStore {
 
     private static func monthAnchor(for date: Date, calendar: Calendar) -> Date {
         calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? date
+    }
+
+    private static func periodStart(
+        containing date: Date,
+        budgetPeriodAnchorDay: Int,
+        calendar: Calendar
+    ) -> Date {
+        let monthStart = monthAnchor(for: date, calendar: calendar)
+        let normalizedDay = normalizedAnchorDay(budgetPeriodAnchorDay, forMonthContaining: monthStart, calendar: calendar)
+        let currentMonthAnchor = calendar.date(byAdding: .day, value: normalizedDay - 1, to: monthStart) ?? monthStart
+
+        if date >= currentMonthAnchor {
+            return currentMonthAnchor
+        }
+
+        guard let previousMonth = calendar.date(byAdding: .month, value: -1, to: monthStart) else {
+            return currentMonthAnchor
+        }
+
+        let previousMonthStart = monthAnchor(for: previousMonth, calendar: calendar)
+        let previousNormalizedDay = normalizedAnchorDay(budgetPeriodAnchorDay, forMonthContaining: previousMonthStart, calendar: calendar)
+        return calendar.date(byAdding: .day, value: previousNormalizedDay - 1, to: previousMonthStart) ?? previousMonthStart
+    }
+
+    private static func nextPeriodStart(
+        after periodStart: Date,
+        budgetPeriodAnchorDay: Int,
+        calendar: Calendar
+    ) -> Date {
+        let currentMonthStart = monthAnchor(for: periodStart, calendar: calendar)
+        guard let nextMonth = calendar.date(byAdding: .month, value: 1, to: currentMonthStart) else {
+            return periodStart
+        }
+
+        let nextMonthStart = monthAnchor(for: nextMonth, calendar: calendar)
+        let normalizedDay = normalizedAnchorDay(budgetPeriodAnchorDay, forMonthContaining: nextMonthStart, calendar: calendar)
+        return calendar.date(byAdding: .day, value: normalizedDay - 1, to: nextMonthStart) ?? nextMonthStart
+    }
+
+    private static func normalizedAnchorDay(
+        _ budgetPeriodAnchorDay: Int,
+        forMonthContaining date: Date,
+        calendar: Calendar
+    ) -> Int {
+        let maxDay = calendar.range(of: .day, in: .month, for: date)?.count ?? 28
+        return max(1, min(maxDay, budgetPeriodAnchorDay))
     }
 
     func currentMonthExpenses(from expenses: [Expense], referenceDate: Date = .now) -> [Expense] {

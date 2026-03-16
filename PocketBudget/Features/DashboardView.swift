@@ -29,12 +29,16 @@ struct DashboardView: View {
         budgetSettings?.initialBudgetAnchorMonth
     }
 
+    private var budgetPeriodAnchorDay: Int {
+        budgetSettings?.budgetPeriodAnchorDay ?? 1
+    }
+
     private var hasBaselineData: Bool {
         !incomeItems.isEmpty
     }
 
     private var currentMonthExpenses: [Expense] {
-        store.currentMonthExpenses(from: expenses)
+        BudgetStore.currentMonthExpenses(from: expenses, budgetPeriodAnchorDay: budgetPeriodAnchorDay)
     }
 
     private var recentExpenses: [Expense] {
@@ -56,6 +60,7 @@ struct DashboardView: View {
         BudgetStore.previousMonthCarryover(
             monthlyBudget: monthlyBudget,
             expenses: expenses,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
             initialAvailableBudget: initialAvailableBudget,
             initialBudgetAnchorMonth: initialBudgetAnchorMonth
         )
@@ -65,6 +70,7 @@ struct DashboardView: View {
         BudgetStore.adjustedMonthlyBudget(
             monthlyBudget: monthlyBudget,
             expenses: expenses,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
             initialAvailableBudget: initialAvailableBudget,
             initialBudgetAnchorMonth: initialBudgetAnchorMonth
         )
@@ -74,13 +80,14 @@ struct DashboardView: View {
         BudgetStore.remainingBudget(
             monthlyBudget: monthlyBudget,
             expenses: expenses,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
             initialAvailableBudget: initialAvailableBudget,
             initialBudgetAnchorMonth: initialBudgetAnchorMonth
         )
     }
 
     private var categorySpending: [CategorySpendingSummary] {
-        BudgetStore.categorySpending(for: expenses)
+        BudgetStore.categorySpending(for: expenses, budgetPeriodAnchorDay: budgetPeriodAnchorDay)
     }
 
     private var topCategory: CategorySpendingSummary? {

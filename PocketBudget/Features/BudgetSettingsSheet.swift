@@ -253,6 +253,7 @@ struct BudgetSettingsSheet: View {
         do {
             try store.saveSettings(
                 currencyCode: currencyCode,
+                budgetPeriodAnchorDay: settings.first?.budgetPeriodAnchorDay,
                 initialAvailableBudget: mode == .onboarding ? parsedInitialAvailableBudget : nil,
                 initialBudgetAnchorMonth: mode == .onboarding ? Self.monthAnchor(for: .now) : nil
             )
