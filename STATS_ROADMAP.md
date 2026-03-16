@@ -92,27 +92,31 @@ Why fifth:
 - carryover is already part of the real budget model
 - it should become visible before it is folded into the final score
 
-### Stats v6: Budget Discipline Score
+### Stats v6: Budget Discipline Rank
 
 Scope:
 
-- create one lightweight summary score based on the earlier statistics modules
+- create one lightweight summary rank based on the earlier statistics modules
 - include the carryover signal as an explicit input
+- include leftover budget percentage as an explicit input
+- keep the model rule-based and transparent
+- show the reasons behind the rank directly in the UI
 - include a chess-themed role progression:
   - Pawn
   - Knight
   - Bishop
+  - Rook
   - Queen
   - King
 
 Why last:
 
-- the score should summarize real behavioral signals
+- the rank should summarize real behavioral signals
 - it should not precede the modules it depends on
 
 ## Non-Goals For Early Stats
 
 - no speculative machine-learning style predictions
 - no overly dense multi-chart dashboard
-- no arbitrary scoring system before the underlying modules exist
+- no arbitrary hidden scoring system before the underlying modules exist
 - no category drill-down until the core Stats area is stable enough to justify it

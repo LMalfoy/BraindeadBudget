@@ -701,3 +701,31 @@ For each iteration:
 3. Add or update tests for calculation and persistence logic.
 4. Verify manually in the simulator.
 5. Do not combine foundation work, UI redesign, and smart parsing into one release.
+
+### Iteration 2.0: Budget Discipline Rank
+
+Goal:
+Add a qualitative, explainable rank system that summarizes the user's current budgeting discipline.
+
+Scope:
+
+- derive a rank from existing statistics signals
+- use a transparent, rule-based evaluation model
+- avoid numeric scoring
+- include visible "why" reasons beneath the rank
+- incorporate carryover and rollover as stabilizing or modifying signals
+- handle sparse-data states conservatively
+
+Why this matters:
+
+- the Statistics area needs a capstone module that translates insight into guidance
+- a qualitative rank can motivate the user without pretending to be mathematically exact
+
+Risk:
+Medium
+
+Validation:
+
+- unit tests for rank evaluation and sparse-data behavior
+- manual review that the reasons match the displayed rank
+- confirm that the rank feels stable rather than jumpy across nearby states

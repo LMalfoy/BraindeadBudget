@@ -219,6 +219,54 @@ Category presentation should stay minimal:
 
 After the budgeting baseline and fast-entry flow are established, the next priority is dashboard polish.
 
+## Statistics Area Direction
+
+The Statistics area is the app's second major product pillar.
+
+Its purpose is not decorative analytics. It should function as a behavioral feedback system that helps the user:
+
+- understand spending habits
+- notice unhealthy patterns early
+- recognize positive carryover and rollover outcomes
+- regulate spending more intentionally over time
+
+Each statistics module should follow these rules:
+
+- keep the visual presentation easy to understand
+- include a short plain-language interpretation
+- prefer behavioral usefulness over analytical density
+- build iteratively on top of the existing budget model
+
+The final capstone of the Statistics area should be a qualitative discipline rank.
+
+That rank should:
+
+- be rule-based and deterministic
+- avoid false precision and avoid numeric scores
+- summarize budgeting discipline in a motivating but fair way
+- explain itself transparently through visible reasons
+
+The rank hierarchy should be chess-inspired:
+
+- Pawn
+- Knight
+- Bishop
+- Rook
+- Queen
+- King
+
+The rank should be driven primarily by behavioral signals:
+
+- budget trajectory
+- category distribution
+- temporal spending pattern
+- month-over-month comparison
+
+And it should be stabilized or adjusted by outcome signals:
+
+- monthly carryover
+- leftover budget percentage for the month
+
 This means:
 
 - stronger visual hierarchy for the remaining budget

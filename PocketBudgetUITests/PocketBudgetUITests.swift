@@ -108,6 +108,19 @@ final class PocketBudgetUITests: XCTestCase {
         XCTAssertTrue(app.otherElements["stats.carryoverModule"].firstMatch.waitForExistence(timeout: 5))
     }
 
+    func testStatsAreaShowsBudgetDisciplineRank() throws {
+        let app = XCUIApplication()
+        launchAndCompleteBudgetSetup(in: app)
+        addExpense(named: "Coffee", amount: "5.50", categoryIdentifier: "food", in: app)
+
+        let statsButton = app.tabBars.buttons["Stats"].firstMatch
+        XCTAssertTrue(statsButton.waitForExistence(timeout: 5))
+        statsButton.tap()
+
+        XCTAssertTrue(app.staticTexts["Budget Discipline"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Knight"].firstMatch.waitForExistence(timeout: 5))
+    }
+
     func testUserCanOpenExpenseHistory() throws {
         let app = XCUIApplication()
         launchAndCompleteBudgetSetup(in: app)

@@ -444,6 +444,73 @@ final class BudgetCalculationTests: XCTestCase {
         }
     }
 
+    func testBudgetDisciplineFallsBackToKnightWhenDataIsSparse() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 6, day: 20, calendar: calendar)
+        let expenses = [
+            Expense(title: "Coffee", category: .food, amount: 12, date: makeDate(year: 2026, month: 6, day: 4, calendar: calendar))
+        ]
+
+        let evaluation = BudgetStore.evaluateBudgetDiscipline(
+            monthlyBudget: 100,
+            expenses: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertEqual(evaluation.rank, .knight)
+        XCTAssertTrue(evaluation.isSparseData)
+        XCTAssertEqual(evaluation.summary, "Still learning your spending pattern.")
+    }
+
+    func testBudgetDisciplineCanReachKingForStrongStableBehavior() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 6, day: 26, calendar: calendar)
+        let expenses = [
+            Expense(title: "May Groceries", category: .food, amount: 80, date: makeDate(year: 2026, month: 5, day: 10, calendar: calendar)),
+            Expense(title: "Coffee", category: .food, amount: 10, date: makeDate(year: 2026, month: 6, day: 5, calendar: calendar)),
+            Expense(title: "Train", category: .transport, amount: 15, date: makeDate(year: 2026, month: 6, day: 15, calendar: calendar)),
+            Expense(title: "Soap", category: .household, amount: 20, date: makeDate(year: 2026, month: 6, day: 25, calendar: calendar))
+        ]
+
+        let evaluation = BudgetStore.evaluateBudgetDiscipline(
+            monthlyBudget: 100,
+            expenses: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertEqual(evaluation.rank, .king)
+        XCTAssertFalse(evaluation.isSparseData)
+    }
+
+    func testBudgetDisciplineDropsToPawnForUnhealthyPattern() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 6, day: 8, calendar: calendar)
+        let expenses = [
+            Expense(title: "May Dinner", category: .food, amount: 90, date: makeDate(year: 2026, month: 5, day: 12, calendar: calendar)),
+            Expense(title: "Concert", category: .fun, amount: 70, date: makeDate(year: 2026, month: 6, day: 2, calendar: calendar)),
+            Expense(title: "Games", category: .fun, amount: 60, date: makeDate(year: 2026, month: 6, day: 3, calendar: calendar)),
+            Expense(title: "Bar", category: .fun, amount: 50, date: makeDate(year: 2026, month: 6, day: 4, calendar: calendar))
+        ]
+
+        let evaluation = BudgetStore.evaluateBudgetDiscipline(
+            monthlyBudget: 100,
+            expenses: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertEqual(evaluation.rank, .pawn)
+        XCTAssertFalse(evaluation.isSparseData)
+    }
+
     private func makeDate(year: Int, month: Int, day: Int, calendar: Calendar) -> Date {
         calendar.date(from: DateComponents(year: year, month: month, day: day))!
     }

@@ -65,6 +65,13 @@ struct StatsView: View {
         )
     }
 
+    private var disciplineEvaluation: BudgetDisciplineEvaluation {
+        BudgetStore.evaluateBudgetDiscipline(
+            monthlyBudget: monthlyBudget,
+            expenses: expenses
+        )
+    }
+
     private var trajectoryInterpretation: String {
         guard let firstPoint = trajectory.first, let lastPoint = trajectory.last else {
             return "Add a few expenses to see how your budget pace changes through the month."
@@ -150,6 +157,44 @@ struct StatsView: View {
 
     var body: some View {
         List {
+            Section {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Budget Discipline")
+                        .font(.headline)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(disciplineEvaluation.rank.title)
+                            .font(.system(size: 34, weight: .bold, design: .rounded))
+                            .foregroundStyle(rankColor(for: disciplineEvaluation.rank))
+                            .accessibilityIdentifier("stats.rankValue")
+
+                        Text(disciplineEvaluation.summary)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("stats.rankSummary")
+                    }
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Why")
+                            .font(.subheadline.weight(.semibold))
+
+                        ForEach(disciplineEvaluation.reasons) { reason in
+                            HStack(alignment: .top, spacing: 10) {
+                                Text(symbol(for: reason.tone))
+                                    .font(.subheadline.weight(.bold))
+                                    .foregroundStyle(reasonColor(for: reason.tone))
+
+                                Text(reason.message)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+                .statsCardStyle()
+                .accessibilityIdentifier("stats.rankModule")
+            }
+
             Section {
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Budget Trajectory")
@@ -407,6 +452,45 @@ struct StatsView: View {
         }
 
         return .primary
+    }
+
+    private func rankColor(for rank: BudgetDisciplineRank) -> Color {
+        switch rank {
+        case .pawn:
+            return .secondary
+        case .knight:
+            return .blue
+        case .bishop:
+            return .teal
+        case .rook:
+            return .indigo
+        case .queen:
+            return .purple
+        case .king:
+            return .orange
+        }
+    }
+
+    private func reasonColor(for tone: BudgetReasonTone) -> Color {
+        switch tone {
+        case .positive:
+            return .green
+        case .neutral:
+            return .secondary
+        case .warning:
+            return .orange
+        }
+    }
+
+    private func symbol(for tone: BudgetReasonTone) -> String {
+        switch tone {
+        case .positive:
+            return "✓"
+        case .neutral:
+            return "•"
+        case .warning:
+            return "!"
+        }
     }
 
     @ViewBuilder

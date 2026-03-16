@@ -63,6 +63,80 @@ struct CarryoverHistoryPoint: Identifiable, Equatable {
     var id: Date { month }
 }
 
+enum BudgetSignalStrength: Equatable {
+    case strong
+    case neutral
+    case weak
+}
+
+enum BudgetReasonTone: Equatable {
+    case positive
+    case neutral
+    case warning
+}
+
+struct BudgetDisciplineReason: Identifiable, Equatable {
+    let message: String
+    let tone: BudgetReasonTone
+
+    var id: String { message }
+}
+
+enum BudgetDisciplineRank: Int, CaseIterable, Equatable {
+    case pawn
+    case knight
+    case bishop
+    case rook
+    case queen
+    case king
+
+    var title: String {
+        switch self {
+        case .pawn:
+            return "Pawn"
+        case .knight:
+            return "Knight"
+        case .bishop:
+            return "Bishop"
+        case .rook:
+            return "Rook"
+        case .queen:
+            return "Queen"
+        case .king:
+            return "King"
+        }
+    }
+
+    var summary: String {
+        switch self {
+        case .pawn:
+            return "Your budget needs tighter control this month."
+        case .knight:
+            return "Your budgeting pattern is still settling."
+        case .bishop:
+            return "Your budgeting behavior is fairly balanced."
+        case .rook:
+            return "Your budgeting behavior is stable this month."
+        case .queen:
+            return "Your budgeting discipline is strong this month."
+        case .king:
+            return "Your budgeting discipline is exceptional right now."
+        }
+    }
+
+    func advanced(by step: Int) -> BudgetDisciplineRank {
+        let nextValue = min(max(rawValue + step, Self.pawn.rawValue), Self.king.rawValue)
+        return Self(rawValue: nextValue) ?? self
+    }
+}
+
+struct BudgetDisciplineEvaluation: Equatable {
+    let rank: BudgetDisciplineRank
+    let summary: String
+    let reasons: [BudgetDisciplineReason]
+    let isSparseData: Bool
+}
+
 enum BudgetStoreError: LocalizedError {
     case invalidExpenseCategory
     case invalidExpenseTitle
@@ -570,6 +644,361 @@ struct BudgetStore {
                     referenceDate: month
                 )
             )
+        }
+    }
+
+    static func evaluateBudgetDiscipline(
+        monthlyBudget: Double,
+        expenses: [Expense],
+        calendar: Calendar = .current,
+        referenceDate: Date = .now
+    ) -> BudgetDisciplineEvaluation {
+        let currentMonthExpenses = currentMonthExpenses(
+            from: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+        let comparison = monthComparison(
+            for: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+        let categorySpending = categorySpending(
+            for: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+        let temporalSpending = temporalSpending(
+            for: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+        let trajectory = budgetTrajectory(
+            monthlyBudget: monthlyBudget,
+            expenses: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+        let carryover = previousMonthCarryover(
+            monthlyBudget: monthlyBudget,
+            expenses: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+        let adjustedBudget = adjustedMonthlyBudget(
+            monthlyBudget: monthlyBudget,
+            expenses: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+        let remaining = remainingBudget(
+            monthlyBudget: monthlyBudget,
+            expenses: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        if currentMonthExpenses.count < 3 {
+            var reasons = [
+                BudgetDisciplineReason(
+                    message: "Not enough current-month data is available for a stable rank yet.",
+                    tone: .neutral
+                )
+            ]
+
+            if carryover > 0 {
+                reasons.append(BudgetDisciplineReason(
+                    message: "Carryover remains healthy.",
+                    tone: .positive
+                ))
+            } else if carryover < 0 {
+                reasons.append(BudgetDisciplineReason(
+                    message: "Carryover is reducing this month's room.",
+                    tone: .warning
+                ))
+            }
+
+            return BudgetDisciplineEvaluation(
+                rank: .knight,
+                summary: "Still learning your spending pattern.",
+                reasons: reasons,
+                isSparseData: true
+            )
+        }
+
+        let trajectoryStrength = disciplineTrajectoryStrength(
+            monthlyBudget: adjustedBudget,
+            currentMonthExpenses: currentMonthExpenses,
+            trajectory: trajectory,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+        let categoryStrength = disciplineCategoryStrength(
+            currentMonthExpenses: currentMonthExpenses,
+            categorySpending: categorySpending
+        )
+        let temporalStrength = disciplineTemporalStrength(
+            currentMonthExpenses: currentMonthExpenses,
+            temporalSpending: temporalSpending
+        )
+        let comparisonStrength = disciplineComparisonStrength(comparison)
+        let carryoverStrength = disciplineCarryoverStrength(
+            carryover: carryover,
+            monthlyBudget: monthlyBudget
+        )
+        let leftoverStrength = disciplineLeftoverStrength(
+            adjustedBudget: adjustedBudget,
+            remaining: remaining
+        )
+
+        let baseRank = resolveBaseRank(
+            strengths: [
+                trajectoryStrength,
+                categoryStrength,
+                temporalStrength,
+                comparisonStrength
+            ]
+        )
+        let finalRank = resolveModifiedRank(
+            baseRank: baseRank,
+            carryoverStrength: carryoverStrength,
+            leftoverStrength: leftoverStrength
+        )
+
+        let reasons = [
+            disciplineReason(
+                for: trajectoryStrength,
+                strong: "Spending pace is close to plan.",
+                neutral: "Spending pace is not far from plan.",
+                weak: "Spending pace is running ahead of plan."
+            ),
+            disciplineReason(
+                for: categoryStrength,
+                strong: "Category distribution is balanced.",
+                neutral: "One category is starting to dominate.",
+                weak: "One category dominates spending heavily."
+            ),
+            disciplineReason(
+                for: temporalStrength,
+                strong: "Spending pattern is stable across the month.",
+                neutral: "Spending is somewhat clustered.",
+                weak: "Spending is heavily concentrated in one part of the month."
+            ),
+            disciplineReason(
+                for: comparisonStrength,
+                strong: "Spending is lower than last month.",
+                neutral: "Spending is close to last month.",
+                weak: "Spending is higher than last month."
+            ),
+            disciplineReason(
+                for: carryoverStrength,
+                strong: "Carryover remains healthy.",
+                neutral: "Carryover is neutral.",
+                weak: "Carryover is reducing this month's room."
+            ),
+            disciplineReason(
+                for: leftoverStrength,
+                strong: "You still have meaningful budget room left.",
+                neutral: "You still have some room left this month.",
+                weak: "You have exhausted this month's budget."
+            )
+        ]
+
+        return BudgetDisciplineEvaluation(
+            rank: finalRank,
+            summary: finalRank.summary,
+            reasons: reasons,
+            isSparseData: false
+        )
+    }
+
+    private static func disciplineTrajectoryStrength(
+        monthlyBudget: Double,
+        currentMonthExpenses: [Expense],
+        trajectory: [BudgetTrajectoryPoint],
+        calendar: Calendar,
+        referenceDate: Date
+    ) -> BudgetSignalStrength {
+        guard monthlyBudget > 0, !currentMonthExpenses.isEmpty, !trajectory.isEmpty else {
+            return .neutral
+        }
+
+        let day = calendar.component(.day, from: referenceDate)
+        let daysInMonth = calendar.range(of: .day, in: .month, for: referenceDate)?.count ?? 30
+        let monthProgress = Double(day) / Double(max(daysInMonth, 1))
+        let spentRatio = totalSpent(for: currentMonthExpenses) / max(monthlyBudget, 1)
+        let pacingGap = spentRatio - monthProgress
+
+        if pacingGap <= 0.05 {
+            return .strong
+        }
+
+        if pacingGap <= 0.18 {
+            return .neutral
+        }
+
+        return .weak
+    }
+
+    private static func disciplineCategoryStrength(
+        currentMonthExpenses: [Expense],
+        categorySpending: [CategorySpendingSummary]
+    ) -> BudgetSignalStrength {
+        let total = totalSpent(for: currentMonthExpenses)
+        guard total > 0, let topCategory = categorySpending.first else {
+            return .neutral
+        }
+
+        let dominance = topCategory.total / total
+
+        if dominance <= 0.45 {
+            return .strong
+        }
+
+        if dominance <= 0.65 {
+            return .neutral
+        }
+
+        return .weak
+    }
+
+    private static func disciplineTemporalStrength(
+        currentMonthExpenses: [Expense],
+        temporalSpending: [TemporalSpendingSummary]
+    ) -> BudgetSignalStrength {
+        let total = totalSpent(for: currentMonthExpenses)
+        guard total > 0, temporalSpending.count >= 2, let strongestSegment = temporalSpending.max(by: { $0.total < $1.total }) else {
+            return .neutral
+        }
+
+        let concentration = strongestSegment.total / total
+
+        if concentration <= 0.45 {
+            return .strong
+        }
+
+        if concentration <= 0.65 {
+            return .neutral
+        }
+
+        return .weak
+    }
+
+    private static func disciplineComparisonStrength(_ comparison: MonthComparisonSummary) -> BudgetSignalStrength {
+        guard comparison.previousMonthTotal > 0 else {
+            return .neutral
+        }
+
+        let relativeChange = comparison.difference / max(comparison.previousMonthTotal, 1)
+
+        if relativeChange <= -0.1 {
+            return .strong
+        }
+
+        if relativeChange < 0.1 {
+            return .neutral
+        }
+
+        return .weak
+    }
+
+    private static func disciplineCarryoverStrength(
+        carryover: Double,
+        monthlyBudget: Double
+    ) -> BudgetSignalStrength {
+        let threshold = max(abs(monthlyBudget) * 0.05, 1)
+
+        if carryover > threshold {
+            return .strong
+        }
+
+        if carryover < -threshold {
+            return .weak
+        }
+
+        return .neutral
+    }
+
+    private static func disciplineLeftoverStrength(
+        adjustedBudget: Double,
+        remaining: Double
+    ) -> BudgetSignalStrength {
+        guard adjustedBudget > 0 else {
+            return remaining >= 0 ? .neutral : .weak
+        }
+
+        let leftoverRatio = remaining / adjustedBudget
+
+        if leftoverRatio >= 0.2 {
+            return .strong
+        }
+
+        if leftoverRatio >= 0 {
+            return .neutral
+        }
+
+        return .weak
+    }
+
+    private static func resolveBaseRank(strengths: [BudgetSignalStrength]) -> BudgetDisciplineRank {
+        let strongCount = strengths.filter { $0 == .strong }.count
+        let weakCount = strengths.filter { $0 == .weak }.count
+
+        if weakCount >= 2 {
+            return .pawn
+        }
+
+        if strongCount == 4 {
+            return .queen
+        }
+
+        if strongCount == 3 && weakCount == 0 {
+            return .rook
+        }
+
+        if strongCount >= 1 && weakCount == 0 {
+            return .bishop
+        }
+
+        return .knight
+    }
+
+    private static func resolveModifiedRank(
+        baseRank: BudgetDisciplineRank,
+        carryoverStrength: BudgetSignalStrength,
+        leftoverStrength: BudgetSignalStrength
+    ) -> BudgetDisciplineRank {
+        let positiveModifiers = [carryoverStrength, leftoverStrength].filter { $0 == .strong }.count
+        let negativeModifiers = [carryoverStrength, leftoverStrength].filter { $0 == .weak }.count
+
+        if positiveModifiers >= 2 && baseRank == .queen {
+            return .king
+        }
+
+        if positiveModifiers >= 1 && negativeModifiers == 0 {
+            return baseRank.advanced(by: 1)
+        }
+
+        if negativeModifiers >= 1 && positiveModifiers == 0 {
+            return baseRank.advanced(by: -1)
+        }
+
+        return baseRank
+    }
+
+    private static func disciplineReason(
+        for strength: BudgetSignalStrength,
+        strong: String,
+        neutral: String,
+        weak: String
+    ) -> BudgetDisciplineReason {
+        switch strength {
+        case .strong:
+            return BudgetDisciplineReason(message: strong, tone: .positive)
+        case .neutral:
+            return BudgetDisciplineReason(message: neutral, tone: .neutral)
+        case .weak:
+            return BudgetDisciplineReason(message: weak, tone: .warning)
         }
     }
 
