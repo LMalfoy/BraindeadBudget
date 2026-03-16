@@ -276,6 +276,16 @@ The Statistics area should also preserve the same visual discipline as the rest 
 - charts should feel integrated into the screen, not detached from it
 - interpretations should stay short and behavior-oriented
 
+The temporal-pattern module should help the user answer:
+
+- when during the month does most spending happen?
+
+The preferred first version is not a complex calendar heatmap. It should be a simple behavioral grouping that is easy to interpret quickly, such as:
+
+- early month
+- mid month
+- late month
+
 The intended thematic progression is:
 
 - Pawn

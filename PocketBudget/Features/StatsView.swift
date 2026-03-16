@@ -43,6 +43,10 @@ struct StatsView: View {
         )
     }
 
+    private var temporalSpending: [TemporalSpendingSummary] {
+        BudgetStore.temporalSpending(for: expenses)
+    }
+
     private var trajectoryInterpretation: String {
         guard let firstPoint = trajectory.first, let lastPoint = trajectory.last else {
             return "Add a few expenses to see how your budget pace changes through the month."
@@ -60,6 +64,31 @@ struct StatsView: View {
         }
 
         return "You still have strong budget room for the rest of the month."
+    }
+
+    private var temporalInterpretation: String {
+        guard !temporalSpending.isEmpty else {
+            return "Add a few expenses to see when your spending tends to happen."
+        }
+
+        let sortedTotals = temporalSpending.map(\.total).sorted(by: >)
+
+        if let first = sortedTotals.first, let last = sortedTotals.last, temporalSpending.count == 3, first - last < 0.15 * first {
+            return "Your spending is spread fairly evenly across the month."
+        }
+
+        guard let topSegment = temporalSpending.max(by: { $0.total < $1.total })?.segment else {
+            return "Add a few expenses to see when your spending tends to happen."
+        }
+
+        switch topSegment {
+        case .early:
+            return "Your spending is concentrated at the beginning of the month."
+        case .mid:
+            return "Most of your spending happens in the middle of the month."
+        case .late:
+            return "Most of your spending happens later in the month."
+        }
     }
 
     var body: some View {
@@ -112,6 +141,43 @@ struct StatsView: View {
                 }
                 .statsCardStyle()
                 .accessibilityIdentifier("stats.trajectoryModule")
+            }
+
+            Section {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Spending Pattern")
+                        .font(.headline)
+
+                    if temporalSpending.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("No temporal spending pattern yet for this month.")
+                                .foregroundStyle(.secondary)
+
+                            Text(temporalInterpretation)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .accessibilityIdentifier("stats.temporalInterpretation")
+                        }
+                    } else {
+                        Chart(temporalSpending) { summary in
+                            BarMark(
+                                x: .value("Segment", summary.segment.title),
+                                y: .value("Amount", summary.total)
+                            )
+                            .foregroundStyle(Color.accentColor.gradient)
+                            .cornerRadius(8)
+                        }
+                        .frame(height: 220)
+                        .accessibilityIdentifier("stats.temporalChart")
+
+                        Text(temporalInterpretation)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("stats.temporalInterpretation")
+                    }
+                }
+                .statsCardStyle()
+                .accessibilityIdentifier("stats.temporalModule")
             }
 
             Section {

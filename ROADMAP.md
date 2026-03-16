@@ -446,6 +446,33 @@ Validation:
 - UI test for opening Stats after the new module is added
 - manual review of trend readability and interpretation quality
 
+### Iteration 1.7: Temporal Pattern
+
+Goal:
+Show when spending tends to happen during the month so users can spot timing habits, not just totals.
+
+Scope:
+
+- add one temporal spending module to Stats
+- group current-month spending into a simple time-of-month pattern
+- include a short plain-language interpretation
+- keep the module easy to understand at a glance
+
+Why this matters:
+
+- category explains where spending goes
+- trajectory explains how fast it declines
+- temporal pattern explains when spending pressure tends to happen
+
+Risk:
+Medium
+
+Validation:
+
+- unit tests for the temporal grouping helper
+- UI test for opening Stats after the module is added
+- manual review that the interpretation remains clear and useful
+
 Validation:
 
 - manual review of onboarding-to-settings behavior

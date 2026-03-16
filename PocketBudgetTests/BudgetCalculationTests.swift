@@ -370,6 +370,31 @@ final class BudgetCalculationTests: XCTestCase {
         XCTAssertEqual(trajectory[1].remainingBudget, 75, accuracy: 0.001)
     }
 
+    func testTemporalSpendingGroupsExpensesIntoEarlyMidLateMonth() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 3, day: 20, calendar: calendar)
+        let expenses = [
+            Expense(title: "Coffee", category: .food, amount: 10, date: makeDate(year: 2026, month: 3, day: 3, calendar: calendar)),
+            Expense(title: "Lunch", category: .food, amount: 15, date: makeDate(year: 2026, month: 3, day: 15, calendar: calendar)),
+            Expense(title: "Cinema", category: .fun, amount: 20, date: makeDate(year: 2026, month: 3, day: 24, calendar: calendar)),
+            Expense(title: "Old", category: .transport, amount: 50, date: makeDate(year: 2026, month: 2, day: 24, calendar: calendar))
+        ]
+
+        let summaries = BudgetStore.temporalSpending(
+            for: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertEqual(summaries, [
+            TemporalSpendingSummary(segment: .early, total: 10),
+            TemporalSpendingSummary(segment: .mid, total: 15),
+            TemporalSpendingSummary(segment: .late, total: 20)
+        ])
+    }
+
     private func makeDate(year: Int, month: Int, day: Int, calendar: Calendar) -> Date {
         calendar.date(from: DateComponents(year: year, month: month, day: day))!
     }

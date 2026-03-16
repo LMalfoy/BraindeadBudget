@@ -21,6 +21,32 @@ struct BudgetTrajectoryPoint: Identifiable, Equatable {
     var id: Date { date }
 }
 
+struct TemporalSpendingSummary: Identifiable, Equatable {
+    enum Segment: String, CaseIterable, Identifiable {
+        case early
+        case mid
+        case late
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .early:
+                return "Early"
+            case .mid:
+                return "Mid"
+            case .late:
+                return "Late"
+            }
+        }
+    }
+
+    let segment: Segment
+    let total: Double
+
+    var id: Segment { segment }
+}
+
 enum BudgetStoreError: LocalizedError {
     case invalidExpenseCategory
     case invalidExpenseTitle
@@ -429,6 +455,49 @@ struct BudgetStore {
                 date: expense.date,
                 remainingBudget: startingBudget - runningSpent
             )
+        }
+    }
+
+    static func temporalSpending(
+        for expenses: [Expense],
+        calendar: Calendar = .current,
+        referenceDate: Date = .now
+    ) -> [TemporalSpendingSummary] {
+        let currentMonthExpenses = currentMonthExpenses(
+            from: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        let totals = Dictionary(grouping: currentMonthExpenses) { expense in
+            temporalSegment(for: expense.date, calendar: calendar)
+        }
+        .mapValues { expenses in
+            expenses.reduce(0) { $0 + $1.amount }
+        }
+
+        return TemporalSpendingSummary.Segment.allCases.compactMap { segment in
+            guard let total = totals[segment], total > 0 else {
+                return nil
+            }
+
+            return TemporalSpendingSummary(segment: segment, total: total)
+        }
+    }
+
+    static func temporalSegment(
+        for date: Date,
+        calendar: Calendar = .current
+    ) -> TemporalSpendingSummary.Segment {
+        let day = calendar.component(.day, from: date)
+
+        switch day {
+        case 1...10:
+            return .early
+        case 11...20:
+            return .mid
+        default:
+            return .late
         }
     }
 

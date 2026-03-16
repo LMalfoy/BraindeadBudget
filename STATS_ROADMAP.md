@@ -55,7 +55,7 @@ Why second:
 Scope:
 
 - show when spending tends to happen
-- likely by weekday, or by early/mid/late month grouping
+- first prefer early / mid / late month grouping rather than a denser weekday view
 - include interpretation such as:
   - `Your spending is concentrated at the beginning of the month`
 
