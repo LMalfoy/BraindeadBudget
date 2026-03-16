@@ -544,7 +544,7 @@ private extension RecurringExpenseCategory {
         case .housingUtilities:
             return "Housing"
         case .subscriptions:
-            return "Subscriptions"
+            return "Abos"
         case .insurance:
             return "Insurance"
         case .savings:

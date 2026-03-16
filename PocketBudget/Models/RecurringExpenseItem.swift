@@ -15,7 +15,7 @@ enum RecurringExpenseCategory: String, CaseIterable, Codable, Identifiable {
         case .housingUtilities:
             return "Housing / Utilities"
         case .subscriptions:
-            return "Subscriptions"
+            return "Abos"
         case .insurance:
             return "Insurance"
         case .savings:
