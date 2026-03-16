@@ -95,6 +95,24 @@ final class BudgetStoreTests: XCTestCase {
         XCTAssertEqual(expenses.first?.note, "Weekly shop")
     }
 
+    func testEraseAllDataClearsPersistedModels() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let store = BudgetStore(context: context)
+
+        try store.saveSettings(currencyCode: "USD")
+        try store.saveIncomeItem(name: "Salary", amount: 3000)
+        try store.saveRecurringExpenseItem(name: "Rent", amount: 1200)
+        try store.addExpense(title: "Coffee", category: .food, amount: 5.5)
+
+        try store.eraseAllData()
+
+        XCTAssertTrue(try context.fetch(FetchDescriptor<BudgetSettings>()).isEmpty)
+        XCTAssertTrue(try context.fetch(FetchDescriptor<IncomeItem>()).isEmpty)
+        XCTAssertTrue(try context.fetch(FetchDescriptor<RecurringExpenseItem>()).isEmpty)
+        XCTAssertTrue(try context.fetch(FetchDescriptor<Expense>()).isEmpty)
+    }
+
     func testDeleteExpenseRemovesRecord() throws {
         let container = try makeContainer()
         let context = ModelContext(container)

@@ -2,11 +2,44 @@ import Foundation
 import SwiftData
 import SwiftUI
 
+enum AppAppearanceOption: String, CaseIterable, Identifiable {
+    case system
+    case light
+    case dark
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .system:
+            return "System"
+        case .light:
+            return "Light"
+        case .dark:
+            return "Dark"
+        }
+    }
+
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system:
+            return nil
+        case .light:
+            return .light
+        case .dark:
+            return .dark
+        }
+    }
+}
+
 @main
 struct PocketBudgetApp: App {
+    @AppStorage("appAppearance") private var appAppearance = AppAppearanceOption.system.rawValue
+
     init() {
         if ProcessInfo.processInfo.arguments.contains("-ui-testing") {
             UserDefaults.standard.removeObject(forKey: "hasCompletedBaselineSetup")
+            UserDefaults.standard.removeObject(forKey: "appAppearance")
         }
     }
 
@@ -30,6 +63,7 @@ struct PocketBudgetApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .preferredColorScheme(AppAppearanceOption(rawValue: appAppearance)?.colorScheme)
         }
         .modelContainer(sharedModelContainer)
     }

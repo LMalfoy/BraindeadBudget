@@ -430,6 +430,14 @@ struct BudgetStore {
         try context.save()
     }
 
+    func eraseAllData() throws {
+        try context.fetch(FetchDescriptor<Expense>()).forEach { context.delete($0) }
+        try context.fetch(FetchDescriptor<IncomeItem>()).forEach { context.delete($0) }
+        try context.fetch(FetchDescriptor<RecurringExpenseItem>()).forEach { context.delete($0) }
+        try context.fetch(FetchDescriptor<BudgetSettings>()).forEach { context.delete($0) }
+        try context.save()
+    }
+
     static func expenses(
         from expenses: [Expense],
         inMonthContaining referenceDate: Date,

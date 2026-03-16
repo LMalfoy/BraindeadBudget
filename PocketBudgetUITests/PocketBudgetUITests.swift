@@ -46,6 +46,29 @@ final class PocketBudgetUITests: XCTestCase {
         XCTAssertTrue(finishButton.waitForExistence(timeout: 5))
     }
 
+    func testUserCanResetAllDataFromSettings() throws {
+        let app = XCUIApplication()
+        launchAndCompleteBudgetSetup(in: app)
+
+        let settingsButton = app.tabBars.buttons["Settings"].firstMatch
+        XCTAssertTrue(settingsButton.waitForExistence(timeout: 5))
+        settingsButton.tap()
+
+        XCTAssertTrue(app.staticTexts["Appearance"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Currency"].firstMatch.waitForExistence(timeout: 5))
+
+        let eraseButton = app.buttons["settings.eraseAllDataButton"].firstMatch
+        XCTAssertTrue(eraseButton.waitForExistence(timeout: 5))
+        eraseButton.tap()
+
+        let confirmButton = app.alerts.buttons["Erase All Data"].firstMatch
+        XCTAssertTrue(confirmButton.waitForExistence(timeout: 5))
+        confirmButton.tap()
+
+        app.tabBars.buttons["Home"].tap()
+        XCTAssertTrue(app.buttons["budgetSetup.addIncomeButton"].firstMatch.waitForExistence(timeout: 5))
+    }
+
     func testUserCanOpenStatsArea() throws {
         let app = XCUIApplication()
         launchAndCompleteBudgetSetup(in: app)

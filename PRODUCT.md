@@ -784,6 +784,18 @@ Once the app is polished and stable, the next meaningful expansion areas are:
 
 These should come after stabilization, not before.
 
+## Settings Direction
+
+Settings should remain intentionally small and practical.
+
+The next utility settings should be:
+
+- appearance selection (`System`, `Light`, `Dark`)
+- currency selection
+- a clearly destructive full reset action
+
+Settings should not become a broad customization area.
+
 ## Non-Functional Requirements
 
 - The main flows should use standard iOS interactions and stay easy to maintain.

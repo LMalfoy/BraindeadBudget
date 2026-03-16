@@ -892,3 +892,11 @@ Validation:
 - manual review of recurring-cost creation and editing flow
 - UI test for choosing a recurring-cost category and saving the item
 - confirm income editing remains unaffected
+## Next Settings Pass
+
+- `v3.0`: Settings foundation
+  - appearance selection: `System / Light / Dark`
+  - currency selection
+  - erase all data / reset flow
+  - settings polish and version display cleanup
+- `v3.1`: budget period anchor setting
