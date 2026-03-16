@@ -14,6 +14,13 @@ struct MonthlyHistoryDigest: Equatable {
     let categorySpending: [CategorySpendingSummary]
 }
 
+struct BudgetTrajectoryPoint: Identifiable, Equatable {
+    let date: Date
+    let remainingBudget: Double
+
+    var id: Date { date }
+}
+
 enum BudgetStoreError: LocalizedError {
     case invalidExpenseCategory
     case invalidExpenseTitle
@@ -388,6 +395,41 @@ struct BudgetStore {
                 referenceDate: referenceDate
             )
         )
+    }
+
+    static func budgetTrajectory(
+        monthlyBudget: Double,
+        expenses: [Expense],
+        calendar: Calendar = .current,
+        referenceDate: Date = .now
+    ) -> [BudgetTrajectoryPoint] {
+        let currentMonthExpenses = currentMonthExpenses(
+            from: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+        .sorted { $0.date < $1.date }
+
+        let startingBudget = adjustedMonthlyBudget(
+            monthlyBudget: monthlyBudget,
+            expenses: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        guard !currentMonthExpenses.isEmpty else {
+            return []
+        }
+
+        var runningSpent = 0.0
+
+        return currentMonthExpenses.map { expense in
+            runningSpent += expense.amount
+            return BudgetTrajectoryPoint(
+                date: expense.date,
+                remainingBudget: startingBudget - runningSpent
+            )
+        }
     }
 
     func currentMonthExpenses(from expenses: [Expense], referenceDate: Date = .now) -> [Expense] {

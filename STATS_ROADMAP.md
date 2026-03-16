@@ -41,6 +41,7 @@ Why first:
 Scope:
 
 - show remaining budget trend or spending pace through the current month
+- keep the first stats card visually tight to the screen title
 - include interpretation such as:
   - `You are spending faster than planned this month`
 

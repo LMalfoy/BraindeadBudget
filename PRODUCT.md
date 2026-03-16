@@ -270,6 +270,12 @@ The long-term Statistics modules are:
 
 The Budget Discipline Score should be a lightweight gamified summary rather than a heavy scoring system.
 
+The Statistics area should also preserve the same visual discipline as the rest of the app:
+
+- the first module should sit close to the screen title without unnecessary top whitespace
+- charts should feel integrated into the screen, not detached from it
+- interpretations should stay short and behavior-oriented
+
 The intended thematic progression is:
 
 - Pawn

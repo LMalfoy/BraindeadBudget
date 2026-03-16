@@ -420,6 +420,32 @@ Validation:
 - UI test for reaching the Stats area
 - manual review of chart readability and interpretation clarity
 
+### Iteration 1.6: Budget Trajectory
+
+Goal:
+Add the first pacing-oriented statistics module so the user can judge whether spending is on track through the current month.
+
+Scope:
+
+- add a Budget Trajectory / Remaining Budget Trend module to Stats
+- include a short plain-language interpretation
+- keep the chart simple and easy to understand
+- tighten the Stats screen top spacing so the first module sits directly below the title
+
+Why this matters:
+
+- it is the first statistics module that reflects spending behavior over time
+- it moves the app from static breakdowns toward active budgeting guidance
+
+Risk:
+Medium
+
+Validation:
+
+- unit tests for any extracted trajectory helpers
+- UI test for opening Stats after the new module is added
+- manual review of trend readability and interpretation quality
+
 Validation:
 
 - manual review of onboarding-to-settings behavior

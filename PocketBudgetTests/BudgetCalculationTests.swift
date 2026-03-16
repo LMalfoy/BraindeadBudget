@@ -340,6 +340,36 @@ final class BudgetCalculationTests: XCTestCase {
         ])
     }
 
+    func testBudgetTrajectoryBuildsRunningRemainingBudgetForCurrentMonth() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 3, day: 20, calendar: calendar)
+        let firstExpense = Expense(
+            title: "Coffee",
+            category: .food,
+            amount: 10,
+            date: makeDate(year: 2026, month: 3, day: 5, calendar: calendar)
+        )
+        let secondExpense = Expense(
+            title: "Train",
+            category: .transport,
+            amount: 15,
+            date: makeDate(year: 2026, month: 3, day: 12, calendar: calendar)
+        )
+
+        let trajectory = BudgetStore.budgetTrajectory(
+            monthlyBudget: 100,
+            expenses: [secondExpense, firstExpense],
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertEqual(trajectory.count, 2)
+        XCTAssertEqual(trajectory[0].remainingBudget, 90, accuracy: 0.001)
+        XCTAssertEqual(trajectory[1].remainingBudget, 75, accuracy: 0.001)
+    }
+
     private func makeDate(year: Int, month: Int, day: Int, calendar: Calendar) -> Date {
         calendar.date(from: DateComponents(year: year, month: month, day: day))!
     }

@@ -59,6 +59,19 @@ final class PocketBudgetUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Food is your largest spending category this month."].firstMatch.waitForExistence(timeout: 5))
     }
 
+    func testStatsAreaShowsBudgetTrajectory() throws {
+        let app = XCUIApplication()
+        launchAndCompleteBudgetSetup(in: app)
+        addExpense(named: "Coffee", amount: "5.50", categoryIdentifier: "food", in: app)
+
+        let statsButton = app.tabBars.buttons["Stats"].firstMatch
+        XCTAssertTrue(statsButton.waitForExistence(timeout: 5))
+        statsButton.tap()
+
+        XCTAssertTrue(app.otherElements["stats.trajectoryModule"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["You still have strong budget room for the rest of the month."].firstMatch.waitForExistence(timeout: 5))
+    }
+
     func testUserCanOpenExpenseHistory() throws {
         let app = XCUIApplication()
         launchAndCompleteBudgetSetup(in: app)
