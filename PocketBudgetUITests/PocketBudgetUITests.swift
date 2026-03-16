@@ -80,6 +80,22 @@ final class PocketBudgetUITests: XCTestCase {
         XCTAssertTrue(monthLabelButton.waitForExistence(timeout: 5))
     }
 
+    func testHistoryMonthNavigationWorksForEmptyMonths() throws {
+        let app = XCUIApplication()
+        launchAndCompleteBudgetSetup(in: app)
+        app.tabBars.buttons["History"].tap()
+
+        let monthLabelButton = app.buttons["history.monthLabel"].firstMatch
+        XCTAssertTrue(monthLabelButton.waitForExistence(timeout: 5))
+        let initialLabel = monthLabelButton.label
+
+        let nextMonthButton = app.buttons["history.nextMonthButton"].firstMatch
+        XCTAssertTrue(nextMonthButton.waitForExistence(timeout: 5))
+        nextMonthButton.tap()
+
+        XCTAssertNotEqual(monthLabelButton.label, initialLabel)
+    }
+
     func testUserCanSubmitExpenseFromAmountField() throws {
         let app = XCUIApplication()
         launchAndCompleteBudgetSetup(in: app)

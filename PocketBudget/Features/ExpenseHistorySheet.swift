@@ -3,6 +3,8 @@ import SwiftData
 import SwiftUI
 
 struct ExpenseHistorySheet: View {
+    private static let historyCalendar = Calendar.current
+
     @Environment(\.modelContext) private var modelContext
 
     @Query(sort: \Expense.date, order: .reverse) private var expenses: [Expense]
@@ -10,7 +12,7 @@ struct ExpenseHistorySheet: View {
     @Query(sort: \IncomeItem.createdAt) private var incomeItems: [IncomeItem]
     @Query(sort: \RecurringExpenseItem.createdAt) private var recurringExpenseItems: [RecurringExpenseItem]
 
-    @State private var selectedMonth = Date.now
+    @State private var selectedMonth = ExpenseHistorySheet.monthAnchor(for: .now)
     @State private var editingExpense: Expense?
     @State private var showingMonthPicker = false
     @State private var errorMessage: String?
@@ -87,6 +89,7 @@ struct ExpenseHistorySheet: View {
                 }
             }
         }
+        .contentMargins(.top, 0, for: .scrollContent)
         .navigationTitle("Expense History")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingMonthPicker) {
@@ -149,12 +152,13 @@ struct ExpenseHistorySheet: View {
             }
             .accessibilityIdentifier("history.nextMonthButton")
         }
+        .buttonStyle(.plain)
         .padding(.vertical, 4)
     }
 
     private var availableYears: [Int] {
-        let expenseYears = expenses.map { Calendar.current.component(.year, from: $0.date) }
-        let currentYear = Calendar.current.component(.year, from: .now)
+        let expenseYears = expenses.map { Self.historyCalendar.component(.year, from: $0.date) }
+        let currentYear = Self.historyCalendar.component(.year, from: .now)
         let minimumYear = min(expenseYears.min() ?? currentYear, currentYear) - 1
         let maximumYear = max(expenseYears.max() ?? currentYear, currentYear) + 1
 
@@ -162,9 +166,14 @@ struct ExpenseHistorySheet: View {
     }
 
     private func shiftMonth(by value: Int) {
-        if let shiftedMonth = Calendar.current.date(byAdding: .month, value: value, to: selectedMonth) {
-            selectedMonth = shiftedMonth
+        if let shiftedMonth = Self.historyCalendar.date(byAdding: .month, value: value, to: selectedMonth) {
+            selectedMonth = Self.monthAnchor(for: shiftedMonth)
         }
+    }
+
+    private static func monthAnchor(for date: Date) -> Date {
+        let components = historyCalendar.dateComponents([.year, .month], from: date)
+        return historyCalendar.date(from: components) ?? date
     }
 
     private func deleteExpenses(at offsets: IndexSet) {
@@ -300,13 +309,10 @@ private struct MonthYearPickerSheet: View {
     }
 
     private func applySelection() {
-        let currentDay = Calendar.current.component(.day, from: selectedMonth)
-        let components = DateComponents(year: selectedYear, month: selectedMonthIndex, day: currentDay)
+        let components = DateComponents(year: selectedYear, month: selectedMonthIndex, day: 1)
 
         if let updatedDate = Calendar.current.date(from: components) {
             selectedMonth = updatedDate
-        } else if let fallbackDate = Calendar.current.date(from: DateComponents(year: selectedYear, month: selectedMonthIndex, day: 1)) {
-            selectedMonth = fallbackDate
         }
 
         dismiss()

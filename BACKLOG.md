@@ -29,6 +29,11 @@ Future improvements, polish items, and larger feature notes to revisit after the
 - Editing an expense from monthly history should later reuse the same add-expense style sheet, including the colored category tiles.
 - The `Monthly Expenses` section title in history is redundant and can be removed in a later cleanup pass.
 - The month/year picker opened from the history header should later feel smaller and lighter; the current full-page presentation is too visually large for only two controls.
+- The app should adopt a clear versioning scheme that matches actual product maturity rather than the informal iteration labels used during development.
+- Settings should always show the real current app version from the active release scheme, not a placeholder like `1.0`.
+- Decide how internal iteration numbers map to public versions before the first real release.
+- In expense history, the left/right month arrows should always navigate to adjacent months even when no entries exist there.
+- Empty months should still be reachable and display as valid periods; data for that month only exists once the user records entries there.
 
 ## Usage Rule
 
