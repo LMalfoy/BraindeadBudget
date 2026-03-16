@@ -145,7 +145,7 @@ struct SettingsSheet: View {
                         .foregroundStyle(.secondary)
 
                     Text("Cburnett chess set via Wikimedia Commons / Wikipedia")
-                    Text("Dark transparent piece variants used in-app")
+                    Text("Transparent light and dark piece variants used in-app")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
