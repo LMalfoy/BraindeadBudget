@@ -395,6 +395,55 @@ final class BudgetCalculationTests: XCTestCase {
         ])
     }
 
+    func testMonthComparisonUsesCurrentAndPreviousMonthTotals() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 3, day: 20, calendar: calendar)
+        let expenses = [
+            Expense(title: "Coffee", category: .food, amount: 10, date: makeDate(year: 2026, month: 3, day: 3, calendar: calendar)),
+            Expense(title: "Lunch", category: .food, amount: 15, date: makeDate(year: 2026, month: 3, day: 15, calendar: calendar)),
+            Expense(title: "Cinema", category: .fun, amount: 20, date: makeDate(year: 2026, month: 2, day: 24, calendar: calendar))
+        ]
+
+        let comparison = BudgetStore.monthComparison(
+            for: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertEqual(comparison.currentMonthTotal, 25, accuracy: 0.001)
+        XCTAssertEqual(comparison.previousMonthTotal, 20, accuracy: 0.001)
+        XCTAssertEqual(comparison.difference, 5, accuracy: 0.001)
+    }
+
+    func testCarryoverHistoryBuildsTrailingSixMonthSeries() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 6, day: 20, calendar: calendar)
+        let expenses = [
+            Expense(title: "Jan", category: .food, amount: 80, date: makeDate(year: 2026, month: 1, day: 10, calendar: calendar)),
+            Expense(title: "Feb", category: .food, amount: 120, date: makeDate(year: 2026, month: 2, day: 10, calendar: calendar)),
+            Expense(title: "Apr", category: .food, amount: 60, date: makeDate(year: 2026, month: 4, day: 10, calendar: calendar)),
+            Expense(title: "May", category: .food, amount: 110, date: makeDate(year: 2026, month: 5, day: 10, calendar: calendar))
+        ]
+
+        let history = BudgetStore.carryoverHistory(
+            monthlyBudget: 100,
+            expenses: expenses,
+            months: 6,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertEqual(history.count, 6)
+        let expectedAmounts = [0.0, 20.0, -20.0, 0.0, 40.0, -10.0]
+        for (actual, expected) in zip(history.map(\.amount), expectedAmounts) {
+            XCTAssertEqual(actual, expected, accuracy: 0.001)
+        }
+    }
+
     private func makeDate(year: Int, month: Int, day: Int, calendar: Calendar) -> Date {
         calendar.date(from: DateComponents(year: year, month: month, day: day))!
     }

@@ -83,6 +83,31 @@ final class PocketBudgetUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Spending Pattern"].firstMatch.waitForExistence(timeout: 5))
     }
 
+    func testStatsAreaShowsMonthComparison() throws {
+        let app = XCUIApplication()
+        launchAndCompleteBudgetSetup(in: app)
+        addExpense(named: "Coffee", amount: "5.50", categoryIdentifier: "food", in: app)
+
+        let statsButton = app.tabBars.buttons["Stats"].firstMatch
+        XCTAssertTrue(statsButton.waitForExistence(timeout: 5))
+        statsButton.tap()
+
+        XCTAssertTrue(app.staticTexts["Month Comparison"].firstMatch.waitForExistence(timeout: 5))
+    }
+
+    func testStatsAreaShowsCarryoverModule() throws {
+        let app = XCUIApplication()
+        launchAndCompleteBudgetSetup(in: app)
+        addExpense(named: "Coffee", amount: "5.50", categoryIdentifier: "food", in: app)
+
+        let statsButton = app.tabBars.buttons["Stats"].firstMatch
+        XCTAssertTrue(statsButton.waitForExistence(timeout: 5))
+        statsButton.tap()
+
+        XCTAssertTrue(app.staticTexts["Carryover"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.otherElements["stats.carryoverModule"].firstMatch.waitForExistence(timeout: 5))
+    }
+
     func testUserCanOpenExpenseHistory() throws {
         let app = XCUIApplication()
         launchAndCompleteBudgetSetup(in: app)

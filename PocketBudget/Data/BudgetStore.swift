@@ -47,6 +47,22 @@ struct TemporalSpendingSummary: Identifiable, Equatable {
     var id: Segment { segment }
 }
 
+struct MonthComparisonSummary: Equatable {
+    let currentMonthTotal: Double
+    let previousMonthTotal: Double
+
+    var difference: Double {
+        currentMonthTotal - previousMonthTotal
+    }
+}
+
+struct CarryoverHistoryPoint: Identifiable, Equatable {
+    let month: Date
+    let amount: Double
+
+    var id: Date { month }
+}
+
 enum BudgetStoreError: LocalizedError {
     case invalidExpenseCategory
     case invalidExpenseTitle
@@ -498,6 +514,62 @@ struct BudgetStore {
             return .mid
         default:
             return .late
+        }
+    }
+
+    static func monthComparison(
+        for expenses: [Expense],
+        calendar: Calendar = .current,
+        referenceDate: Date = .now
+    ) -> MonthComparisonSummary {
+        let currentTotal = totalSpent(
+            for: currentMonthExpenses(
+                from: expenses,
+                calendar: calendar,
+                referenceDate: referenceDate
+            )
+        )
+        let previousTotal = totalSpent(
+            for: previousMonthExpenses(
+                from: expenses,
+                calendar: calendar,
+                referenceDate: referenceDate
+            )
+        )
+
+        return MonthComparisonSummary(
+            currentMonthTotal: currentTotal,
+            previousMonthTotal: previousTotal
+        )
+    }
+
+    static func carryoverHistory(
+        monthlyBudget: Double,
+        expenses: [Expense],
+        months: Int = 6,
+        calendar: Calendar = .current,
+        referenceDate: Date = .now
+    ) -> [CarryoverHistoryPoint] {
+        guard months > 0 else {
+            return []
+        }
+
+        let referenceMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: referenceDate)) ?? referenceDate
+
+        return (0..<months).compactMap { offset in
+            guard let month = calendar.date(byAdding: .month, value: offset - (months - 1), to: referenceMonth) else {
+                return nil
+            }
+
+            return CarryoverHistoryPoint(
+                month: month,
+                amount: previousMonthCarryover(
+                    monthlyBudget: monthlyBudget,
+                    expenses: expenses,
+                    calendar: calendar,
+                    referenceDate: month
+                )
+            )
         }
     }
 

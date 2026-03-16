@@ -78,11 +78,26 @@ Why fourth:
 - stronger historical insight
 - easier to understand once the earlier modules already exist
 
-### Stats v5: Budget Discipline Score
+### Stats v5: Carryover Insight
+
+Scope:
+
+- show whether carryover into the current month is positive, neutral, or negative
+- include a short interpretation such as:
+  - `You carried money forward from last month`
+  - `Last month reduced this month’s available budget`
+
+Why fifth:
+
+- carryover is already part of the real budget model
+- it should become visible before it is folded into the final score
+
+### Stats v6: Budget Discipline Score
 
 Scope:
 
 - create one lightweight summary score based on the earlier statistics modules
+- include the carryover signal as an explicit input
 - include a chess-themed role progression:
   - Pawn
   - Knight

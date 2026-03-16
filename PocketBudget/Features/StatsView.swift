@@ -47,6 +47,24 @@ struct StatsView: View {
         BudgetStore.temporalSpending(for: expenses)
     }
 
+    private var monthComparison: MonthComparisonSummary {
+        BudgetStore.monthComparison(for: expenses)
+    }
+
+    private var carryoverAmount: Double {
+        BudgetStore.previousMonthCarryover(
+            monthlyBudget: monthlyBudget,
+            expenses: expenses
+        )
+    }
+
+    private var carryoverHistory: [CarryoverHistoryPoint] {
+        BudgetStore.carryoverHistory(
+            monthlyBudget: monthlyBudget,
+            expenses: expenses
+        )
+    }
+
     private var trajectoryInterpretation: String {
         guard let firstPoint = trajectory.first, let lastPoint = trajectory.last else {
             return "Add a few expenses to see how your budget pace changes through the month."
@@ -89,6 +107,45 @@ struct StatsView: View {
         case .late:
             return "Most of your spending happens later in the month."
         }
+    }
+
+    private var comparisonInterpretation: String {
+        if monthComparison.currentMonthTotal == 0, monthComparison.previousMonthTotal == 0 {
+            return "Add some history to compare this month against the previous one."
+        }
+
+        if monthComparison.previousMonthTotal == 0 {
+            return "You have no spending recorded last month to compare against yet."
+        }
+
+        let difference = monthComparison.difference
+        let threshold = max(monthComparison.previousMonthTotal * 0.1, 1)
+
+        if difference <= -threshold {
+            return "You are doing better than last month."
+        }
+
+        if abs(difference) < threshold {
+            return "Your spending is close to last month."
+        }
+
+        return "You are spending more than last month."
+    }
+
+    private var carryoverInterpretation: String {
+        if monthComparison.previousMonthTotal == 0 {
+            return "You have no previous-month spending yet to generate carryover."
+        }
+
+        if carryoverAmount > 0 {
+            return "You carried money forward from last month."
+        }
+
+        if carryoverAmount < 0 {
+            return "Last month reduced this month’s available budget."
+        }
+
+        return "You started this month with no carryover."
     }
 
     var body: some View {
@@ -141,6 +198,104 @@ struct StatsView: View {
                 }
                 .statsCardStyle()
                 .accessibilityIdentifier("stats.trajectoryModule")
+            }
+
+            Section {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Carryover")
+                        .font(.headline)
+
+                    if carryoverHistory.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("No carryover history yet.")
+                                .foregroundStyle(.secondary)
+
+                            Text(carryoverInterpretation)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .accessibilityIdentifier("stats.carryoverInterpretation")
+                        }
+                    } else {
+                        Chart(carryoverHistory) { point in
+                            BarMark(
+                                x: .value("Month", point.month, unit: .month),
+                                y: .value("Carryover", point.amount)
+                            )
+                            .foregroundStyle(point.amount >= 0 ? Color.green.gradient : Color.red.gradient)
+                            .cornerRadius(6)
+                        }
+                        .frame(height: 220)
+                        .accessibilityIdentifier("stats.carryoverChart")
+
+                        HStack {
+                            Text("Current Carryover")
+                                .foregroundStyle(.secondary)
+
+                            Spacer()
+
+                            Text(carryoverAmount.formatted(.currency(code: currencyCode)))
+                                .font(.title3.weight(.semibold))
+                                .foregroundStyle(carryoverColor)
+                        }
+
+                        Text("Last 6 months")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Text(carryoverInterpretation)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("stats.carryoverInterpretation")
+                }
+                .statsCardStyle()
+                .accessibilityIdentifier("stats.carryoverModule")
+            }
+
+            Section {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Month Comparison")
+                        .font(.headline)
+
+                    if monthComparison.currentMonthTotal == 0, monthComparison.previousMonthTotal == 0 {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("No comparison data yet.")
+                                .foregroundStyle(.secondary)
+
+                            Text(comparisonInterpretation)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .accessibilityIdentifier("stats.comparisonInterpretation")
+                        }
+                    } else {
+                        Chart([
+                            MonthComparisonBar(label: "Previous", amount: monthComparison.previousMonthTotal),
+                            MonthComparisonBar(label: "Current", amount: monthComparison.currentMonthTotal)
+                        ]) { bar in
+                            BarMark(
+                                x: .value("Month", bar.label),
+                                y: .value("Amount", bar.amount)
+                            )
+                            .foregroundStyle(bar.color)
+                            .cornerRadius(8)
+                        }
+                        .frame(height: 220)
+                        .accessibilityIdentifier("stats.comparisonChart")
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            comparisonRow(title: "Current Month", amount: monthComparison.currentMonthTotal)
+                            comparisonRow(title: "Previous Month", amount: monthComparison.previousMonthTotal)
+                            comparisonRow(title: "Difference", amount: monthComparison.difference)
+                        }
+
+                        Text(comparisonInterpretation)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("stats.comparisonInterpretation")
+                    }
+                }
+                .statsCardStyle()
+                .accessibilityIdentifier("stats.comparisonModule")
             }
 
             Section {
@@ -240,6 +395,43 @@ struct StatsView: View {
         .contentMargins(.top, 0, for: .scrollContent)
         .navigationTitle("Stats")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var carryoverColor: Color {
+        if carryoverAmount > 0 {
+            return .green
+        }
+
+        if carryoverAmount < 0 {
+            return .red
+        }
+
+        return .primary
+    }
+
+    @ViewBuilder
+    private func comparisonRow(title: String, amount: Double) -> some View {
+        HStack {
+            Text(title)
+                .foregroundStyle(.secondary)
+
+            Spacer()
+
+            Text(amount.formatted(.currency(code: currencyCode)))
+                .fontWeight(.medium)
+                .foregroundStyle(title == "Difference" && amount > 0 ? .red : .primary)
+        }
+    }
+}
+
+private struct MonthComparisonBar: Identifiable {
+    let label: String
+    let amount: Double
+
+    var id: String { label }
+
+    var color: Color {
+        label == "Current" ? .accentColor : Color.secondary.opacity(0.45)
     }
 }
 

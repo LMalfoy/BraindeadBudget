@@ -473,6 +473,59 @@ Validation:
 - UI test for opening Stats after the module is added
 - manual review that the interpretation remains clear and useful
 
+### Iteration 1.8: Month-over-Month Comparison
+
+Goal:
+Show whether the user is doing better or worse than the previous month in a simple, behaviorally useful way.
+
+Scope:
+
+- add one month-over-month comparison module to Stats
+- compare the current month against the previous month
+- include a short interpretation
+- keep the comparison readable and non-dense
+
+Why this matters:
+
+- it gives the user a sense of progress or regression
+- it adds historical perspective without requiring a full analytics dashboard
+
+Risk:
+Medium
+
+Validation:
+
+- unit tests for the comparison helper
+- UI test for opening Stats after the module is added
+- manual review that the comparison wording is understandable
+
+### Iteration 1.9: Carryover Insight
+
+Goal:
+Make monthly carryover a first-class behavioral metric in the Statistics area.
+
+Scope:
+
+- add one carryover-focused module to Stats
+- clearly show whether carryover is positive, neutral, or negative
+- include a short plain-language interpretation
+- frame carryover as an important input into the later discipline score
+
+Why this matters:
+
+- carryover already affects the real budget model
+- users should be rewarded for positive rollover and warned about negative rollover
+- the discipline score should not be built before this signal is visible on its own
+
+Risk:
+Low to medium
+
+Validation:
+
+- unit tests for any carryover presentation helper
+- UI test for opening Stats after the module is added
+- manual review that the interpretation feels clear and fair
+
 Validation:
 
 - manual review of onboarding-to-settings behavior

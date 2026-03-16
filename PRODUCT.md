@@ -266,9 +266,15 @@ The long-term Statistics modules are:
 - Spending by Category
 - Spending by Day / Temporal Pattern
 - Month-over-Month Comparison
+- Carryover Insight
 - Budget Discipline Score
 
 The Budget Discipline Score should be a lightweight gamified summary rather than a heavy scoring system.
+
+Carryover Insight should be treated as one of the important inputs into the later Budget Discipline Score.
+
+Positive carryover should be read as evidence of restraint or healthy budgeting continuity.
+Negative carryover should be read as a warning signal that the next month is starting under pressure.
 
 The Statistics area should also preserve the same visual discipline as the rest of the app:
 
@@ -285,6 +291,20 @@ The preferred first version is not a complex calendar heatmap. It should be a si
 - early month
 - mid month
 - late month
+
+The month-over-month module should help the user answer:
+
+- am I doing better or worse than last month?
+- which direction is my spending moving?
+
+This module should stay comparative and simple. It should not become a dense historical analytics surface.
+
+The carryover module should help the user answer:
+
+- did I carry money forward from the previous month?
+- am I starting this month with an advantage or a handicap?
+
+This module should be explicit and easy to read, because carryover already affects the real budget model.
 
 The intended thematic progression is:
 
