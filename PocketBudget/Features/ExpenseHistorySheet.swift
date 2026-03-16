@@ -85,14 +85,14 @@ struct ExpenseHistorySheet: View {
                     }
                     .onDelete(perform: deleteExpenses)
                 }
-            } header: {
-                Text("Monthly Expenses")
             }
         }
         .navigationTitle("Expense History")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingMonthPicker) {
             MonthYearPickerSheet(selectedMonth: $selectedMonth, availableYears: availableYears)
+                .presentationDetents([.height(300)])
+                .presentationDragIndicator(.visible)
         }
         .sheet(item: $editingExpense) { expense in
             ExpenseEditorSheet(expense: expense, currencyCode: currencyCode) { expense, title, category, amount, date, note in
@@ -254,20 +254,31 @@ private struct MonthYearPickerSheet: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Picker("Month", selection: $selectedMonthIndex) {
-                    ForEach(1...12, id: \.self) { month in
-                        Text(monthName(for: month)).tag(month)
+            VStack(spacing: 0) {
+                HStack(spacing: 0) {
+                    Picker("Month", selection: $selectedMonthIndex) {
+                        ForEach(1...12, id: \.self) { month in
+                            Text(monthName(for: month)).tag(month)
+                        }
                     }
-                }
-                .accessibilityIdentifier("history.monthPicker.month")
+                    .pickerStyle(.wheel)
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity)
+                    .clipped()
+                    .accessibilityIdentifier("history.monthPicker.month")
 
-                Picker("Year", selection: $selectedYear) {
-                    ForEach(availableYears, id: \.self) { year in
-                        Text(String(year)).tag(year)
+                    Picker("Year", selection: $selectedYear) {
+                        ForEach(availableYears, id: \.self) { year in
+                            Text(String(year)).tag(year)
+                        }
                     }
+                    .pickerStyle(.wheel)
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity)
+                    .clipped()
+                    .accessibilityIdentifier("history.monthPicker.year")
                 }
-                .accessibilityIdentifier("history.monthPicker.year")
+                .frame(height: 180)
             }
             .navigationTitle("Select Month")
             .navigationBarTitleDisplayMode(.inline)
@@ -407,12 +418,7 @@ private struct ExpenseEditorSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    Picker("Category", selection: $selectedCategory) {
-                        ForEach(ExpenseCategory.allCases) { category in
-                            Text(category.title).tag(category)
-                        }
-                    }
-                    .pickerStyle(.segmented)
+                    categoryPicker
                 } header: {
                     Text("Category")
                 }
@@ -429,7 +435,15 @@ private struct ExpenseEditorSheet: View {
 
                     TextField("Amount", text: $amountText)
                         .keyboardType(.decimalPad)
+                        .submitLabel(.done)
                         .focused($focusedField, equals: .amount)
+                        .onSubmit {
+                            guard !isSaveDisabled else {
+                                return
+                            }
+
+                            saveExpense()
+                        }
                         .accessibilityIdentifier("editExpense.amountField")
                 } header: {
                     Text("Expense")
@@ -482,6 +496,36 @@ private struct ExpenseEditorSheet: View {
         }
     }
 
+    private var categoryPicker: some View {
+        HStack(spacing: 10) {
+            ForEach(ExpenseCategory.allCases) { category in
+                Button {
+                    selectedCategory = category
+                } label: {
+                    VStack(spacing: 8) {
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(category.color.opacity(selectedCategory == category ? 0.95 : 0.22))
+                            .frame(height: 44)
+                            .overlay {
+                                Image(systemName: category.symbolName)
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundStyle(selectedCategory == category ? .white : category.color)
+                            }
+
+                        Text(category.title)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("editExpense.category.\(category.rawValue)")
+            }
+        }
+    }
+
     private func saveExpense() {
         guard let amount = parsedAmount else {
             errorMessage = BudgetStoreError.invalidExpenseAmount.localizedDescription
@@ -526,6 +570,19 @@ private extension ExpenseCategory {
             return .orange
         case .fun:
             return .pink
+        }
+    }
+
+    var symbolName: String {
+        switch self {
+        case .food:
+            return "fork.knife"
+        case .transport:
+            return "tram.fill"
+        case .household:
+            return "house.fill"
+        case .fun:
+            return "sparkles"
         }
     }
 }

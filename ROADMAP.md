@@ -366,6 +366,32 @@ Validation:
 - UI tests for opening the picker and navigating history
 - UI/manual validation for keyboard submit behavior in the add-expense flow
 
+### Iteration 1.4: History Screen Polish
+
+Goal:
+Tighten the monthly history experience so it feels more consistent and less visually heavy.
+
+Scope:
+
+- reuse the add-expense style editor when editing from history
+- remove redundant section chrome from the history list
+- make the month/year picker lighter and smaller than the current full-page presentation
+- preserve the current history capabilities and data behavior
+
+Why this matters:
+
+- the history screen is now important enough that rough edges stand out
+- polish here improves trust without expanding the product surface
+
+Risk:
+Low to medium
+
+Validation:
+
+- manual checks that history editing still works correctly
+- UI tests for opening and using history after the presentation change
+- regression checks that edit/delete behavior remains unchanged
+
 Validation:
 
 - manual review of onboarding-to-settings behavior

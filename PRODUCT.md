@@ -184,6 +184,16 @@ The monthly digest should help the user understand the selected period at a glan
 
 The dashboard should remain a lightweight overview. The full inspection and correction workflow belongs in monthly history.
 
+The history editing flow should feel consistent with the main add-expense flow.
+
+That means:
+
+- editing should ideally reuse the same visual language as expense entry
+- category selection should stay immediate and color-coded
+- month selection should feel lightweight and proportional to the task
+
+History should feel like a refined operational screen, not a stack of disconnected subflows.
+
 ## Categories
 
 PocketBudget should use a small set of simple categories for variable spending.
