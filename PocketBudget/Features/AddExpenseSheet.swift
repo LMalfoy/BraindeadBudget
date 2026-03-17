@@ -1,3 +1,19 @@
+/*
+ Fast expense-entry screen.
+
+ This sheet is optimized for the app's main habit loop: recording a new expense
+ with as little friction as possible.
+
+ The intended order is:
+ - choose category
+ - enter title
+ - enter amount
+ - optionally adjust date or note
+
+ The sheet does not talk to SwiftData directly. Instead, it validates user
+ input locally and sends the result upward through the `onSave` closure.
+ */
+
 import Foundation
 import SwiftUI
 

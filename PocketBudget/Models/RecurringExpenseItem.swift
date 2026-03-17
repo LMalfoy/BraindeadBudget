@@ -1,3 +1,17 @@
+/*
+ Recurring monthly cost model.
+
+ This file represents fixed or repeating commitments such as:
+ - housing / utilities
+ - subscriptions
+ - insurance
+ - savings
+ - debt
+
+ These records are intentionally separate from normal expenses so the app can
+ distinguish structural recurring costs from variable day-to-day spending.
+ */
+
 import Foundation
 import SwiftData
 

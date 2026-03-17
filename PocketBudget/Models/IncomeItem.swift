@@ -1,3 +1,13 @@
+/*
+ Monthly income model.
+
+ Income is intentionally stored as one or more separate items instead of a
+ single number. That keeps the setup flexible for users with multiple sources
+ such as salary, freelance work, or benefits.
+
+ `BudgetStore` later sums these items to build the monthly spending baseline.
+ */
+
 import Foundation
 import SwiftData
 

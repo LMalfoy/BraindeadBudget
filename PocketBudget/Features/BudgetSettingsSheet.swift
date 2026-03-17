@@ -1,3 +1,19 @@
+/*
+ Budget setup and budget-management screen.
+
+ This file is used in two modes:
+ - onboarding: first-time setup before the user can use the app
+ - manage: later editing from Settings
+
+ The screen lets the user define:
+ - monthly income items
+ - recurring monthly costs
+ - the initial available budget for the currently active period
+
+ It is one of the most important product screens because it establishes the
+ financial baseline that the rest of the app relies on.
+ */
+
 import Foundation
 import SwiftData
 import SwiftUI

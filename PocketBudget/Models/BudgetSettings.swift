@@ -1,3 +1,16 @@
+/*
+ Persistent app-wide budgeting settings.
+
+ This model stores the "global state" for budgeting, for example:
+ - selected currency
+ - chosen budget period anchor day
+ - the initial available budget entered during first onboarding
+ - the month/period that initial budget anchor belongs to
+
+ The app keeps only one logical settings record and updates it over time.
+ That is why many screens query `budgets.first`.
+ */
+
 import Foundation
 import SwiftData
 

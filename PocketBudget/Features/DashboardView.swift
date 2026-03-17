@@ -1,3 +1,20 @@
+/*
+ Main home screen.
+
+ The dashboard answers the app's most important question:
+ "How much money is still available in the current budget period?"
+
+ It combines:
+ - the calculated monthly baseline
+ - carryover from the previous period
+ - real recorded expenses for the current period
+ - a quick category overview
+ - recent expense activity
+
+ This file is also responsible for showing first-run onboarding when setup has
+ not yet been completed.
+ */
+
 import Charts
 import Foundation
 import SwiftData

@@ -1,69 +1,31 @@
 # PocketBudget Backlog
 
-Future improvements, polish items, and larger feature notes to revisit after the current iteration.
+Future improvements and final polish notes that remain relevant after the current core feature work.
 
-## Current Notes
+## Final Product Issues
 
-- Remove the `PocketBudget` headline from the main dashboard.
-- Keep `Date` and `Note` visible in the add-expense sheet instead of hiding them behind a disclosure control.
-- Make dashboard expense rows tappable in a later pass so they can reveal the full title and additional details like amount, date, note, and category.
-- Align dashboard card/panel spacing more precisely so the summary and category overview blocks feel visually consistent.
-- Remove the redundant `Category Overview` title from the chart card if the chart context is already obvious.
-- Consider making pie or donut slices tappable in a later version so selecting a category reveals the underlying expenses for that category.
-- Add a dedicated expense-history sheet in a later version that lets the user browse expenses by month.
-- In that future history sheet, provide easy month/year navigation so the user can switch to a specific period quickly.
-- That future month-based expense list should support both editing and deleting expenses.
-- On the main dashboard, a quick downward scroll toward the expense list can later become the cue that opens the monthly expense-history page.
-- That future transition should feel like moving from the lightweight recent-expense preview into the full month-based list.
-- Add a dedicated settings area in a later version so budget editing and app-level controls are not always exposed as a top-left dashboard action.
-- In that future settings area, the budget setup screen should still open automatically when no budget information exists.
-- Use that future settings area for version info, author/app info, and later customization options.
-- Future settings should allow changing the app currency.
-- Later customization could allow adjusting spending categories and their colors.
-- The settings entry point on the dashboard can later stay hidden by default and only reveal itself when the user pulls the dashboard down.
-- In a future period-based budgeting version, a negative remainder from one month should carry over into the next month’s available budget.
-- Example: if March ends at `-200`, April should begin with that `200` deducted from the new month’s budget.
-- Future branding direction: rename the app to `Budget Rook` or simply `Rook`.
-- Future app icon direction: use a black rook on a white background.
-- Future symbol direction: use the Lichess rook style if the asset/license is confirmed safe for app use.
-- In monthly history, tapping the month header should later open a direct month/year picker while the adjacent-month arrows remain available.
-- Monthly history should later include a compact digest for the selected month, including total spent, carryover, and category totals.
-- Editing an expense from monthly history should later reuse the same add-expense style sheet, including the colored category tiles.
-- The `Monthly Expenses` section title in history is redundant and can be removed in a later cleanup pass.
-- The month/year picker opened from the history header should later feel smaller and lighter; the current full-page presentation is too visually large for only two controls.
-- The app should adopt a clear versioning scheme that matches actual product maturity rather than the informal iteration labels used during development.
-- Settings should always show the real current app version from the active release scheme, not a placeholder like `1.0`.
-- Decide how internal iteration numbers map to public versions before the first real release.
-- The future Budget Discipline Score should use chess-role progression: Pawn, Knight, Bishop, Queen, King.
-- Chess-role gamification should only be added after the core statistics modules are stable and meaningful.
-- Before shipping chess-piece artwork, verify the exact license and attribution requirements for the chosen asset files.
-- First-run onboarding should support users who begin using the app in the middle of an existing spending period rather than at the start of a fresh month.
-- The app should capture an initial in-period budget state explicitly, rather than faking it through one large synthetic expense entry.
-- A fake `spent so far` expense would distort statistics, so mid-period initialization needs its own correct product/model approach.
-- In expense history, the left/right month arrows should always navigate to adjacent months even when no entries exist there.
-- Empty months should still be reachable and display as valid periods; data for that month only exists once the user records entries there.
-- The Stats spending-pattern module should later use finer temporal sampling than only early/mid/late month.
-- A useful next step is splitting the month into roughly 10 periods while still producing plain-language interpretations that describe where spending is mostly concentrated.
-- The Stats month-comparison module should later expand from current-vs-previous month into a trailing 6-month comparison view.
-- Reorder `Budget Spending` stats to:
-  - Spending by Category
-  - Budget Trajectory
-  - Month Comparison
-  - Carryover
-  - Spending Pattern
-- Reorder `Recurring Spending` stats to:
-  - Fixed Cost Distribution
-  - Fixed Cost Ratio
-  - Subscription Load
-  - Savings Stability
-- Remove the standalone `Fixed Cost Structure` card once its useful information is absorbed by the reordered recurring-spending view.
-- `Savings Stability` should later become a trailing 6-month view instead of only a current-month snapshot.
+- Add a smooth expense editing flow that reuses the add-expense style where practical.
+- Make dashboard expense rows tappable later if that helps surface edit/detail actions cleanly.
+- Keep history month navigation lightweight; the month picker should feel smaller and less visually heavy.
+- Consider removing any remaining redundant history labels if they do not add meaning.
+- Review dark mode carefully across all major screens and sheets.
+- Do a final pass on empty states, copy, spacing, and modal dismissal behavior.
+- Confirm the chess asset attribution and licensing notes remain correct for shipped assets.
+- Review automated UI tests and keep only the ones that are reliable enough to trust.
+- Remove stale planning artifacts and obsolete iteration leftovers from the repo when convenient.
+
+## Explicit Non-Goals
+
+These ideas are intentionally deferred or dropped for now:
+
+- custom spending categories
+- custom category colors
+- broader app customization controls
+- another large redesign of the Statistics architecture
 
 ## Usage Rule
 
 Only pull items from this list into an active iteration when:
 
-- they fit the current scope naturally, or
-- they clearly improve the current product without destabilizing working flows
-
-This file is for future work notes, not a commitment that every item must land soon.
+- they clearly improve product quality, or
+- they remove friction without destabilizing working flows

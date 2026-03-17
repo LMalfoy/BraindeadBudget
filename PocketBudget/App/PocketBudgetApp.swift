@@ -1,3 +1,16 @@
+/*
+ App entry point and global app setup.
+
+ This file is responsible for:
+ - launching the SwiftUI app
+ - creating the shared SwiftData model container
+ - switching between system, light, and dark appearance
+ - resetting selected user defaults during UI testing
+
+ If the app fails very early during launch, this is one of the first files to
+ inspect, because the SwiftData container is created here.
+ */
+
 import Foundation
 import SwiftData
 import SwiftUI

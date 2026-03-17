@@ -1,3 +1,18 @@
+/*
+ Unit tests for derived budget and statistics calculations.
+
+ These tests focus on "math and model behavior" rather than persistence.
+ They verify that the app calculates values such as:
+ - available monthly budget
+ - carryover
+ - remaining budget
+ - anchored budget periods
+ - progression XP and level behavior
+
+ If a chart or summary looks wrong, this is one of the best places to add or
+ inspect coverage.
+ */
+
 import Foundation
 import XCTest
 @testable import PocketBudget

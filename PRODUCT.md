@@ -38,6 +38,23 @@ The primary user is someone who:
 - Focused: the app should do a small number of important things well.
 - Low-risk to build: changes should be small, testable, and easy to verify.
 
+## Product Guidance Principle
+
+PocketBudget should explain itself briefly at key moments without becoming tutorial-heavy.
+
+The preferred pattern is:
+
+- one short intro before first setup
+- one short explainer for complex progression mechanics
+- one short product explanation in `About`
+
+These explanations should:
+
+- stay brief
+- use plain language
+- avoid financial jargon
+- help the user understand what the app is doing and why
+
 ## Budgeting Model
 
 PocketBudget should treat budgeting as a two-layer system.

@@ -1,3 +1,17 @@
+/*
+ App-level settings screen.
+
+ This view collects controls that do not belong on the dashboard:
+ - budget management entry point
+ - currency
+ - budget-period anchor day
+ - appearance
+ - erase-all-data reset
+ - app/about information
+
+ It is intentionally kept practical and small so the app stays easy to use.
+ */
+
 import SwiftData
 import SwiftUI
 

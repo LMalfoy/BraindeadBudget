@@ -1,3 +1,17 @@
+/*
+ End-to-end UI tests for the most important user flows.
+
+ These tests simulate how a real user moves through the app, for example:
+ - first setup
+ - adding an expense
+ - opening settings
+ - resetting the app
+ - navigating statistics
+
+ They are intentionally focused on high-value flows instead of every possible
+ detail, because UI tests are slower and more fragile than unit tests.
+ */
+
 import XCTest
 
 final class PocketBudgetUITests: XCTestCase {

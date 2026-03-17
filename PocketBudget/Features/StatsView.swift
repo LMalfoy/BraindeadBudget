@@ -1,3 +1,15 @@
+/*
+ Statistics area for the app.
+
+ The Statistics feature is split into three perspectives:
+ - Total Spending: broad combined monthly overview
+ - Budget Spending: variable-spending behavior and budget tracking
+ - Recurring Spending: structural monthly commitments
+
+ This file mainly assembles UI modules and asks `BudgetStore` for the derived
+ data series and summary values that those modules need.
+ */
+
 import Charts
 import Foundation
 import SwiftData
@@ -163,6 +175,9 @@ struct StatsView: View {
     }
 
     private var combinedSpendingSlices: [CombinedSpendingSlice] {
+        // The top overview intentionally merges variable and recurring categories into one
+        // lightweight synthesis view. Deeper behavioral and structural analysis lives in
+        // the two subpages below.
         let budgetSlices = categorySpending.map {
             CombinedSpendingSlice(title: $0.category.title, total: $0.total, color: $0.category.color)
         }

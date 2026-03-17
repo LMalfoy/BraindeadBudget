@@ -1,3 +1,16 @@
+/*
+ Variable day-to-day spending model.
+
+ `Expense` represents the purchases the user records during normal usage:
+ groceries, transport, fun, household spending, and so on.
+
+ Important detail:
+ - expenses are the only records that represent flexible spending behavior
+ - recurring costs are stored separately in `RecurringExpenseItem`
+ - statistics such as category spending, trajectory, and month comparison
+   are built from these records
+ */
+
 import Foundation
 import SwiftData
 

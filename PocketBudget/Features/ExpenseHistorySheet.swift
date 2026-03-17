@@ -1,3 +1,16 @@
+/*
+ Month-based expense history screen.
+
+ This view is where the user reviews already recorded expenses over time.
+ It supports:
+ - moving between budget periods / months
+ - seeing a compact digest for the selected period
+ - editing or deleting expenses from history
+
+ Compared to the dashboard, this screen is less about the current moment and
+ more about inspection and correction.
+ */
+
 import Foundation
 import SwiftData
 import SwiftUI

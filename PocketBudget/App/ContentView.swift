@@ -1,3 +1,17 @@
+/*
+ Main tab container for the app.
+
+ This file does not contain business logic. Its job is only to wire the four
+ top-level user areas together:
+ - Home dashboard
+ - Expense history
+ - Statistics
+ - Settings
+
+ If you want to understand how the app is structured from a user perspective,
+ this is the first file to read after `PocketBudgetApp.swift`.
+ */
+
 import SwiftUI
 
 struct ContentView: View {

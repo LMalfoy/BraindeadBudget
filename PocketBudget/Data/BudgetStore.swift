@@ -1,3 +1,23 @@
+/*
+ Core budget logic and persistence helper.
+
+ This is the most important non-UI file in the project.
+
+ It has two jobs:
+ 1. write, update, and delete SwiftData records
+ 2. calculate all derived budgeting and statistics values
+
+ Examples of calculations handled here:
+ - available monthly budget
+ - carryover between budget periods
+ - remaining budget
+ - category summaries
+ - statistics series for charts
+ - savings-based chess progression
+
+ If you want to understand how the app "thinks", this is the primary file.
+ */
+
 import Foundation
 import SwiftData
 
@@ -625,6 +645,9 @@ struct BudgetStore {
             referenceDate: referenceDate
         )
 
+        // The first tracked period is anchored by user-entered reality, not by a synthetic
+        // backfilled spend history. Carryover from that initial period must therefore start
+        // from the initial available budget instead of the calculated monthly baseline.
         if let previousMonthReferenceDate = calendar.date(byAdding: .month, value: -1, to: referenceDate),
            let initialAvailableBudget,
            isInitialAnchorMonth(
@@ -1118,6 +1141,8 @@ struct BudgetStore {
         var progressMonths: [SavingsProgressMonth] = []
         var month = startMonth
 
+        // Progression is awarded only from fully completed budget periods so the current
+        // in-flight month cannot prematurely inflate XP.
         while month < currentMonth {
             let monthExpenses = Self.expenses(
                 from: expenses,
@@ -1259,6 +1284,9 @@ struct BudgetStore {
         budgetPeriodAnchorDay: Int,
         calendar: Calendar
     ) -> Date {
+        // Budget periods are anchored to an arbitrary day of the month rather than always
+        // starting on day 1, so dates before the current month's anchor belong to the
+        // previous anchored period.
         let monthStart = monthAnchor(for: date, calendar: calendar)
         let normalizedDay = normalizedAnchorDay(budgetPeriodAnchorDay, forMonthContaining: monthStart, calendar: calendar)
         let currentMonthAnchor = calendar.date(byAdding: .day, value: normalizedDay - 1, to: monthStart) ?? monthStart

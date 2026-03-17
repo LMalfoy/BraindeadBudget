@@ -1,3 +1,13 @@
+/*
+ Unit tests for persistence-oriented store behavior.
+
+ These tests check that `BudgetStore` correctly creates, updates, and deletes
+ SwiftData records for settings, income, recurring costs, and expenses.
+
+ Compared to `BudgetCalculationTests`, these tests are more about storage and
+ side effects than about pure numeric calculation.
+ */
+
 import SwiftData
 import XCTest
 @testable import PocketBudget
