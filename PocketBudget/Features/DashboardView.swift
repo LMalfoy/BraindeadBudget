@@ -178,11 +178,68 @@ struct DashboardView: View {
             }
         }
         .fullScreenCover(isPresented: setupCoverBinding) {
-            BudgetSettingsSheet(mode: .onboarding)
+            InitialSetupFlowView()
         }
     }
 
     private static let cardInsets = EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16)
+}
+
+private struct InitialSetupFlowView: View {
+    @State private var hasAcceptedIntro = false
+
+    var body: some View {
+        if hasAcceptedIntro {
+            BudgetSettingsSheet(mode: .onboarding)
+        } else {
+            OnboardingIntroView {
+                hasAcceptedIntro = true
+            }
+        }
+    }
+}
+
+private struct OnboardingIntroView: View {
+    let onContinue: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 24) {
+                Spacer(minLength: 0)
+
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("How BudgetRook Works")
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
+
+                    Text("BudgetRook starts from your monthly income and recurring costs to calculate what is available to spend.")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+
+                    Text("You then track daily spending against that budget, while Statistics separates total spending, budget spending, and recurring spending.")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+
+                    Text("Chess progression rewards money saved at the end of completed budget periods.")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer(minLength: 0)
+
+                Button("Continue to Setup") {
+                    onContinue()
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .accessibilityIdentifier("onboardingIntro.continueButton")
+            }
+            .padding(24)
+            .navigationTitle("Welcome")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .interactiveDismissDisabled(true)
+    }
 }
 
 private struct SummaryCardView: View {

@@ -21,6 +21,7 @@ struct StatsView: View {
 
     private let calendar = Calendar.current
     @State private var selectedSubpage: StatsSubpage = .budgetSpending
+    @State private var showingProgressionInfo = false
     @Query(sort: \Expense.date, order: .reverse) private var expenses: [Expense]
     @Query(sort: \BudgetSettings.updatedAt, order: .reverse) private var budgets: [BudgetSettings]
     @Query(sort: \IncomeItem.createdAt) private var incomeItems: [IncomeItem]
@@ -360,6 +361,35 @@ struct StatsView: View {
         .contentMargins(.top, 0, for: .scrollContent)
         .navigationTitle("Stats")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showingProgressionInfo) {
+            NavigationStack {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Budget Progression is based on how much budget you save by the end of completed budget periods.")
+                            .foregroundStyle(.secondary)
+
+                        Text("Saved budget earns XP. Strong months can advance multiple levels at once, and progress carries forward over time.")
+                            .foregroundStyle(.secondary)
+
+                        Text("This system rewards budget outcome, not spending style. What matters is finishing the period under budget.")
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(20)
+                }
+                .navigationTitle("Progression")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Close") {
+                            showingProgressionInfo = false
+                        }
+                    }
+                }
+            }
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
+        }
     }
 
     private var totalSpendingOverviewCard: some View {
@@ -427,8 +457,21 @@ struct StatsView: View {
 
     private var budgetDisciplineCard: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Budget Progression")
-                .font(.headline)
+            HStack {
+                Text("Budget Progression")
+                    .font(.headline)
+
+                Spacer()
+
+                Button {
+                    showingProgressionInfo = true
+                } label: {
+                    Image(systemName: "info.circle")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("stats.progressionInfoButton")
+            }
 
             HStack(alignment: .top, spacing: 14) {
                 Image(progressionEvaluation.level.piece.assetName)

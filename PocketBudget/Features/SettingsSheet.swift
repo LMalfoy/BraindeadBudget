@@ -11,6 +11,7 @@ struct SettingsSheet: View {
 
     @State private var showingBudgetSettings = false
     @State private var showingBudgetPeriodAnchorPicker = false
+    @State private var showingAboutInfo = false
     @State private var showingResetConfirmation = false
     @State private var errorMessage: String?
 
@@ -127,7 +128,7 @@ struct SettingsSheet: View {
                 }
             }
 
-            Section("About") {
+            Section {
                 LabeledContent("Version", value: appVersion)
                     .accessibilityIdentifier("settings.versionValue")
 
@@ -150,12 +151,56 @@ struct SettingsSheet: View {
                         .foregroundStyle(.secondary)
                 }
                 .accessibilityIdentifier("settings.chessIconsSection")
+            } header: {
+                HStack {
+                    Text("About")
+
+                    Spacer()
+
+                    Button {
+                        showingAboutInfo = true
+                    } label: {
+                        Image(systemName: "info.circle")
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("settings.aboutInfoButton")
+                }
             }
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingBudgetSettings) {
             BudgetSettingsSheet(mode: .manage)
+        }
+        .sheet(isPresented: $showingAboutInfo) {
+            NavigationStack {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("BudgetRook is a simple personal budgeting app built around one core question: how much money is still available to spend in the current budget period?")
+                            .foregroundStyle(.secondary)
+
+                        Text("It separates total spending, budget spending, and recurring spending so your monthly overview stays clear without becoming accounting software.")
+                            .foregroundStyle(.secondary)
+
+                        Text("The app is designed for fast daily capture, clear monthly awareness, and lightweight long-term progression.")
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(20)
+                }
+                .navigationTitle("About BudgetRook")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Close") {
+                            showingAboutInfo = false
+                        }
+                    }
+                }
+            }
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showingBudgetPeriodAnchorPicker) {
             NavigationStack {

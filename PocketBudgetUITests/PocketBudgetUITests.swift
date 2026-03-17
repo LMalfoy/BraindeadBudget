@@ -67,7 +67,7 @@ final class PocketBudgetUITests: XCTestCase {
         confirmButton.tap()
 
         app.tabBars.buttons["Home"].tap()
-        XCTAssertTrue(app.buttons["budgetSetup.addIncomeButton"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["onboardingIntro.continueButton"].firstMatch.waitForExistence(timeout: 5))
     }
 
     func testUserCanOpenStatsArea() throws {
@@ -151,6 +151,34 @@ final class PocketBudgetUITests: XCTestCase {
 
         XCTAssertTrue(app.staticTexts["Budget Progression"].firstMatch.waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Pawn I"].firstMatch.waitForExistence(timeout: 5))
+    }
+
+    func testUserCanOpenBudgetProgressionInfo() throws {
+        let app = XCUIApplication()
+        launchAndCompleteBudgetSetup(in: app)
+
+        app.tabBars.buttons["Stats"].tap()
+
+        let infoButton = app.buttons["stats.progressionInfoButton"].firstMatch
+        XCTAssertTrue(infoButton.waitForExistence(timeout: 5))
+        infoButton.tap()
+
+        XCTAssertTrue(app.navigationBars["Progression"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Budget Progression is based on how much budget you save by the end of completed budget periods."].firstMatch.waitForExistence(timeout: 5))
+    }
+
+    func testUserCanOpenAboutInfo() throws {
+        let app = XCUIApplication()
+        launchAndCompleteBudgetSetup(in: app)
+
+        app.tabBars.buttons["Settings"].tap()
+
+        let infoButton = app.buttons["settings.aboutInfoButton"].firstMatch
+        XCTAssertTrue(infoButton.waitForExistence(timeout: 5))
+        infoButton.tap()
+
+        XCTAssertTrue(app.navigationBars["About BudgetRook"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["BudgetRook is a simple personal budgeting app built around one core question: how much money is still available to spend in the current budget period?"].firstMatch.waitForExistence(timeout: 5))
     }
 
     func testUserCanSwitchStatsPerspective() throws {
@@ -303,6 +331,10 @@ final class PocketBudgetUITests: XCTestCase {
     private func launchAndCompleteBudgetSetup(in app: XCUIApplication) {
         app.launchArguments.append("-ui-testing")
         app.launch()
+
+        let introContinueButton = app.buttons["onboardingIntro.continueButton"].firstMatch
+        XCTAssertTrue(introContinueButton.waitForExistence(timeout: 5))
+        introContinueButton.tap()
 
         let addIncomeButton = app.buttons["budgetSetup.addIncomeButton"].firstMatch
         XCTAssertTrue(addIncomeButton.waitForExistence(timeout: 5))
