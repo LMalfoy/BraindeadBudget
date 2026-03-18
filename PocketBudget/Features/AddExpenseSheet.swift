@@ -36,6 +36,7 @@ struct AddExpenseSheet: View {
     @State private var date = Date.now
     @State private var note = ""
     @State private var errorMessage: String?
+    @State private var hasRequestedInitialFocus = false
     private var parsedAmount: Double? {
         Self.parseAmount(amountText)
     }
@@ -159,6 +160,9 @@ struct AddExpenseSheet: View {
                 Text(errorMessage ?? "Something went wrong.")
             }
             .defaultFocus($focusedField, .title)
+            .onAppear {
+                requestInitialFocusIfNeeded()
+            }
         }
     }
 
@@ -214,6 +218,22 @@ struct AddExpenseSheet: View {
         }
 
         return Double(trimmed.replacingOccurrences(of: ",", with: "."))
+    }
+
+    private func requestInitialFocusIfNeeded() {
+        guard !hasRequestedInitialFocus else {
+            return
+        }
+
+        hasRequestedInitialFocus = true
+
+        Task { @MainActor in
+            focusedField = .title
+            try? await Task.sleep(for: .milliseconds(120))
+            if focusedField == nil {
+                focusedField = .title
+            }
+        }
     }
 }
 private extension ExpenseCategory {
