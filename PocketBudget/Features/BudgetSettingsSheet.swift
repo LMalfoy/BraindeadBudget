@@ -507,6 +507,7 @@ private struct BaselineItemEditorSheet: View {
                     }
                 }
             }
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle(draft.sourceID == nil ? "Add \(draft.kind.title)" : "Edit \(draft.kind.title)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -531,13 +532,7 @@ private struct BaselineItemEditorSheet: View {
             } message: {
                 Text(errorMessage ?? "Something went wrong.")
             }
-            .task {
-                guard focusedField == nil else {
-                    return
-                }
-
-                focusedField = .name
-            }
+            .defaultFocus($focusedField, .name)
         }
     }
 

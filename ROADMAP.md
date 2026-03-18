@@ -229,3 +229,27 @@ Why this matters:
 
 - the app already computes and rewards disciplined spending, but the dashboard does not surface that momentum clearly
 - a small visible streak indicator makes the habit loop more tangible without overwhelming the core budgeting purpose
+
+### Iteration 2.0.7: Subscription Visibility
+
+Goal:
+Make subscription costs directly visible inside the recurring-spending statistics so the subscription load metric is not just abstract count and total.
+
+Scope:
+
+- add a compact subscription list beneath the existing subscription load summary
+- show each subscription name and monthly amount
+- keep the list lightweight and read-only
+- use the existing recurring-expense data model and recurring statistics area
+
+Not in scope:
+
+- no recurring-cost editing from this module
+- no new subscription categories
+- no trend views yet
+- no stats navigation changes
+
+Why this matters:
+
+- subscription count and total cost are helpful, but users also need to see what is actually included
+- this makes recurring spending more understandable without adding new product complexity

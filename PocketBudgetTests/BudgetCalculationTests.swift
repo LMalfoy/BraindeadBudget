@@ -728,6 +728,23 @@ final class BudgetCalculationTests: XCTestCase {
         XCTAssertEqual(savingsStability.savingsShare, 0.1, accuracy: 0.001)
     }
 
+    func testSubscriptionItemsReturnOnlySubscriptionsSortedByAmount() {
+        let recurringExpenseItems = [
+            RecurringExpenseItem(name: "Netflix", amount: 13, category: .subscriptions),
+            RecurringExpenseItem(name: "iCloud", amount: 3, category: .subscriptions),
+            RecurringExpenseItem(name: "Rent", amount: 1200, category: .housingUtilities),
+            RecurringExpenseItem(name: "ChatGPT", amount: 20, category: .subscriptions)
+        ]
+
+        let items = BudgetStore.subscriptionItems(for: recurringExpenseItems)
+
+        XCTAssertEqual(items.map(\.name), ["ChatGPT", "Netflix", "iCloud"])
+        let expectedAmounts = [20.0, 13.0, 3.0]
+        for (actual, expected) in zip(items.map(\.amount), expectedAmounts) {
+            XCTAssertEqual(actual, expected, accuracy: 0.001)
+        }
+    }
+
     func testSavingsStabilityHistoryBuildsTrailingSixMonthSeries() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!

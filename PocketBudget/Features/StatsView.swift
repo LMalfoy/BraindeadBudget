@@ -171,6 +171,10 @@ struct StatsView: View {
         BudgetStore.subscriptionLoad(for: recurringExpenseItems)
     }
 
+    private var subscriptionItems: [SubscriptionItemSummary] {
+        BudgetStore.subscriptionItems(for: recurringExpenseItems)
+    }
+
     private var savingsStability: SavingsStabilitySummary {
         BudgetStore.savingsStability(
             incomeItems: incomeItems,
@@ -1049,6 +1053,30 @@ struct StatsView: View {
                             Text("Monthly Cost")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Subscriptions")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.primary)
+
+                        ForEach(subscriptionItems) { item in
+                            HStack(spacing: 10) {
+                                Circle()
+                                    .fill(Color.purple.opacity(0.22))
+                                    .frame(width: 10, height: 10)
+
+                                Text(item.name)
+                                    .foregroundStyle(.primary)
+                                    .lineLimit(1)
+
+                                Spacer()
+
+                                Text(item.amount.formatted(.currency(code: currencyCode)))
+                                    .fontWeight(.medium)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                     }
 

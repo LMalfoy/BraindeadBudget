@@ -132,6 +132,12 @@ struct SubscriptionLoadSummary: Equatable {
     let totalMonthlyCost: Double
 }
 
+struct SubscriptionItemSummary: Identifiable, Equatable {
+    let id: UUID
+    let name: String
+    let amount: Double
+}
+
 struct SavingsStabilitySummary: Equatable {
     let monthlyIncome: Double
     let savingsAmount: Double
@@ -755,6 +761,21 @@ struct BudgetStore {
             count: subscriptionItems.count,
             totalMonthlyCost: subscriptionItems.reduce(0) { $0 + $1.amount }
         )
+    }
+
+    static func subscriptionItems(
+        for recurringExpenseItems: [RecurringExpenseItem]
+    ) -> [SubscriptionItemSummary] {
+        recurringExpenseItems
+            .filter { $0.category == .subscriptions }
+            .map { SubscriptionItemSummary(id: $0.id, name: $0.name, amount: $0.amount) }
+            .sorted { lhs, rhs in
+                if lhs.amount == rhs.amount {
+                    return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+                }
+
+                return lhs.amount > rhs.amount
+            }
     }
 
     static func savingsStability(
