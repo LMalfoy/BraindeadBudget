@@ -24,6 +24,8 @@
 		A10000000000000000000219 /* BudgetStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000119 /* BudgetStoreTests.swift */; };
 		A1000000000000000000021A /* BudgetCalculationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000011A /* BudgetCalculationTests.swift */; };
 		A1000000000000000000021B /* PocketBudgetUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000011B /* PocketBudgetUITests.swift */; };
+		C10000000000000000000210 /* QuickAddWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000110 /* QuickAddWidget.swift */; };
+		C10000000000000000000211 /* QuickAddWidget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = C10000000000000000000111 /* QuickAddWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -64,7 +66,23 @@
 		A10000000000000000000119 /* BudgetStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgetStoreTests.swift; sourceTree = "<group>"; };
 		A1000000000000000000011A /* BudgetCalculationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgetCalculationTests.swift; sourceTree = "<group>"; };
 		A1000000000000000000011B /* PocketBudgetUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PocketBudgetUITests.swift; sourceTree = "<group>"; };
+		C10000000000000000000110 /* QuickAddWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickAddWidget.swift; sourceTree = "<group>"; };
+		C10000000000000000000111 /* QuickAddWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = QuickAddWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		C10000000000000000000312 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				C10000000000000000000211 /* QuickAddWidget.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		A10000000000000000000311 /* Frameworks */ = {
@@ -88,6 +106,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C10000000000000000000311 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -95,6 +120,7 @@
 			isa = PBXGroup;
 			children = (
 				A10000000000000000000010 /* PocketBudget */,
+				C10000000000000000000010 /* PocketBudgetWidget */,
 				A10000000000000000000016 /* PocketBudgetTests */,
 				A10000000000000000000017 /* PocketBudgetUITests */,
 				A10000000000000000000004 /* Products */,
@@ -107,6 +133,7 @@
 				A10000000000000000000100 /* PocketBudget.app */,
 				A10000000000000000000101 /* PocketBudgetTests.xctest */,
 				A10000000000000000000102 /* PocketBudgetUITests.xctest */,
+				C10000000000000000000111 /* QuickAddWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -189,6 +216,14 @@
 			path = PocketBudgetUITests;
 			sourceTree = "<group>";
 		};
+		C10000000000000000000010 /* PocketBudgetWidget */ = {
+			isa = PBXGroup;
+			children = (
+				C10000000000000000000110 /* QuickAddWidget.swift */,
+			);
+			path = PocketBudgetWidget;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -199,6 +234,7 @@
 				A10000000000000000000311 /* Frameworks */,
 				A10000000000000000000310 /* Sources */,
 				A10000000000000000000312 /* Resources */,
+				C10000000000000000000312 /* Embed App Extensions */,
 			);
 			buildRules = (
 			);
@@ -249,6 +285,25 @@
 			productReference = A10000000000000000000102 /* PocketBudgetUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		C10000000000000000000600 /* QuickAddWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C10000000000000000000410 /* Build configuration list for PBXNativeTarget "QuickAddWidget" */;
+			buildPhases = (
+				C10000000000000000000311 /* Frameworks */,
+				C10000000000000000000313 /* Sources */,
+				C10000000000000000000314 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = QuickAddWidget;
+			packageProductDependencies = (
+			);
+			productName = QuickAddWidget;
+			productReference = C10000000000000000000111 /* QuickAddWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -270,6 +325,9 @@
 						TestTargetID = A10000000000000000000600;
 					};
 				};
+				C10000000000000000000600 = {
+					CreatedOnToolsVersion = 16.0;
+				};
 			};
 			buildConfigurationList = A10000000000000000000003 /* Build configuration list for PBXProject "PocketBudget" */;
 			compatibilityVersion = "Xcode 15.0";
@@ -287,6 +345,7 @@
 				A10000000000000000000600 /* PocketBudget */,
 				A10000000000000000000601 /* PocketBudgetTests */,
 				A10000000000000000000602 /* PocketBudgetUITests */,
+				C10000000000000000000600 /* QuickAddWidget */,
 			);
 		};
 /* End PBXProject section */
@@ -297,6 +356,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000218 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C10000000000000000000314 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -337,6 +403,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1000000000000000000021B /* PocketBudgetUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C10000000000000000000313 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C10000000000000000000210 /* QuickAddWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -397,7 +471,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 2.0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = "de-.kevinsicking-.budgetrook";
+				PRODUCT_BUNDLE_IDENTIFIER = "de.kevinsicking.budgetrook";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -430,7 +504,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 2.0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = "de-.kevinsicking-.budgetrook";
+				PRODUCT_BUNDLE_IDENTIFIER = "de.kevinsicking.budgetrook";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -455,7 +529,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "de-.kevinsicking-.budgetrook.tests";
+				PRODUCT_BUNDLE_IDENTIFIER = "de.kevinsicking.budgetrook.tests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -481,7 +555,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "de-.kevinsicking-.budgetrook-.tests";
+				PRODUCT_BUNDLE_IDENTIFIER = "de.kevinsicking.budgetrook.tests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -505,7 +579,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "de-.kevinsicking-.budgetrook.uitests";
+				PRODUCT_BUNDLE_IDENTIFIER = "de.kevinsicking.budgetrook.uitests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -529,14 +603,69 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "de-.kevinsicking-.budgetrook-.uitests";
-				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = "de-.kevinsicking-.budgetrook.uitests";
+				PRODUCT_BUNDLE_IDENTIFIER = "de.kevinsicking.budgetrook.uitests";
+				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = "de.kevinsicking.budgetrook.uitests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
 				TEST_TARGET_NAME = PocketBudget;
+			};
+			name = Release;
+		};
+		C10000000000000000000510 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 25;
+				DEVELOPMENT_TEAM = DW6SAZ37JV;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = PocketBudgetWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = "de.kevinsicking.budgetrook.widget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		C10000000000000000000511 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 25;
+				DEVELOPMENT_TEAM = DW6SAZ37JV;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = PocketBudgetWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = "de.kevinsicking.budgetrook.widget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -575,6 +704,15 @@
 			buildConfigurations = (
 				A10000000000000000000530 /* Debug */,
 				A10000000000000000000531 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C10000000000000000000410 /* Build configuration list for PBXNativeTarget "QuickAddWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C10000000000000000000510 /* Debug */,
+				C10000000000000000000511 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
