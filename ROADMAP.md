@@ -166,3 +166,21 @@ Why this matters:
 - the first friction pass exposed a few rough edges immediately in real use
 - these are small changes with high day-to-day usability value
 - keeping them together avoids a bloated backlog of tiny but related UX fixes
+
+### Iteration 2.0.3: Dashboard Guidance
+
+Goal:
+Make the dashboard card more helpful and less redundant by adding one practical pacing metric and removing one confusing value.
+
+Scope:
+
+- add `Daily Safe Spend` to the main dashboard card
+- add a small info button that explains the most important dashboard figures
+- remove `Available This Month` from the dashboard card
+- keep `Remaining` as the primary action-driving budget number
+
+Why this matters:
+
+- the dashboard should answer not only \"how much is left\" but also \"what is safe today\"
+- the card is now mature enough that redundant values should be trimmed away
+- explanation matters more once the dashboard becomes denser

@@ -93,6 +93,16 @@ struct DashboardView: View {
         )
     }
 
+    private var daysRemainingInCurrentPeriod: Int {
+        BudgetStore.daysRemainingInCurrentPeriod(
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay
+        )
+    }
+
+    private var dailySafeSpend: Double {
+        remainingBudget / Double(daysRemainingInCurrentPeriod)
+    }
+
     private var remainingBudget: Double {
         BudgetStore.remainingBudget(
             monthlyBudget: monthlyBudget,
@@ -130,9 +140,10 @@ struct DashboardView: View {
                         monthLabel: Date.now.formatted(.dateTime.month(.wide)),
                         baselineMonthlyBudget: monthlyBudget,
                         carryoverAmount: previousMonthCarryover,
-                        adjustedMonthlyBudget: adjustedMonthlyBudget,
                         totalSpent: totalSpent,
                         remainingBudget: remainingBudget,
+                        dailySafeSpend: dailySafeSpend,
+                        daysRemainingInCurrentPeriod: daysRemainingInCurrentPeriod,
                         currencyCode: currencyCode,
                         hasCompletedSetup: hasBaselineData
                     )
@@ -278,16 +289,36 @@ private struct SummaryCardView: View {
     let monthLabel: String
     let baselineMonthlyBudget: Double
     let carryoverAmount: Double
-    let adjustedMonthlyBudget: Double
     let totalSpent: Double
     let remainingBudget: Double
+    let dailySafeSpend: Double
+    let daysRemainingInCurrentPeriod: Int
     let currencyCode: String
     let hasCompletedSetup: Bool
+
+    @State private var showingInfo = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             if hasCompletedSetup {
                 VStack(alignment: .leading, spacing: 12) {
+                    HStack(alignment: .top) {
+                        Text("Budget Overview")
+                            .font(.headline.weight(.semibold))
+
+                        Spacer()
+
+                        Button {
+                            showingInfo = true
+                        } label: {
+                            Image(systemName: "info.circle")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("dashboard.summaryInfoButton")
+                    }
+
                     summaryRow(title: "Baseline Budget", value: formatted(baselineMonthlyBudget))
                     summaryRow(title: "Carryover", value: formatted(carryoverAmount))
                     summaryRow(title: "Spent in \(monthLabel)", value: formatted(totalSpent))
@@ -303,7 +334,19 @@ private struct SummaryCardView: View {
                             .accessibilityIdentifier("dashboard.remainingBudgetValue")
                     }
 
-                    summaryRow(title: "Available This Month", value: formatted(adjustedMonthlyBudget))
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Daily Safe Spend")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+
+                        Text(formatted(dailySafeSpend))
+                            .font(.title3.weight(.semibold))
+                            .foregroundStyle(dailySafeSpend < 0 ? .red : .green)
+
+                        Text("\(daysRemainingInCurrentPeriod) day\(daysRemainingInCurrentPeriod == 1 ? "" : "s") left in this budget period")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             } else {
                 VStack(alignment: .leading, spacing: 8) {
@@ -316,6 +359,9 @@ private struct SummaryCardView: View {
             }
         }
         .dashboardCardStyle()
+        .sheet(isPresented: $showingInfo) {
+            DashboardSummaryInfoSheet()
+        }
     }
 
     @ViewBuilder
@@ -331,6 +377,43 @@ private struct SummaryCardView: View {
 
     private func formatted(_ amount: Double) -> String {
         amount.formatted(.currency(code: currencyCode))
+    }
+}
+
+private struct DashboardSummaryInfoSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Remaining")
+                        .font(.headline)
+                    Text("Amount left in the current budget period after your baseline budget, carryover, and recorded expenses are taken into account.")
+                        .foregroundStyle(.secondary)
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Daily Safe Spend")
+                        .font(.headline)
+                    Text("A simple per-day guideline based on your remaining budget and the number of days left in the current budget period.")
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+            }
+            .padding(24)
+            .navigationTitle("Budget Info")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium])
     }
 }
 

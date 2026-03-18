@@ -770,6 +770,19 @@ struct BudgetStore {
         )
     }
 
+    static func daysRemainingInCurrentPeriod(
+        referenceDate: Date = .now,
+        budgetPeriodAnchorDay: Int = 1,
+        calendar: Calendar = .current
+    ) -> Int {
+        let start = periodStart(containing: referenceDate, budgetPeriodAnchorDay: budgetPeriodAnchorDay, calendar: calendar)
+        let end = nextPeriodStart(after: start, budgetPeriodAnchorDay: budgetPeriodAnchorDay, calendar: calendar)
+        let startOfToday = calendar.startOfDay(for: referenceDate)
+        let startOfPeriodEnd = calendar.startOfDay(for: end)
+        let days = calendar.dateComponents([.day], from: startOfToday, to: startOfPeriodEnd).day ?? 0
+        return max(1, days)
+    }
+
     static func monthlyHistoryDigest(
         monthlyBudget: Double,
         expenses: [Expense],
