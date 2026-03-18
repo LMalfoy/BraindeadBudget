@@ -26,23 +26,24 @@ struct QuickAddWidgetEntryView: View {
 
     var body: some View {
         Link(destination: URL(string: "budgetrook://add-expense")!) {
-            VStack(alignment: .leading, spacing: 10) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 28, weight: .semibold))
-                    .foregroundStyle(.green)
+            VStack(spacing: 12) {
+                Spacer(minLength: 0)
 
-                Spacer()
+                Text("Add Expense")
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                    .minimumScaleFactor(0.7)
 
-                Text("Quick Add Expense")
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-
-                Text("Tap to add")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                Spacer(minLength: 0)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(Color.green)
+            )
+            .padding(10)
             .containerBackground(for: .widget) {
                 Color(uiColor: .systemBackground)
             }

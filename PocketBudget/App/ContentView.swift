@@ -68,9 +68,13 @@ struct ContentView: View {
                 NotificationCenter.default.post(name: .openQuickAddExpense, object: nil)
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .openExpenseHistoryMonth)) { _ in
+            selectedTab = .history
+        }
     }
 }
 
 extension Notification.Name {
     static let openQuickAddExpense = Notification.Name("openQuickAddExpense")
+    static let openExpenseHistoryMonth = Notification.Name("openExpenseHistoryMonth")
 }

@@ -148,3 +148,21 @@ Why this matters:
 
 - this gives immediate daily-use value without destabilizing the product
 - it creates a clean foundation for later `2.0` dashboard and insights work
+
+### Iteration 2.0.2: Friction And UI Polish
+
+Goal:
+Tighten the first `2.0` UX pass by removing small points of confusion and visual inconsistency.
+
+Scope:
+
+- reshape the quick-add widget into a clearer, more compact call to action
+- make the `Save Expense` action state more intuitive when required fields are empty
+- unify the primary green action color across dashboard and expense-entry flows
+- make `Recent Expenses` on the dashboard tappable and route into history
+
+Why this matters:
+
+- the first friction pass exposed a few rough edges immediately in real use
+- these are small changes with high day-to-day usability value
+- keeping them together avoids a bloated backlog of tiny but related UX fixes

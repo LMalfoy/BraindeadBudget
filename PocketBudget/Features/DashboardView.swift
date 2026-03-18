@@ -157,7 +157,15 @@ struct DashboardView: View {
                             .padding(.vertical, 10)
                     } else {
                         ForEach(recentExpenses) { expense in
-                            ExpenseRowView(expense: expense, currencyCode: currencyCode)
+                            Button {
+                                NotificationCenter.default.post(
+                                    name: .openExpenseHistoryMonth,
+                                    object: expense.date
+                                )
+                            } label: {
+                                ExpenseRowView(expense: expense, currencyCode: currencyCode)
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                 } header: {
@@ -172,7 +180,7 @@ struct DashboardView: View {
                     .font(.headline)
                     .padding(.horizontal, 22)
                     .padding(.vertical, 16)
-                    .background(hasBaselineData ? Color.accentColor : Color(uiColor: .systemGray4))
+                    .background(hasBaselineData ? Color.green : Color(uiColor: .systemGray4))
                     .foregroundStyle(.white)
                     .clipShape(Capsule())
                     .shadow(color: .black.opacity(0.12), radius: 12, y: 6)
@@ -366,6 +374,10 @@ private struct ExpenseRowView: View {
 
             Text(expense.amount.formatted(.currency(code: currencyCode)))
                 .font(.subheadline.weight(.semibold))
+
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
         }
         .padding(.vertical, 4)
     }

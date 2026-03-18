@@ -148,6 +148,13 @@ struct ExpenseHistorySheet: View {
         } message: {
             Text(errorMessage ?? "Something went wrong.")
         }
+        .onReceive(NotificationCenter.default.publisher(for: .openExpenseHistoryMonth)) { notification in
+            guard let date = notification.object as? Date else {
+                return
+            }
+
+            selectedMonth = date
+        }
     }
 
     private var monthNavigator: some View {

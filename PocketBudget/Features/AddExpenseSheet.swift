@@ -44,6 +44,22 @@ struct AddExpenseSheet: View {
         title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || (parsedAmount ?? 0) <= 0
     }
 
+    private var saveAvailabilityHint: String? {
+        if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && (parsedAmount ?? 0) <= 0 {
+            return "Enter an item and amount to enable save."
+        }
+
+        if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "Enter an item to enable save."
+        }
+
+        if (parsedAmount ?? 0) <= 0 {
+            return "Enter an amount to enable save."
+        }
+
+        return nil
+    }
+
     private var errorAlertBinding: Binding<Bool> {
         Binding(
             get: { errorMessage != nil },
@@ -112,9 +128,19 @@ struct AddExpenseSheet: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 10)
-                .padding(.bottom, 12)
                 .disabled(isSaveDisabled)
                 .accessibilityIdentifier("addExpense.saveButton")
+
+                if let saveAvailabilityHint {
+                    Text(saveAvailabilityHint)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 18)
+                        .padding(.top, 6)
+                }
+
+                Spacer(minLength: 12)
             }
             .navigationTitle("Add Expense")
             .navigationBarTitleDisplayMode(.inline)
