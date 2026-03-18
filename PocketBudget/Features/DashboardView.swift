@@ -197,6 +197,13 @@ struct DashboardView: View {
         .fullScreenCover(isPresented: setupCoverBinding) {
             InitialSetupFlowView()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .openQuickAddExpense)) { _ in
+            guard hasBaselineData, hasCompletedSetup else {
+                return
+            }
+
+            showingAddExpense = true
+        }
     }
 
     private static let cardInsets = EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16)

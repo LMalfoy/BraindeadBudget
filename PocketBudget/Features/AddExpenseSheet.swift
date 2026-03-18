@@ -36,7 +36,6 @@ struct AddExpenseSheet: View {
     @State private var date = Date.now
     @State private var note = ""
     @State private var errorMessage: String?
-
     private var parsedAmount: Double? {
         Self.parseAmount(amountText)
     }
@@ -58,51 +57,64 @@ struct AddExpenseSheet: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    categoryPicker
-                } header: {
-                    Text("Category")
-                }
+            VStack(spacing: 0) {
+                Form {
+                    Section {
+                        categoryPicker
+                    } header: {
+                        Text("Category")
+                    }
 
-                Section {
-                    TextField("Item", text: $title)
-                        .textInputAutocapitalization(.words)
-                        .submitLabel(.next)
-                        .focused($focusedField, equals: .title)
-                        .onSubmit {
-                            focusedField = .amount
-                        }
-                        .accessibilityIdentifier("addExpense.titleField")
-
-                    TextField("Amount", text: $amountText)
-                        .keyboardType(.decimalPad)
-                        .submitLabel(.done)
-                        .focused($focusedField, equals: .amount)
-                        .onSubmit {
-                            guard !isSaveDisabled else {
-                                return
+                    Section {
+                        TextField("Item", text: $title)
+                            .textInputAutocapitalization(.words)
+                            .submitLabel(.next)
+                            .focused($focusedField, equals: .title)
+                            .onSubmit {
+                                focusedField = .amount
                             }
+                            .accessibilityIdentifier("addExpense.titleField")
 
-                            saveExpense()
-                        }
-                        .accessibilityIdentifier("addExpense.amountField")
-                } header: {
-                    Text("Expense")
-                } footer: {
-                    Text("Amounts are displayed using \(currencyCode).")
+                        TextField("Amount", text: $amountText)
+                            .keyboardType(.decimalPad)
+                            .submitLabel(.done)
+                            .focused($focusedField, equals: .amount)
+                            .accessibilityIdentifier("addExpense.amountField")
+                    } header: {
+                        Text("Expense")
+                    } footer: {
+                        Text("Amounts are displayed using \(currencyCode).")
+                    }
+
+                    Section {
+                        DatePicker("Date", selection: $date, displayedComponents: .date)
+
+                        TextField("Note", text: $note, axis: .vertical)
+                            .lineLimit(2...4)
+                            .focused($focusedField, equals: .note)
+                            .accessibilityIdentifier("addExpense.noteField")
+                    } header: {
+                        Text("Details")
+                    }
                 }
+                .scrollDismissesKeyboard(.interactively)
 
-                Section {
-                    DatePicker("Date", selection: $date, displayedComponents: .date)
-
-                    TextField("Note", text: $note, axis: .vertical)
-                        .lineLimit(2...4)
-                        .focused($focusedField, equals: .note)
-                        .accessibilityIdentifier("addExpense.noteField")
-                } header: {
-                    Text("Details")
+                Button {
+                    saveExpense()
+                } label: {
+                    Text("Save Expense")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(isSaveDisabled ? Color(uiColor: .systemGray4) : Color.green)
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 }
+                .padding(.horizontal, 16)
+                .padding(.top, 10)
+                .padding(.bottom, 12)
+                .disabled(isSaveDisabled)
+                .accessibilityIdentifier("addExpense.saveButton")
             }
             .navigationTitle("Add Expense")
             .navigationBarTitleDisplayMode(.inline)
@@ -111,14 +123,6 @@ struct AddExpenseSheet: View {
                     Button("Cancel") {
                         dismiss()
                     }
-                }
-
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        saveExpense()
-                    }
-                    .disabled(isSaveDisabled)
-                    .accessibilityIdentifier("addExpense.saveButton")
                 }
             }
             .alert("Couldn’t Save Expense", isPresented: errorAlertBinding) {

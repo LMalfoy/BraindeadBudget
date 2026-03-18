@@ -380,11 +380,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 23;
-				DEVELOPMENT_TEAM = "";
+				CURRENT_PROJECT_VERSION = 25;
+				DEVELOPMENT_TEAM = DW6SAZ37JV;
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = BudgetRook;
+				INFOPLIST_KEY_CFBundleURLTypes_0_CFBundleTypeRole = Editor;
+				INFOPLIST_KEY_CFBundleURLTypes_0_CFBundleURLName = budgetrook;
+				INFOPLIST_KEY_CFBundleURLTypes_0_CFBundleURLSchemes_0 = budgetrook;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -393,8 +396,8 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.15.2;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.PocketBudget;
+				MARKETING_VERSION = 2.0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = "de-.kevinsicking-.budgetrook";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -411,10 +414,13 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 23;
-				DEVELOPMENT_TEAM = "";
+				CURRENT_PROJECT_VERSION = 25;
+				DEVELOPMENT_TEAM = DW6SAZ37JV;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = BudgetRook;
+				INFOPLIST_KEY_CFBundleURLTypes_0_CFBundleTypeRole = Editor;
+				INFOPLIST_KEY_CFBundleURLTypes_0_CFBundleURLName = budgetrook;
+				INFOPLIST_KEY_CFBundleURLTypes_0_CFBundleURLSchemes_0 = budgetrook;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -423,8 +429,8 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.15.2;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.PocketBudget;
+				MARKETING_VERSION = 2.0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = "de-.kevinsicking-.budgetrook";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -439,8 +445,8 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 23;
-				DEVELOPMENT_TEAM = "";
+				CURRENT_PROJECT_VERSION = 25;
+				DEVELOPMENT_TEAM = DW6SAZ37JV;
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -449,7 +455,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.PocketBudgetTests;
+				PRODUCT_BUNDLE_IDENTIFIER = "de-.kevinsicking-.budgetrook.tests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -464,9 +470,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 23;
-				DEVELOPMENT_TEAM = "";
+				CURRENT_PROJECT_VERSION = 25;
+				DEVELOPMENT_TEAM = DW6SAZ37JV;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -474,7 +481,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.PocketBudgetTests;
+				PRODUCT_BUNDLE_IDENTIFIER = "de-.kevinsicking-.budgetrook-.tests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -488,8 +495,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 23;
-				DEVELOPMENT_TEAM = "";
+				CURRENT_PROJECT_VERSION = 25;
+				DEVELOPMENT_TEAM = DW6SAZ37JV;
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -498,7 +505,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.PocketBudgetUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = "de-.kevinsicking-.budgetrook.uitests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -513,8 +520,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 23;
-				DEVELOPMENT_TEAM = "";
+				CURRENT_PROJECT_VERSION = 25;
+				DEVELOPMENT_TEAM = DW6SAZ37JV;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -522,7 +529,8 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.PocketBudgetUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = "de-.kevinsicking-.budgetrook-.uitests";
+				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = "de-.kevinsicking-.budgetrook.uitests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";

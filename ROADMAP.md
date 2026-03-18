@@ -118,3 +118,33 @@ These are intentionally not part of the immediate final stretch:
 3. history UX polish
 4. final UX and QA pass
 5. release hygiene cleanup
+
+## Version 2.0 Direction
+
+Version `2.0` should expand the app carefully along three axes:
+
+- reduce friction when entering expenses
+- improve financial insights
+- add lightweight planning tools
+
+The guiding rule stays the same:
+
+`Simple budget tracking with useful insights.`
+
+The first `2.0` step should stay intentionally small.
+
+### Iteration 2.0.1: Friction Reduction
+
+Goal:
+Reduce input friction in the app's most common daily action: recording an expense.
+
+Scope:
+
+- add a `Quick Add Expense` home screen widget that deep-links into the app
+- make amount entry submittable directly from the keyboard
+- review terminology consistency across the app for closely related concepts
+
+Why this matters:
+
+- this gives immediate daily-use value without destabilizing the product
+- it creates a clean foundation for later `2.0` dashboard and insights work

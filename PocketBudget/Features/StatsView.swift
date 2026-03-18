@@ -818,7 +818,7 @@ struct StatsView: View {
     private var recurringSpendingSections: some View {
         Section {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Fixed Cost Distribution")
+                Text("Spending by Category")
                     .font(.headline)
 
                 if fixedCostDistribution.isEmpty {

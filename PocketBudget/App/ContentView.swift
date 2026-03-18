@@ -15,11 +15,21 @@
 import SwiftUI
 
 struct ContentView: View {
+    private enum Tab: Hashable {
+        case home
+        case history
+        case stats
+        case settings
+    }
+
+    @State private var selectedTab: Tab = .home
+
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             NavigationStack {
                 DashboardView()
             }
+            .tag(Tab.home)
             .tabItem {
                 Label("Home", systemImage: "house")
             }
@@ -27,6 +37,7 @@ struct ContentView: View {
             NavigationStack {
                 ExpenseHistorySheet()
             }
+            .tag(Tab.history)
             .tabItem {
                 Label("History", systemImage: "list.bullet.rectangle")
             }
@@ -34,6 +45,7 @@ struct ContentView: View {
             NavigationStack {
                 StatsView()
             }
+            .tag(Tab.stats)
             .tabItem {
                 Label("Stats", systemImage: "chart.pie")
             }
@@ -41,9 +53,24 @@ struct ContentView: View {
             NavigationStack {
                 SettingsSheet()
             }
+            .tag(Tab.settings)
             .tabItem {
                 Label("Settings", systemImage: "gearshape")
             }
         }
+        .onOpenURL { url in
+            guard url.scheme == "budgetrook" else {
+                return
+            }
+
+            if url.host == "add-expense" {
+                selectedTab = .home
+                NotificationCenter.default.post(name: .openQuickAddExpense, object: nil)
+            }
+        }
     }
+}
+
+extension Notification.Name {
+    static let openQuickAddExpense = Notification.Name("openQuickAddExpense")
 }

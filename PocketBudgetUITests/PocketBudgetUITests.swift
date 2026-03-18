@@ -206,7 +206,7 @@ final class PocketBudgetUITests: XCTestCase {
         openStatsSubpage(named: "Recurring Spending", in: app)
 
         XCTAssertTrue(app.staticTexts["Fixed Cost Ratio"].firstMatch.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Fixed Cost Distribution"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Spending by Category"].firstMatch.waitForExistence(timeout: 5))
     }
 
     func testTotalSpendingShowsFixedCostModules() throws {
@@ -246,7 +246,7 @@ final class PocketBudgetUITests: XCTestCase {
         openStatsSubpage(named: "Recurring Spending", in: app)
 
         XCTAssertTrue(app.staticTexts["Fixed Cost Ratio"].firstMatch.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Fixed Cost Distribution"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Spending by Category"].firstMatch.waitForExistence(timeout: 5))
     }
 
     func testTotalSpendingShowsSubscriptionAndSavingsModules() throws {
@@ -337,7 +337,11 @@ final class PocketBudgetUITests: XCTestCase {
         let amountField = app.textFields["addExpense.amountField"].firstMatch
         XCTAssertTrue(amountField.waitForExistence(timeout: 5))
         amountField.tap()
-        amountField.typeText("3.50\n")
+        amountField.typeText("3.50")
+
+        let saveButton = app.buttons["addExpense.saveButton"].firstMatch
+        XCTAssertTrue(saveButton.waitForExistence(timeout: 5))
+        saveButton.tap()
 
         XCTAssertTrue(app.staticTexts["Tea"].waitForExistence(timeout: 5))
     }
