@@ -14,6 +14,21 @@
 
 import SwiftUI
 
+@MainActor
+enum AchievementNotificationDispatcher {
+    static func postUnlocks(_ unlocks: [AchievementUnlock]) {
+        let definitions = Dictionary(
+            uniqueKeysWithValues: BudgetStore.achievementDefinitions().map { ($0.id.rawValue, $0.title) }
+        )
+
+        for unlock in unlocks {
+            if let title = definitions[unlock.achievementID] {
+                NotificationCenter.default.post(name: .achievementUnlocked, object: title)
+            }
+        }
+    }
+}
+
 struct ContentView: View {
     private enum Tab: Hashable {
         case home

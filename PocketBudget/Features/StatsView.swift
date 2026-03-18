@@ -445,7 +445,7 @@ struct StatsView: View {
                     initialAvailableBudget: initialAvailableBudget,
                     initialBudgetAnchorMonth: initialBudgetAnchorMonth
                 )
-                postAchievementUnlocks(unlocks)
+                AchievementNotificationDispatcher.postUnlocks(unlocks)
             } catch {
                 // Stats should still open even if achievement syncing fails.
             }
@@ -1144,18 +1144,6 @@ struct StatsView: View {
             return .purple
         case .king:
             return .orange
-        }
-    }
-
-    private func postAchievementUnlocks(_ unlocks: [AchievementUnlock]) {
-        let definitions = Dictionary(
-            uniqueKeysWithValues: BudgetStore.achievementDefinitions().map { ($0.id.rawValue, $0.title) }
-        )
-
-        for unlock in unlocks {
-            if let title = definitions[unlock.achievementID] {
-                NotificationCenter.default.post(name: .achievementUnlocked, object: title)
-            }
         }
     }
 

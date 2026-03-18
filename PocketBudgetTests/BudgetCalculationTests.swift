@@ -795,6 +795,49 @@ final class BudgetCalculationTests: XCTestCase {
         XCTAssertTrue(unlocked.contains(.courseCorrection))
     }
 
+    func testDashboardSnapshotClampsDailySafeSpendAtZeroWhenRemainingBudgetIsNegative() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 6, day: 20, calendar: calendar)
+        let incomeItems = [IncomeItem(name: "Salary", amount: 1000)]
+        let recurringExpenseItems = [RecurringExpenseItem(name: "Rent", amount: 200)]
+        let expenses = [
+            Expense(title: "Trip", category: .fun, amount: 900, date: makeDate(year: 2026, month: 6, day: 12, calendar: calendar))
+        ]
+
+        let snapshot = BudgetStore.dashboardSnapshot(
+            incomeItems: incomeItems,
+            recurringExpenseItems: recurringExpenseItems,
+            expenses: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertLessThan(snapshot.remainingBudget, 0)
+        XCTAssertEqual(snapshot.dailySafeSpend, 0, accuracy: 0.001)
+    }
+
+    func testSafeSpendStreakCountsConsecutiveDaysUnderSafeSpend() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 6, day: 20, calendar: calendar)
+        let expenses = [
+            Expense(title: "Day One", category: .food, amount: 20, date: makeDate(year: 2026, month: 6, day: 18, calendar: calendar)),
+            Expense(title: "Day Two", category: .food, amount: 20, date: makeDate(year: 2026, month: 6, day: 19, calendar: calendar))
+        ]
+
+        let streak = BudgetStore.safeSpendStreak(
+            monthlyBudget: 300,
+            expenses: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertEqual(streak, 2)
+    }
+
     private func makeDate(year: Int, month: Int, day: Int, calendar: Calendar) -> Date {
         calendar.date(from: DateComponents(year: year, month: month, day: day))!
     }

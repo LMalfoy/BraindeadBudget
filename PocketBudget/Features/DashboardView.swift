@@ -54,71 +54,20 @@ struct DashboardView: View {
         !incomeItems.isEmpty
     }
 
-    private var currentMonthExpenses: [Expense] {
-        BudgetStore.currentMonthExpenses(from: expenses, budgetPeriodAnchorDay: budgetPeriodAnchorDay)
-    }
-
     private var recentExpenses: [Expense] {
         Array(expenses.prefix(10))
     }
 
-    private var totalSpent: Double {
-        BudgetStore.totalSpent(for: currentMonthExpenses)
-    }
-
-    private var monthlyBudget: Double {
-        BudgetStore.availableMonthlyBudget(
+    private func makeDashboardSnapshot(referenceDate: Date = .now) -> DashboardSnapshot {
+        BudgetStore.dashboardSnapshot(
             incomeItems: incomeItems,
-            recurringExpenseItems: recurringExpenseItems
-        )
-    }
-
-    private var previousMonthCarryover: Double {
-        BudgetStore.previousMonthCarryover(
-            monthlyBudget: monthlyBudget,
+            recurringExpenseItems: recurringExpenseItems,
             expenses: expenses,
             budgetPeriodAnchorDay: budgetPeriodAnchorDay,
             initialAvailableBudget: initialAvailableBudget,
-            initialBudgetAnchorMonth: initialBudgetAnchorMonth
+            initialBudgetAnchorMonth: initialBudgetAnchorMonth,
+            referenceDate: referenceDate
         )
-    }
-
-    private var adjustedMonthlyBudget: Double {
-        BudgetStore.adjustedMonthlyBudget(
-            monthlyBudget: monthlyBudget,
-            expenses: expenses,
-            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
-            initialAvailableBudget: initialAvailableBudget,
-            initialBudgetAnchorMonth: initialBudgetAnchorMonth
-        )
-    }
-
-    private var daysRemainingInCurrentPeriod: Int {
-        BudgetStore.daysRemainingInCurrentPeriod(
-            budgetPeriodAnchorDay: budgetPeriodAnchorDay
-        )
-    }
-
-    private var dailySafeSpend: Double {
-        max(0, remainingBudget) / Double(daysRemainingInCurrentPeriod)
-    }
-
-    private var remainingBudget: Double {
-        BudgetStore.remainingBudget(
-            monthlyBudget: monthlyBudget,
-            expenses: expenses,
-            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
-            initialAvailableBudget: initialAvailableBudget,
-            initialBudgetAnchorMonth: initialBudgetAnchorMonth
-        )
-    }
-
-    private var categorySpending: [CategorySpendingSummary] {
-        BudgetStore.categorySpending(for: expenses, budgetPeriodAnchorDay: budgetPeriodAnchorDay)
-    }
-
-    private var topCategory: CategorySpendingSummary? {
-        categorySpending.first
     }
 
     private var currencyCode: String {
@@ -133,17 +82,19 @@ struct DashboardView: View {
     }
 
     var body: some View {
+        let snapshot = makeDashboardSnapshot()
+
         ZStack(alignment: .bottomTrailing) {
             List {
                 Section {
                     SummaryCardView(
                         monthLabel: Date.now.formatted(.dateTime.month(.wide)),
-                        baselineMonthlyBudget: monthlyBudget,
-                        carryoverAmount: previousMonthCarryover,
-                        totalSpent: totalSpent,
-                        remainingBudget: remainingBudget,
-                        dailySafeSpend: dailySafeSpend,
-                        daysRemainingInCurrentPeriod: daysRemainingInCurrentPeriod,
+                        baselineMonthlyBudget: snapshot.monthlyBudget,
+                        carryoverAmount: snapshot.previousMonthCarryover,
+                        totalSpent: snapshot.totalSpent,
+                        remainingBudget: snapshot.remainingBudget,
+                        dailySafeSpend: snapshot.dailySafeSpend,
+                        daysRemainingInCurrentPeriod: snapshot.daysRemainingInCurrentPeriod,
                         currencyCode: currencyCode,
                         hasCompletedSetup: hasBaselineData
                     )
@@ -152,8 +103,8 @@ struct DashboardView: View {
 
                 Section {
                     CategoryOverviewCardView(
-                        categorySpending: categorySpending,
-                        topCategory: topCategory,
+                        categorySpending: snapshot.categorySpending,
+                        topCategory: snapshot.topCategory,
                         currencyCode: currencyCode
                     )
                     .listRowInsets(Self.cardInsets)
@@ -220,7 +171,7 @@ struct DashboardView: View {
                     initialAvailableBudget: initialAvailableBudget,
                     initialBudgetAnchorMonth: initialBudgetAnchorMonth
                 )
-                postAchievementUnlocks(unlocks)
+                AchievementNotificationDispatcher.postUnlocks(unlocks)
             }
         }
         .fullScreenCover(isPresented: setupCoverBinding) {
@@ -244,7 +195,7 @@ struct DashboardView: View {
                     initialAvailableBudget: initialAvailableBudget,
                     initialBudgetAnchorMonth: initialBudgetAnchorMonth
                 )
-                postAchievementUnlocks(unlocks)
+                AchievementNotificationDispatcher.postUnlocks(unlocks)
             } catch {
                 // Dashboard should stay usable even if achievement syncing fails.
             }
@@ -252,18 +203,6 @@ struct DashboardView: View {
     }
 
     private static let cardInsets = EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16)
-
-    private func postAchievementUnlocks(_ unlocks: [AchievementUnlock]) {
-        let definitions = Dictionary(
-            uniqueKeysWithValues: BudgetStore.achievementDefinitions().map { ($0.id.rawValue, $0.title) }
-        )
-
-        for unlock in unlocks {
-            if let title = definitions[unlock.achievementID] {
-                NotificationCenter.default.post(name: .achievementUnlocked, object: title)
-            }
-        }
-    }
 }
 
 private struct InitialSetupFlowView: View {

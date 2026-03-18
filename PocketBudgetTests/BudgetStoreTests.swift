@@ -181,6 +181,47 @@ final class BudgetStoreTests: XCTestCase {
         XCTAssertEqual(updatedExpense.note, "Edited")
     }
 
+    func testSyncAchievementsDoesNotCreateDuplicateUnlocks() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let store = BudgetStore(context: context)
+
+        try store.saveSettings(
+            currencyCode: "USD",
+            budgetPeriodAnchorDay: nil,
+            initialAvailableBudget: 1800,
+            initialBudgetAnchorMonth: Date(timeIntervalSince1970: 0)
+        )
+        try store.saveIncomeItem(name: "Salary", amount: 3000)
+        try store.saveRecurringExpenseItem(name: "Rent", amount: 1200)
+        try store.addExpense(title: "Coffee", category: .food, amount: 5.5)
+
+        let incomes = try context.fetch(FetchDescriptor<IncomeItem>())
+        let recurring = try context.fetch(FetchDescriptor<RecurringExpenseItem>())
+        let expenses = try context.fetch(FetchDescriptor<Expense>())
+
+        let firstRunUnlocks = try store.syncAchievements(
+            hasCompletedSetup: true,
+            incomeItems: incomes,
+            recurringExpenseItems: recurring,
+            expenses: expenses,
+            initialAvailableBudget: 1800,
+            initialBudgetAnchorMonth: Date(timeIntervalSince1970: 0)
+        )
+        let secondRunUnlocks = try store.syncAchievements(
+            hasCompletedSetup: true,
+            incomeItems: incomes,
+            recurringExpenseItems: recurring,
+            expenses: expenses,
+            initialAvailableBudget: 1800,
+            initialBudgetAnchorMonth: Date(timeIntervalSince1970: 0)
+        )
+
+        XCTAssertFalse(firstRunUnlocks.isEmpty)
+        XCTAssertTrue(secondRunUnlocks.isEmpty)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<AchievementUnlock>()).count, firstRunUnlocks.count)
+    }
+
     private func makeContainer() throws -> ModelContainer {
         let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
         return try ModelContainer(

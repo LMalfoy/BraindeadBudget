@@ -98,6 +98,17 @@ struct MonthlySpendingPoint: Identifiable, Equatable {
     var id: Date { month }
 }
 
+struct DashboardSnapshot: Equatable {
+    let monthlyBudget: Double
+    let previousMonthCarryover: Double
+    let remainingBudget: Double
+    let totalSpent: Double
+    let dailySafeSpend: Double
+    let daysRemainingInCurrentPeriod: Int
+    let categorySpending: [CategorySpendingSummary]
+    let topCategory: CategorySpendingSummary?
+}
+
 struct FixedCostCategorySummary: Identifiable, Equatable {
     let category: RecurringExpenseCategory
     let total: Double
@@ -629,6 +640,69 @@ struct BudgetStore {
 
     static func totalRecurringExpenses(for recurringExpenseItems: [RecurringExpenseItem]) -> Double {
         recurringExpenseItems.reduce(0) { $0 + $1.amount }
+    }
+
+    static func dashboardSnapshot(
+        incomeItems: [IncomeItem],
+        recurringExpenseItems: [RecurringExpenseItem],
+        expenses: [Expense],
+        budgetPeriodAnchorDay: Int = 1,
+        initialAvailableBudget: Double? = nil,
+        initialBudgetAnchorMonth: Date? = nil,
+        calendar: Calendar = .current,
+        referenceDate: Date = .now
+    ) -> DashboardSnapshot {
+        let monthlyBudget = availableMonthlyBudget(
+            incomeItems: incomeItems,
+            recurringExpenseItems: recurringExpenseItems
+        )
+        let currentPeriodExpenses = currentMonthExpenses(
+            from: expenses,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+        let totalSpent = totalSpent(for: currentPeriodExpenses)
+        let previousMonthCarryover = previousMonthCarryover(
+            monthlyBudget: monthlyBudget,
+            expenses: expenses,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
+            initialAvailableBudget: initialAvailableBudget,
+            initialBudgetAnchorMonth: initialBudgetAnchorMonth,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+        let remainingBudget = remainingBudget(
+            monthlyBudget: monthlyBudget,
+            expenses: expenses,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
+            initialAvailableBudget: initialAvailableBudget,
+            initialBudgetAnchorMonth: initialBudgetAnchorMonth,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+        let categorySpending = categorySpending(
+            for: expenses,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+        let daysRemaining = daysRemainingInCurrentPeriod(
+            referenceDate: referenceDate,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
+            calendar: calendar,
+        )
+
+        return DashboardSnapshot(
+            monthlyBudget: monthlyBudget,
+            previousMonthCarryover: previousMonthCarryover,
+            remainingBudget: remainingBudget,
+            totalSpent: totalSpent,
+            dailySafeSpend: max(0, remainingBudget) / Double(daysRemaining),
+            daysRemainingInCurrentPeriod: daysRemaining,
+            categorySpending: categorySpending,
+            topCategory: categorySpending.first
+        )
     }
 
     static func fixedCostRatio(

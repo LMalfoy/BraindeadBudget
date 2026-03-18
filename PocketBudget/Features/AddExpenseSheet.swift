@@ -158,13 +158,7 @@ struct AddExpenseSheet: View {
             } message: {
                 Text(errorMessage ?? "Something went wrong.")
             }
-            .task {
-                guard focusedField == nil else {
-                    return
-                }
-
-                focusedField = .title
-            }
+            .defaultFocus($focusedField, .title)
         }
     }
 
