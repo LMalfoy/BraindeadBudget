@@ -253,3 +253,29 @@ Why this matters:
 
 - subscription count and total cost are helpful, but users also need to see what is actually included
 - this makes recurring spending more understandable without adding new product complexity
+
+### Iteration 2.0.8: History Category Filtering
+
+Goal:
+Turn the expense history view into a more interactive analysis surface by adding a category overview and letting users filter the history list directly from that chart.
+
+Scope:
+
+- add a `Spending by Category` overview to the top of the expense history screen
+- allow tapping a category in the chart to apply a category filter
+- update the expense history list to show only items from the selected category
+- provide a clear way to reset the category filter
+- keep the implementation limited to variable expense history
+
+Not in scope:
+
+- no recurring-spending drilldown in this iteration
+- no search field
+- no multi-filter combinations
+- no category editing
+- no new stats tab or navigation changes
+
+Why this matters:
+
+- users should be able to move from overview to detail without leaving the history context
+- this makes home, stats, and history feel more coherent because the same category concept appears across the app

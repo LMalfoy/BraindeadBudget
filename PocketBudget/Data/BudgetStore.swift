@@ -903,8 +903,14 @@ struct BudgetStore {
             referenceDate: referenceDate
         )
 
-        return ExpenseCategory.allCases.compactMap { category in
-            let total = currentMonthExpenses
+        return categorySpendingSummaries(for: currentMonthExpenses)
+    }
+
+    static func categorySpendingSummaries(
+        for expenses: [Expense]
+    ) -> [CategorySpendingSummary] {
+        ExpenseCategory.allCases.compactMap { category in
+            let total = expenses
                 .filter { $0.category == category }
                 .reduce(0) { $0 + $1.amount }
 

@@ -247,6 +247,20 @@ final class BudgetCalculationTests: XCTestCase {
         XCTAssertEqual(summaries[1], CategorySpendingSummary(category: .food, total: 17))
     }
 
+    func testCategorySpendingSummariesAggregateProvidedExpenseSetWithoutMonthFiltering() {
+        let expenses = [
+            Expense(title: "Coffee", category: .food, amount: 5),
+            Expense(title: "Lunch", category: .food, amount: 12),
+            Expense(title: "Train", category: .transport, amount: 20)
+        ]
+
+        let summaries = BudgetStore.categorySpendingSummaries(for: expenses)
+
+        XCTAssertEqual(summaries.count, 2)
+        XCTAssertEqual(summaries[0], CategorySpendingSummary(category: .transport, total: 20))
+        XCTAssertEqual(summaries[1], CategorySpendingSummary(category: .food, total: 17))
+    }
+
     func testTopSpendingCategoryReturnsHighestCategoryForCurrentMonth() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!

@@ -12,6 +12,7 @@
  */
 
 import Foundation
+import Charts
 import SwiftData
 import SwiftUI
 
@@ -28,6 +29,7 @@ struct ExpenseHistorySheet: View {
     @State private var selectedMonth = Date.now
     @State private var editingExpense: Expense?
     @State private var showingMonthPicker = false
+    @State private var selectedCategoryFilter: ExpenseCategory?
     @State private var errorMessage: String?
 
     private var store: BudgetStore {
@@ -56,6 +58,18 @@ struct ExpenseHistorySheet: View {
             inMonthContaining: selectedMonth,
             budgetPeriodAnchorDay: budgetPeriodAnchorDay
         )
+    }
+
+    private var monthCategorySpending: [CategorySpendingSummary] {
+        BudgetStore.categorySpendingSummaries(for: monthExpenses)
+    }
+
+    private var filteredMonthExpenses: [Expense] {
+        guard let selectedCategoryFilter else {
+            return monthExpenses
+        }
+
+        return monthExpenses.filter { $0.category == selectedCategoryFilter }
     }
 
     private var monthlyBudget: Double {
@@ -98,19 +112,18 @@ struct ExpenseHistorySheet: View {
             }
 
             Section {
-                MonthlyHistoryDigestView(
-                    digest: digest,
-                    currencyCode: currencyCode
-                )
+                historyCategoryFilterCard
             }
 
             Section {
-                if monthExpenses.isEmpty {
-                    Text("No expenses recorded for this month.")
+                if filteredMonthExpenses.isEmpty {
+                    Text(selectedCategoryFilter == nil
+                         ? "No expenses recorded for this month."
+                         : "No expenses recorded for this category in the selected month.")
                         .foregroundStyle(.secondary)
                         .padding(.vertical, 10)
                 } else {
-                    ForEach(monthExpenses) { expense in
+                    ForEach(filteredMonthExpenses) { expense in
                         ExpenseHistoryRowView(expense: expense, currencyCode: currencyCode)
                             .contentShape(Rectangle())
                             .onTapGesture {
@@ -154,6 +167,10 @@ struct ExpenseHistorySheet: View {
             }
 
             selectedMonth = date
+            selectedCategoryFilter = nil
+        }
+        .onChange(of: selectedMonth) { _ in
+            selectedCategoryFilter = nil
         }
     }
 
@@ -217,7 +234,7 @@ struct ExpenseHistorySheet: View {
 
     private func deleteExpenses(at offsets: IndexSet) {
         do {
-            let itemsToDelete = offsets.map { monthExpenses[$0] }
+            let itemsToDelete = offsets.map { filteredMonthExpenses[$0] }
 
             for expense in itemsToDelete {
                 try store.deleteExpense(expense)
@@ -226,39 +243,52 @@ struct ExpenseHistorySheet: View {
             errorMessage = error.localizedDescription
         }
     }
-}
 
-private struct MonthlyHistoryDigestView: View {
-    let digest: MonthlyHistoryDigest
-    let currencyCode: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+    private var historyCategoryFilterCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
             HStack {
-                digestItem(title: "Spent", value: digest.totalSpent)
+                overviewItem(title: "Spent", value: digest.totalSpent)
                 Spacer()
-                digestItem(title: "Carryover", value: digest.carryover)
+                overviewItem(title: "Carryover", value: digest.carryover)
             }
 
-            if digest.categorySpending.isEmpty {
+            if monthCategorySpending.isEmpty {
                 Text("No category totals for this month yet.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             } else {
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(digest.categorySpending) { summary in
+                Text("Spending by Category")
+                    .font(.headline)
+
+                Chart(monthCategorySpending) { summary in
+                    SectorMark(
+                        angle: .value("Amount", summary.total),
+                        innerRadius: .ratio(0.58),
+                        angularInset: 2
+                    )
+                    .foregroundStyle(summary.category.color)
+                    .opacity(selectedCategoryFilter == nil || selectedCategoryFilter == summary.category ? 1 : 0.35)
+                }
+                .chartLegend(.hidden)
+                .frame(height: 180)
+                .accessibilityIdentifier("history.categoryChart")
+
+                historyCategoryTiles
+
+                VStack(spacing: 10) {
+                    ForEach(monthCategorySpending) { summary in
                         HStack(spacing: 10) {
                             Circle()
                                 .fill(summary.category.color)
-                                .frame(width: 8, height: 8)
+                                .frame(width: 10, height: 10)
 
                             Text(summary.category.title)
-                                .font(.footnote)
+                                .foregroundStyle(.primary)
 
                             Spacer()
 
                             Text(summary.total.formatted(.currency(code: currencyCode)))
-                                .font(.footnote.weight(.medium))
+                                .fontWeight(.medium)
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -268,8 +298,69 @@ private struct MonthlyHistoryDigestView: View {
         .padding(.vertical, 4)
     }
 
+    private var historyCategoryTiles: some View {
+        HStack(spacing: 10) {
+            ForEach(ExpenseCategory.allCases) { category in
+                Button {
+                    toggleCategoryFilter(category)
+                } label: {
+                    VStack(spacing: 8) {
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(category.color.opacity(selectedCategoryFilter == category ? 0.95 : 0.22))
+                            .frame(height: 44)
+                            .overlay {
+                                Image(systemName: category.symbolName)
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundStyle(selectedCategoryFilter == category ? .white : category.color)
+                            }
+
+                        Text(category.title)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("history.categoryFilter.\(category.rawValue)")
+            }
+
+            Button {
+                selectedCategoryFilter = nil
+            } label: {
+                VStack(spacing: 8) {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(selectedCategoryFilter == nil ? Color.accentColor.opacity(0.95) : Color(uiColor: .secondarySystemBackground))
+                        .frame(height: 44)
+                        .overlay {
+                            Image(systemName: "line.3.horizontal.decrease.circle")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundStyle(selectedCategoryFilter == nil ? .white : .secondary)
+                        }
+
+                    Text("All")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("history.categoryFilter.all")
+        }
+    }
+
+    private func toggleCategoryFilter(_ category: ExpenseCategory) {
+        if selectedCategoryFilter == category {
+            selectedCategoryFilter = nil
+        } else {
+            selectedCategoryFilter = category
+        }
+    }
+
     @ViewBuilder
-    private func digestItem(title: String, value: Double) -> some View {
+    private func overviewItem(title: String, value: Double) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.caption)
