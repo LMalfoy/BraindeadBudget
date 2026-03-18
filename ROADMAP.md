@@ -184,3 +184,23 @@ Why this matters:
 - the dashboard should answer not only \"how much is left\" but also \"what is safe today\"
 - the card is now mature enough that redundant values should be trimmed away
 - explanation matters more once the dashboard becomes denser
+
+### Iteration 2.0.4: Achievements Beta
+
+Goal:
+Add a lightweight achievements system that rewards meaningful budgeting behavior without turning the app into a game-first product.
+
+Scope:
+
+- add a compact achievements preview card in the statistics / progression area
+- add an achievements detail page
+- show locked and unlocked achievements distinctly
+- make achievements tappable for a short detail explanation
+- evaluate and persist a first curated achievement set
+- show a small in-app unlock notification when a new achievement is earned
+
+Why this matters:
+
+- achievements should reinforce budgeting habits, not replace the app's purpose
+- the system is most useful when it stays curated, understandable, and secondary
+- this creates the base for future badge artwork and additional achievements later

@@ -63,6 +63,7 @@ struct PocketBudgetApp: App {
         do {
             return try ModelContainer(
                 for: BudgetSettings.self,
+                AchievementUnlock.self,
                 Expense.self,
                 IncomeItem.self,
                 RecurringExpenseItem.self,

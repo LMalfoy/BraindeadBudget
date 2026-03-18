@@ -42,3 +42,14 @@ final class BudgetSettings {
         self.updatedAt = updatedAt
     }
 }
+
+@Model
+final class AchievementUnlock {
+    @Attribute(.unique) var achievementID: String
+    var unlockedAt: Date
+
+    init(achievementID: String, unlockedAt: Date = .now) {
+        self.achievementID = achievementID
+        self.unlockedAt = unlockedAt
+    }
+}

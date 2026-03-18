@@ -748,6 +748,53 @@ final class BudgetCalculationTests: XCTestCase {
         XCTAssertTrue(history.allSatisfy { abs($0.savingsAmount - 300) < 0.001 })
     }
 
+    func testAchievementEvaluationUnlocksSetupAndFirstExpenseMilestones() {
+        let incomeItems = [IncomeItem(name: "Salary", amount: 3000)]
+        let recurringExpenseItems = [RecurringExpenseItem(name: "Rent", amount: 1200)]
+        let expenses = [Expense(title: "Coffee", category: .food, amount: 4.5, date: .now)]
+
+        let unlocked = BudgetStore.evaluateAchievementIDs(
+            hasCompletedSetup: true,
+            incomeItems: incomeItems,
+            recurringExpenseItems: recurringExpenseItems,
+            expenses: expenses,
+            initialAvailableBudget: 1800,
+            initialBudgetAnchorMonth: .now
+        )
+
+        XCTAssertTrue(unlocked.contains(.architectOfOrder))
+        XCTAssertTrue(unlocked.contains(.firstStep))
+        XCTAssertFalse(unlocked.contains(.habitBuilder))
+    }
+
+    func testAchievementEvaluationUnlocksCourseCorrectionAfterThreeImprovingPeriods() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 6, day: 20, calendar: calendar)
+        let incomeItems = [IncomeItem(name: "Salary", amount: 2500)]
+        let recurringExpenseItems = [RecurringExpenseItem(name: "Rent", amount: 1500)]
+        let expenses = [
+            Expense(title: "February", category: .food, amount: 900, date: makeDate(year: 2026, month: 2, day: 10, calendar: calendar)),
+            Expense(title: "March", category: .food, amount: 800, date: makeDate(year: 2026, month: 3, day: 10, calendar: calendar)),
+            Expense(title: "April", category: .food, amount: 700, date: makeDate(year: 2026, month: 4, day: 10, calendar: calendar)),
+            Expense(title: "May", category: .food, amount: 600, date: makeDate(year: 2026, month: 5, day: 10, calendar: calendar))
+        ]
+
+        let unlocked = BudgetStore.evaluateAchievementIDs(
+            hasCompletedSetup: true,
+            incomeItems: incomeItems,
+            recurringExpenseItems: recurringExpenseItems,
+            expenses: expenses,
+            initialAvailableBudget: 1000,
+            initialBudgetAnchorMonth: makeDate(year: 2026, month: 2, day: 1, calendar: calendar),
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertTrue(unlocked.contains(.courseCorrection))
+    }
+
     private func makeDate(year: Int, month: Int, day: Int, calendar: Calendar) -> Date {
         calendar.date(from: DateComponents(year: year, month: month, day: day))!
     }

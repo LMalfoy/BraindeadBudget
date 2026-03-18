@@ -227,6 +227,54 @@ struct BudgetProgressionEvaluation: Equatable {
     let periodNote: String
 }
 
+enum BudgetAchievementID: String, CaseIterable, Codable, Identifiable {
+    case architectOfOrder
+    case firstStep
+    case habitBuilder
+    case steadyHand
+    case surgicalPrecision
+    case roomToBreathe
+    case financialCushion
+    case spartanMode
+    case courseCorrection
+    case checkmate
+
+    var id: String { rawValue }
+}
+
+struct BudgetAchievementDefinition: Identifiable, Equatable {
+    let id: BudgetAchievementID
+    let title: String
+    let description: String
+    let unlockCondition: String
+    let symbolName: String
+}
+
+struct BudgetAchievementStatus: Identifiable, Equatable {
+    let definition: BudgetAchievementDefinition
+    let unlockedAt: Date?
+
+    var id: BudgetAchievementID { definition.id }
+    var isUnlocked: Bool { unlockedAt != nil }
+}
+
+struct AchievementUnlockBanner: Equatable {
+    let title: String
+}
+
+private struct CompletedBudgetPeriodSummary: Equatable {
+    let startDate: Date
+    let adjustedBudget: Double
+    let totalSpent: Double
+    let remainingBudget: Double
+    let expenseCount: Int
+
+    var remainingShare: Double {
+        guard adjustedBudget > 0 else { return 0 }
+        return remainingBudget / adjustedBudget
+    }
+}
+
 enum BudgetStoreError: LocalizedError {
     case invalidExpenseCategory
     case invalidExpenseTitle
@@ -479,7 +527,47 @@ struct BudgetStore {
         try context.fetch(FetchDescriptor<IncomeItem>()).forEach { context.delete($0) }
         try context.fetch(FetchDescriptor<RecurringExpenseItem>()).forEach { context.delete($0) }
         try context.fetch(FetchDescriptor<BudgetSettings>()).forEach { context.delete($0) }
+        try context.fetch(FetchDescriptor<AchievementUnlock>()).forEach { context.delete($0) }
         try context.save()
+    }
+
+    @discardableResult
+    func syncAchievements(
+        hasCompletedSetup: Bool,
+        incomeItems: [IncomeItem],
+        recurringExpenseItems: [RecurringExpenseItem],
+        expenses: [Expense],
+        budgetPeriodAnchorDay: Int = 1,
+        initialAvailableBudget: Double? = nil,
+        initialBudgetAnchorMonth: Date? = nil,
+        referenceDate: Date = .now
+    ) throws -> [AchievementUnlock] {
+        let unlockedIDs = Self.evaluateAchievementIDs(
+            hasCompletedSetup: hasCompletedSetup,
+            incomeItems: incomeItems,
+            recurringExpenseItems: recurringExpenseItems,
+            expenses: expenses,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
+            initialAvailableBudget: initialAvailableBudget,
+            initialBudgetAnchorMonth: initialBudgetAnchorMonth,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+        let existingUnlocks = try context.fetch(FetchDescriptor<AchievementUnlock>())
+        let existingIDs = Set(existingUnlocks.map(\.achievementID))
+        var newUnlocks: [AchievementUnlock] = []
+
+        for achievementID in unlockedIDs where !existingIDs.contains(achievementID.rawValue) {
+            let unlock = AchievementUnlock(achievementID: achievementID.rawValue)
+            context.insert(unlock)
+            newUnlocks.append(unlock)
+        }
+
+        if !newUnlocks.isEmpty {
+            try context.save()
+        }
+
+        return newUnlocks
     }
 
     static func expenses(
@@ -1127,6 +1215,234 @@ struct BudgetStore {
         )
     }
 
+    static func achievementDefinitions() -> [BudgetAchievementDefinition] {
+        [
+            BudgetAchievementDefinition(
+                id: .architectOfOrder,
+                title: "Architect of Order",
+                description: "You set up your financial system.",
+                unlockCondition: "Complete initial budget setup with income, recurring costs, and a starting budget anchor.",
+                symbolName: "building.columns.fill"
+            ),
+            BudgetAchievementDefinition(
+                id: .firstStep,
+                title: "First Step",
+                description: "The journey begins.",
+                unlockCondition: "Log your first expense.",
+                symbolName: "figure.walk"
+            ),
+            BudgetAchievementDefinition(
+                id: .habitBuilder,
+                title: "Habit Builder",
+                description: "Tracking is becoming a habit.",
+                unlockCondition: "Log 100 expenses.",
+                symbolName: "calendar.badge.checkmark"
+            ),
+            BudgetAchievementDefinition(
+                id: .steadyHand,
+                title: "Steady Hand",
+                description: "Seven days of disciplined spending.",
+                unlockCondition: "Reach a safe-spending streak of 7 days.",
+                symbolName: "hand.raised.fill"
+            ),
+            BudgetAchievementDefinition(
+                id: .surgicalPrecision,
+                title: "Surgical Precision",
+                description: "You planned your budget with impressive accuracy.",
+                unlockCondition: "Finish a completed period within ±5% of the available budget.",
+                symbolName: "scope"
+            ),
+            BudgetAchievementDefinition(
+                id: .roomToBreathe,
+                title: "Room to Breathe",
+                description: "You finished the period comfortably below budget.",
+                unlockCondition: "Finish a completed period with at least 10% of the budget left.",
+                symbolName: "wind"
+            ),
+            BudgetAchievementDefinition(
+                id: .financialCushion,
+                title: "Financial Cushion",
+                description: "A healthy buffer at the end of the period.",
+                unlockCondition: "Finish a completed period with at least 30% of the budget left.",
+                symbolName: "pill.fill"
+            ),
+            BudgetAchievementDefinition(
+                id: .spartanMode,
+                title: "Spartan Mode",
+                description: "Extreme restraint. Impressive discipline.",
+                unlockCondition: "Finish a completed period with at least 50% of the budget left.",
+                symbolName: "shield.lefthalf.filled"
+            ),
+            BudgetAchievementDefinition(
+                id: .courseCorrection,
+                title: "Course Correction",
+                description: "Three periods in a row of improving spending.",
+                unlockCondition: "Complete three consecutive spending decreases compared to the previous period.",
+                symbolName: "arrow.trianglehead.turn.up.right.circle.fill"
+            ),
+            BudgetAchievementDefinition(
+                id: .checkmate,
+                title: "Checkmate",
+                description: "You reached the highest progression rank.",
+                unlockCondition: "Reach King rank in budget progression.",
+                symbolName: "crown.fill"
+            )
+        ]
+    }
+
+    static func achievementStatuses(from unlocks: [AchievementUnlock]) -> [BudgetAchievementStatus] {
+        let unlockDates = Dictionary(uniqueKeysWithValues: unlocks.map { ($0.achievementID, $0.unlockedAt) })
+        return achievementDefinitions().map { definition in
+            BudgetAchievementStatus(
+                definition: definition,
+                unlockedAt: unlockDates[definition.id.rawValue]
+            )
+        }
+    }
+
+    static func safeSpendStreak(
+        monthlyBudget: Double,
+        expenses: [Expense],
+        budgetPeriodAnchorDay: Int = 1,
+        initialAvailableBudget: Double? = nil,
+        initialBudgetAnchorMonth: Date? = nil,
+        calendar: Calendar = .current,
+        referenceDate: Date = .now
+    ) -> Int {
+        let periodStartDate = periodStart(containing: referenceDate, budgetPeriodAnchorDay: budgetPeriodAnchorDay, calendar: calendar)
+        let periodEndDate = nextPeriodStart(after: periodStartDate, budgetPeriodAnchorDay: budgetPeriodAnchorDay, calendar: calendar)
+        let today = calendar.startOfDay(for: min(referenceDate, calendar.date(byAdding: .day, value: -1, to: periodEndDate) ?? referenceDate))
+        var streak = 0
+        var runningRemaining = remainingBudget(
+            monthlyBudget: monthlyBudget,
+            expenses: expenses,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
+            initialAvailableBudget: initialAvailableBudget,
+            initialBudgetAnchorMonth: initialBudgetAnchorMonth,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+        let currentPeriodExpenses = Self.expenses(
+            from: expenses,
+            inMonthContaining: referenceDate,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
+            calendar: calendar
+        )
+        let groupedExpenses = Dictionary(grouping: currentPeriodExpenses) { calendar.startOfDay(for: $0.date) }
+        var cursor = today
+
+        while cursor >= periodStartDate {
+            let nextDay = calendar.date(byAdding: .day, value: 1, to: cursor) ?? cursor
+            let dayExpenses = groupedExpenses[cursor, default: []]
+            let dayTotal = totalSpent(for: dayExpenses)
+            let daysRemaining = max(calendar.dateComponents([.day], from: cursor, to: periodEndDate).day ?? 0, 1)
+            let safeSpend = max(0, runningRemaining) / Double(daysRemaining)
+
+            if dayTotal <= safeSpend + 0.001 {
+                streak += 1
+            } else {
+                break
+            }
+
+            runningRemaining += dayTotal
+            cursor = calendar.date(byAdding: .day, value: -1, to: cursor) ?? periodStartDate
+
+            if nextDay == cursor {
+                break
+            }
+        }
+
+        return streak
+    }
+
+    static func evaluateAchievementIDs(
+        hasCompletedSetup: Bool,
+        incomeItems: [IncomeItem],
+        recurringExpenseItems: [RecurringExpenseItem],
+        expenses: [Expense],
+        budgetPeriodAnchorDay: Int = 1,
+        initialAvailableBudget: Double? = nil,
+        initialBudgetAnchorMonth: Date? = nil,
+        calendar: Calendar = .current,
+        referenceDate: Date = .now
+    ) -> Set<BudgetAchievementID> {
+        let monthlyBudget = availableMonthlyBudget(
+            incomeItems: incomeItems,
+            recurringExpenseItems: recurringExpenseItems
+        )
+        let progression = evaluateBudgetProgression(
+            monthlyBudget: monthlyBudget,
+            expenses: expenses,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
+            initialAvailableBudget: initialAvailableBudget,
+            initialBudgetAnchorMonth: initialBudgetAnchorMonth,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+        let completedPeriods = completedBudgetPeriods(
+            monthlyBudget: monthlyBudget,
+            expenses: expenses,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
+            initialAvailableBudget: initialAvailableBudget,
+            initialBudgetAnchorMonth: initialBudgetAnchorMonth,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+        let streak = safeSpendStreak(
+            monthlyBudget: monthlyBudget,
+            expenses: expenses,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
+            initialAvailableBudget: initialAvailableBudget,
+            initialBudgetAnchorMonth: initialBudgetAnchorMonth,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        var unlocked: Set<BudgetAchievementID> = []
+
+        if hasCompletedSetup, !incomeItems.isEmpty, !recurringExpenseItems.isEmpty, initialAvailableBudget != nil {
+            unlocked.insert(.architectOfOrder)
+        }
+
+        if !expenses.isEmpty {
+            unlocked.insert(.firstStep)
+        }
+
+        if expenses.count >= 100 {
+            unlocked.insert(.habitBuilder)
+        }
+
+        if streak >= 7 {
+            unlocked.insert(.steadyHand)
+        }
+
+        if completedPeriods.contains(where: { $0.expenseCount > 0 && $0.adjustedBudget > 0 && abs($0.remainingShare) <= 0.05 }) {
+            unlocked.insert(.surgicalPrecision)
+        }
+
+        if completedPeriods.contains(where: { $0.expenseCount > 0 && $0.remainingShare >= 0.10 }) {
+            unlocked.insert(.roomToBreathe)
+        }
+
+        if completedPeriods.contains(where: { $0.expenseCount > 0 && $0.remainingShare >= 0.30 }) {
+            unlocked.insert(.financialCushion)
+        }
+
+        if completedPeriods.contains(where: { $0.expenseCount > 0 && $0.remainingShare >= 0.50 }) {
+            unlocked.insert(.spartanMode)
+        }
+
+        if hasThreePeriodSpendingDecline(completedPeriods) {
+            unlocked.insert(.courseCorrection)
+        }
+
+        if progression.level.piece == .king {
+            unlocked.insert(.checkmate)
+        }
+
+        return unlocked
+    }
+
     private static func completedSavingsProgressMonths(
         monthlyBudget: Double,
         expenses: [Expense],
@@ -1205,6 +1521,91 @@ struct BudgetStore {
         }
 
         return progressMonths
+    }
+
+    private static func completedBudgetPeriods(
+        monthlyBudget: Double,
+        expenses: [Expense],
+        budgetPeriodAnchorDay: Int,
+        initialAvailableBudget: Double?,
+        initialBudgetAnchorMonth: Date?,
+        calendar: Calendar,
+        referenceDate: Date
+    ) -> [CompletedBudgetPeriodSummary] {
+        let currentPeriod = periodStart(containing: referenceDate, budgetPeriodAnchorDay: budgetPeriodAnchorDay, calendar: calendar)
+        let startPeriod: Date?
+
+        if let initialBudgetAnchorMonth {
+            startPeriod = periodStart(containing: initialBudgetAnchorMonth, budgetPeriodAnchorDay: budgetPeriodAnchorDay, calendar: calendar)
+        } else if let earliestExpense = expenses.map(\.date).min() {
+            startPeriod = periodStart(containing: earliestExpense, budgetPeriodAnchorDay: budgetPeriodAnchorDay, calendar: calendar)
+        } else {
+            startPeriod = nil
+        }
+
+        guard let startPeriod else {
+            return []
+        }
+
+        var summaries: [CompletedBudgetPeriodSummary] = []
+        var period = startPeriod
+
+        while period < currentPeriod {
+            let periodExpenses = Self.expenses(
+                from: expenses,
+                inMonthContaining: period,
+                budgetPeriodAnchorDay: budgetPeriodAnchorDay,
+                calendar: calendar
+            )
+            let adjustedBudget = adjustedMonthlyBudget(
+                monthlyBudget: monthlyBudget,
+                expenses: expenses,
+                budgetPeriodAnchorDay: budgetPeriodAnchorDay,
+                initialAvailableBudget: initialAvailableBudget,
+                initialBudgetAnchorMonth: initialBudgetAnchorMonth,
+                calendar: calendar,
+                referenceDate: period
+            )
+            let spent = totalSpent(for: periodExpenses)
+            let remaining = remainingBudget(
+                monthlyBudget: monthlyBudget,
+                expenses: expenses,
+                budgetPeriodAnchorDay: budgetPeriodAnchorDay,
+                initialAvailableBudget: initialAvailableBudget,
+                initialBudgetAnchorMonth: initialBudgetAnchorMonth,
+                calendar: calendar,
+                referenceDate: period
+            )
+
+            summaries.append(
+                CompletedBudgetPeriodSummary(
+                    startDate: period,
+                    adjustedBudget: adjustedBudget,
+                    totalSpent: spent,
+                    remainingBudget: remaining,
+                    expenseCount: periodExpenses.count
+                )
+            )
+
+            period = nextPeriodStart(after: period, budgetPeriodAnchorDay: budgetPeriodAnchorDay, calendar: calendar)
+        }
+
+        return summaries
+    }
+
+    private static func hasThreePeriodSpendingDecline(_ periods: [CompletedBudgetPeriodSummary]) -> Bool {
+        guard periods.count >= 4 else {
+            return false
+        }
+
+        for windowStart in 0...(periods.count - 4) {
+            let window = Array(periods[windowStart..<(windowStart + 4)])
+            if zip(window, window.dropFirst()).allSatisfy({ next in next.1.totalSpent < next.0.totalSpent }) {
+                return true
+            }
+        }
+
+        return false
     }
 
     private static func chessProgressionLevels() -> [ChessProgressionLevel] {

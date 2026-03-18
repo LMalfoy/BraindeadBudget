@@ -211,6 +211,16 @@ struct DashboardView: View {
                     date: date,
                     note: note
                 )
+                let unlocks = try store.syncAchievements(
+                    hasCompletedSetup: hasCompletedSetup,
+                    incomeItems: incomeItems,
+                    recurringExpenseItems: recurringExpenseItems,
+                    expenses: expenses,
+                    budgetPeriodAnchorDay: budgetPeriodAnchorDay,
+                    initialAvailableBudget: initialAvailableBudget,
+                    initialBudgetAnchorMonth: initialBudgetAnchorMonth
+                )
+                postAchievementUnlocks(unlocks)
             }
         }
         .fullScreenCover(isPresented: setupCoverBinding) {
@@ -223,9 +233,37 @@ struct DashboardView: View {
 
             showingAddExpense = true
         }
+        .task {
+            do {
+                let unlocks = try store.syncAchievements(
+                    hasCompletedSetup: hasCompletedSetup,
+                    incomeItems: incomeItems,
+                    recurringExpenseItems: recurringExpenseItems,
+                    expenses: expenses,
+                    budgetPeriodAnchorDay: budgetPeriodAnchorDay,
+                    initialAvailableBudget: initialAvailableBudget,
+                    initialBudgetAnchorMonth: initialBudgetAnchorMonth
+                )
+                postAchievementUnlocks(unlocks)
+            } catch {
+                // Dashboard should stay usable even if achievement syncing fails.
+            }
+        }
     }
 
     private static let cardInsets = EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16)
+
+    private func postAchievementUnlocks(_ unlocks: [AchievementUnlock]) {
+        let definitions = Dictionary(
+            uniqueKeysWithValues: BudgetStore.achievementDefinitions().map { ($0.id.rawValue, $0.title) }
+        )
+
+        for unlock in unlocks {
+            if let title = definitions[unlock.achievementID] {
+                NotificationCenter.default.post(name: .achievementUnlocked, object: title)
+            }
+        }
+    }
 }
 
 private struct InitialSetupFlowView: View {

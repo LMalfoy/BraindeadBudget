@@ -115,6 +115,8 @@ final class BudgetStoreTests: XCTestCase {
         try store.saveIncomeItem(name: "Salary", amount: 3000)
         try store.saveRecurringExpenseItem(name: "Rent", amount: 1200)
         try store.addExpense(title: "Coffee", category: .food, amount: 5.5)
+        context.insert(AchievementUnlock(achievementID: BudgetAchievementID.firstStep.rawValue))
+        try context.save()
 
         try store.eraseAllData()
 
@@ -122,6 +124,7 @@ final class BudgetStoreTests: XCTestCase {
         XCTAssertTrue(try context.fetch(FetchDescriptor<IncomeItem>()).isEmpty)
         XCTAssertTrue(try context.fetch(FetchDescriptor<RecurringExpenseItem>()).isEmpty)
         XCTAssertTrue(try context.fetch(FetchDescriptor<Expense>()).isEmpty)
+        XCTAssertTrue(try context.fetch(FetchDescriptor<AchievementUnlock>()).isEmpty)
     }
 
     func testDeleteExpenseRemovesRecord() throws {
@@ -185,6 +188,7 @@ final class BudgetStoreTests: XCTestCase {
             Expense.self,
             IncomeItem.self,
             RecurringExpenseItem.self,
+            AchievementUnlock.self,
             configurations: configuration
         )
     }

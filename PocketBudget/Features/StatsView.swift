@@ -32,12 +32,20 @@ struct StatsView: View {
     }
 
     private let calendar = Calendar.current
+    @Environment(\.modelContext) private var modelContext
     @State private var selectedSubpage: StatsSubpage = .budgetSpending
     @State private var showingProgressionInfo = false
+    @State private var showingAchievements = false
+    @State private var selectedAchievement: BudgetAchievementStatus?
     @Query(sort: \Expense.date, order: .reverse) private var expenses: [Expense]
     @Query(sort: \BudgetSettings.updatedAt, order: .reverse) private var budgets: [BudgetSettings]
     @Query(sort: \IncomeItem.createdAt) private var incomeItems: [IncomeItem]
     @Query(sort: \RecurringExpenseItem.createdAt) private var recurringExpenseItems: [RecurringExpenseItem]
+    @Query(sort: \AchievementUnlock.unlockedAt, order: .reverse) private var achievementUnlocks: [AchievementUnlock]
+
+    private var store: BudgetStore {
+        BudgetStore(context: modelContext)
+    }
 
     private var budgetSettings: BudgetSettings? {
         budgets.first
@@ -132,6 +140,21 @@ struct StatsView: View {
             initialAvailableBudget: initialAvailableBudget,
             initialBudgetAnchorMonth: initialBudgetAnchorMonth
         )
+    }
+
+    private var achievementStatuses: [BudgetAchievementStatus] {
+        BudgetStore.achievementStatuses(from: achievementUnlocks)
+    }
+
+    private var unlockedAchievements: [BudgetAchievementStatus] {
+        achievementStatuses.filter(\.isUnlocked)
+    }
+
+    private var recentUnlockedAchievements: [BudgetAchievementStatus] {
+        unlockedAchievements
+            .sorted { ($0.unlockedAt ?? .distantPast) > ($1.unlockedAt ?? .distantPast) }
+            .prefix(3)
+            .map { $0 }
     }
 
     private var fixedCostRatio: FixedCostRatioSummary {
@@ -358,6 +381,10 @@ struct StatsView: View {
             }
 
             Section {
+                achievementsPreviewCard
+            }
+
+            Section {
                 Picker("Statistics Subpage", selection: $selectedSubpage) {
                     ForEach(StatsSubpage.allCases) { subpage in
                         Text(subpage.rawValue).tag(subpage)
@@ -404,6 +431,31 @@ struct StatsView: View {
             }
             .presentationDetents([.medium])
             .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showingAchievements) {
+            AchievementListView(
+                statuses: achievementStatuses,
+                selectedAchievement: $selectedAchievement
+            )
+        }
+        .sheet(item: $selectedAchievement) { status in
+            AchievementDetailSheet(status: status)
+        }
+        .task {
+            do {
+                let unlocks = try store.syncAchievements(
+                    hasCompletedSetup: !incomeItems.isEmpty || budgetSettings?.initialAvailableBudget != nil,
+                    incomeItems: incomeItems,
+                    recurringExpenseItems: recurringExpenseItems,
+                    expenses: expenses,
+                    budgetPeriodAnchorDay: budgetPeriodAnchorDay,
+                    initialAvailableBudget: initialAvailableBudget,
+                    initialBudgetAnchorMonth: initialBudgetAnchorMonth
+                )
+                postAchievementUnlocks(unlocks)
+            } catch {
+                // Stats should still open even if achievement syncing fails.
+            }
         }
     }
 
@@ -566,6 +618,60 @@ struct StatsView: View {
         }
         .statsCardStyle()
         .accessibilityIdentifier("stats.progressionModule")
+    }
+
+    private var achievementsPreviewCard: some View {
+        Button {
+            showingAchievements = true
+        } label: {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Text("Achievements")
+                        .font(.headline)
+
+                    Spacer()
+
+                    Text("\(unlockedAchievements.count)/\(achievementStatuses.count)")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+
+                if recentUnlockedAchievements.isEmpty {
+                    Text("Unlock achievements by setting up your budget, logging expenses, and finishing periods well.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                } else {
+                    VStack(spacing: 10) {
+                        ForEach(recentUnlockedAchievements) { status in
+                            HStack(spacing: 10) {
+                                Image(systemName: status.definition.symbolName)
+                                    .foregroundStyle(.green)
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(status.definition.title)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(.primary)
+
+                                    Text(status.definition.description)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                }
+
+                                Spacer()
+                            }
+                        }
+                    }
+                }
+
+                Text("Tap to view all badges")
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+            .statsCardStyle()
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("stats.achievementsPreview")
     }
 
     @ViewBuilder
@@ -1048,6 +1154,18 @@ struct StatsView: View {
         }
     }
 
+    private func postAchievementUnlocks(_ unlocks: [AchievementUnlock]) {
+        let definitions = Dictionary(
+            uniqueKeysWithValues: BudgetStore.achievementDefinitions().map { ($0.id.rawValue, $0.title) }
+        )
+
+        for unlock in unlocks {
+            if let title = definitions[unlock.achievementID] {
+                NotificationCenter.default.post(name: .achievementUnlocked, object: title)
+            }
+        }
+    }
+
     @ViewBuilder
     private func comparisonRow(title: String, amount: Double) -> some View {
         HStack {
@@ -1074,6 +1192,145 @@ struct StatsView: View {
                 .fontWeight(.medium)
                 .foregroundStyle(.primary)
         }
+    }
+}
+
+private struct AchievementListView: View {
+    let statuses: [BudgetAchievementStatus]
+    @Binding var selectedAchievement: BudgetAchievementStatus?
+    @Environment(\.dismiss) private var dismiss
+
+    private let columns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                LazyVGrid(columns: columns, spacing: 12) {
+                    ForEach(statuses) { status in
+                        Button {
+                            selectedAchievement = status
+                        } label: {
+                            VStack(alignment: .leading, spacing: 10) {
+                                HStack {
+                                    Image(systemName: status.definition.symbolName)
+                                        .font(.title3)
+                                        .foregroundStyle(status.isUnlocked ? .green : .secondary)
+
+                                    Spacer()
+
+                                    Text(status.isUnlocked ? "Unlocked" : "Locked")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(status.isUnlocked ? .green : .secondary)
+                                }
+
+                                Text(status.definition.title)
+                                    .font(.subheadline.weight(.bold))
+                                    .foregroundStyle(.primary)
+                                    .multilineTextAlignment(.leading)
+
+                                Text(status.definition.description)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .multilineTextAlignment(.leading)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .frame(maxWidth: .infinity, minHeight: 132, alignment: .topLeading)
+                            .padding(14)
+                            .background(Color(uiColor: .secondarySystemBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .opacity(status.isUnlocked ? 1 : 0.72)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(16)
+            }
+            .navigationTitle("Achievements")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct AchievementDetailSheet: View {
+    let status: BudgetAchievementStatus
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 18) {
+                HStack(spacing: 14) {
+                    Image(systemName: status.definition.symbolName)
+                        .font(.system(size: 28, weight: .semibold))
+                        .foregroundStyle(status.isUnlocked ? .green : .secondary)
+                        .frame(width: 54, height: 54)
+                        .background(Color(uiColor: .secondarySystemBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(status.definition.title)
+                            .font(.title3.weight(.bold))
+
+                        Text(status.isUnlocked ? "Unlocked" : "Locked")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(status.isUnlocked ? .green : .secondary)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Description")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+
+                    Text(status.definition.description)
+                        .font(.body)
+                        .foregroundStyle(.primary)
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("How to unlock")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+
+                    Text(status.definition.unlockCondition)
+                        .font(.body)
+                        .foregroundStyle(.primary)
+                }
+
+                if let unlockedAt = status.unlockedAt {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Unlocked on")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+
+                        Text(unlockedAt.formatted(date: .abbreviated, time: .omitted))
+                            .font(.body.weight(.medium))
+                    }
+                }
+
+                Spacer()
+            }
+            .padding(20)
+            .navigationTitle("Badge")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium])
     }
 }
 

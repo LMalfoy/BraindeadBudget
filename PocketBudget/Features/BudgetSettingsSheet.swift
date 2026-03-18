@@ -274,6 +274,16 @@ struct BudgetSettingsSheet: View {
                 initialBudgetAnchorMonth: mode == .onboarding ? Self.monthAnchor(for: .now) : nil
             )
             hasCompletedSetup = true
+            let unlocks = try store.syncAchievements(
+                hasCompletedSetup: hasCompletedSetup,
+                incomeItems: incomeItems,
+                recurringExpenseItems: recurringExpenseItems,
+                expenses: [],
+                budgetPeriodAnchorDay: settings.first?.budgetPeriodAnchorDay ?? 1,
+                initialAvailableBudget: mode == .onboarding ? parsedInitialAvailableBudget : settings.first?.initialAvailableBudget,
+                initialBudgetAnchorMonth: mode == .onboarding ? Self.monthAnchor(for: .now) : settings.first?.initialBudgetAnchorMonth
+            )
+            postAchievementUnlocks(unlocks)
             dismiss()
         } catch {
             errorMessage = error.localizedDescription
@@ -306,6 +316,18 @@ struct BudgetSettingsSheet: View {
 
     private static func monthAnchor(for date: Date, calendar: Calendar = .current) -> Date {
         calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? date
+    }
+
+    private func postAchievementUnlocks(_ unlocks: [AchievementUnlock]) {
+        let definitions = Dictionary(
+            uniqueKeysWithValues: BudgetStore.achievementDefinitions().map { ($0.id.rawValue, $0.title) }
+        )
+
+        for unlock in unlocks {
+            if let title = definitions[unlock.achievementID] {
+                NotificationCenter.default.post(name: .achievementUnlocked, object: title)
+            }
+        }
     }
 }
 
