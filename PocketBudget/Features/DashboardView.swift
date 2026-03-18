@@ -95,6 +95,7 @@ struct DashboardView: View {
                         remainingBudget: snapshot.remainingBudget,
                         dailySafeSpend: snapshot.dailySafeSpend,
                         daysRemainingInCurrentPeriod: snapshot.daysRemainingInCurrentPeriod,
+                        safeSpendStreak: snapshot.safeSpendStreak,
                         currencyCode: currencyCode,
                         hasCompletedSetup: hasBaselineData
                     )
@@ -270,6 +271,7 @@ private struct SummaryCardView: View {
     let remainingBudget: Double
     let dailySafeSpend: Double
     let daysRemainingInCurrentPeriod: Int
+    let safeSpendStreak: Int
     let currencyCode: String
     let hasCompletedSetup: Bool
 
@@ -335,10 +337,42 @@ private struct SummaryCardView: View {
                 }
             }
         }
+        .overlay(alignment: .bottomTrailing) {
+            if safeSpendStreak > 0 {
+                streakIndicator
+                    .padding(.trailing, 4)
+                    .padding(.bottom, 4)
+            }
+        }
         .dashboardCardStyle()
         .sheet(isPresented: $showingInfo) {
             DashboardSummaryInfoSheet()
         }
+    }
+
+    private var streakIndicator: some View {
+        ZStack(alignment: .bottomTrailing) {
+            Image(systemName: "flame.fill")
+                .font(.system(size: 26, weight: .bold))
+                .foregroundStyle(.blue.gradient)
+                .frame(width: 34, height: 34)
+                .accessibilityHidden(true)
+
+            Text("\(safeSpendStreak)")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.white)
+                .frame(minWidth: 18, minHeight: 18)
+                .padding(.horizontal, 4)
+                .background(Circle().fill(Color.blue))
+                .overlay(
+                    Circle()
+                        .stroke(Color(uiColor: .secondarySystemBackground), lineWidth: 2)
+                )
+                .offset(x: 5, y: 5)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Safe spending streak")
+        .accessibilityValue("\(safeSpendStreak) days")
     }
 
     @ViewBuilder

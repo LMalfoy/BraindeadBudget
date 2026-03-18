@@ -816,6 +816,7 @@ final class BudgetCalculationTests: XCTestCase {
 
         XCTAssertLessThan(snapshot.remainingBudget, 0)
         XCTAssertEqual(snapshot.dailySafeSpend, 0, accuracy: 0.001)
+        XCTAssertEqual(snapshot.safeSpendStreak, 0)
     }
 
     func testSafeSpendStreakCountsConsecutiveDaysUnderSafeSpend() {
@@ -836,6 +837,29 @@ final class BudgetCalculationTests: XCTestCase {
         )
 
         XCTAssertEqual(streak, 2)
+    }
+
+    func testDashboardSnapshotIncludesSafeSpendStreak() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 6, day: 20, calendar: calendar)
+        let incomeItems = [IncomeItem(name: "Salary", amount: 3000)]
+        let recurringExpenseItems = [RecurringExpenseItem(name: "Rent", amount: 1200)]
+        let expenses = [
+            Expense(title: "Day One", category: .food, amount: 20, date: makeDate(year: 2026, month: 6, day: 18, calendar: calendar)),
+            Expense(title: "Day Two", category: .food, amount: 20, date: makeDate(year: 2026, month: 6, day: 19, calendar: calendar))
+        ]
+
+        let snapshot = BudgetStore.dashboardSnapshot(
+            incomeItems: incomeItems,
+            recurringExpenseItems: recurringExpenseItems,
+            expenses: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertEqual(snapshot.safeSpendStreak, 2)
     }
 
     private func makeDate(year: Int, month: Int, day: Int, calendar: Calendar) -> Date {

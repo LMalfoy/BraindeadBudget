@@ -105,6 +105,7 @@ struct DashboardSnapshot: Equatable {
     let totalSpent: Double
     let dailySafeSpend: Double
     let daysRemainingInCurrentPeriod: Int
+    let safeSpendStreak: Int
     let categorySpending: [CategorySpendingSummary]
     let topCategory: CategorySpendingSummary?
 }
@@ -687,6 +688,15 @@ struct BudgetStore {
             calendar: calendar,
             referenceDate: referenceDate
         )
+        let safeSpendStreak = safeSpendStreak(
+            monthlyBudget: monthlyBudget,
+            expenses: expenses,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
+            initialAvailableBudget: initialAvailableBudget,
+            initialBudgetAnchorMonth: initialBudgetAnchorMonth,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
         let daysRemaining = daysRemainingInCurrentPeriod(
             referenceDate: referenceDate,
             budgetPeriodAnchorDay: budgetPeriodAnchorDay,
@@ -700,6 +710,7 @@ struct BudgetStore {
             totalSpent: totalSpent,
             dailySafeSpend: max(0, remainingBudget) / Double(daysRemaining),
             daysRemainingInCurrentPeriod: daysRemaining,
+            safeSpendStreak: safeSpendStreak,
             categorySpending: categorySpending,
             topCategory: categorySpending.first
         )

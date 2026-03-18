@@ -204,3 +204,28 @@ Why this matters:
 - achievements should reinforce budgeting habits, not replace the app's purpose
 - the system is most useful when it stays curated, understandable, and secondary
 - this creates the base for future badge artwork and additional achievements later
+
+### Iteration 2.0.6: Dashboard Streak Indicator
+
+Goal:
+Make the existing safe-spending streak visible on the dashboard with a compact visual indicator that reinforces momentum without cluttering the main budget card.
+
+Scope:
+
+- add a streak indicator to the budget overview card
+- position it in the lower-right area of the card
+- use a blue flame symbol with a small circular streak count badge
+- show the current streak count from the existing safe-spend streak logic
+- keep the indicator compact and secondary to the main budget values
+
+Not in scope:
+
+- no new achievements
+- no new dashboard metrics
+- no new stats modules
+- no gamification redesign
+
+Why this matters:
+
+- the app already computes and rewards disciplined spending, but the dashboard does not surface that momentum clearly
+- a small visible streak indicator makes the habit loop more tangible without overwhelming the core budgeting purpose
