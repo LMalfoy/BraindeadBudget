@@ -100,7 +100,7 @@ struct DashboardView: View {
     }
 
     private var dailySafeSpend: Double {
-        remainingBudget / Double(daysRemainingInCurrentPeriod)
+        max(0, remainingBudget) / Double(daysRemainingInCurrentPeriod)
     }
 
     private var remainingBudget: Double {
