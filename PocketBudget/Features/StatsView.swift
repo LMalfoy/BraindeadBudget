@@ -36,7 +36,6 @@ struct StatsView: View {
     @State private var selectedSubpage: StatsSubpage = .budgetSpending
     @State private var showingProgressionInfo = false
     @State private var showingAchievements = false
-    @State private var selectedAchievement: BudgetAchievementStatus?
     @Query(sort: \Expense.date, order: .reverse) private var expenses: [Expense]
     @Query(sort: \BudgetSettings.updatedAt, order: .reverse) private var budgets: [BudgetSettings]
     @Query(sort: \IncomeItem.createdAt) private var incomeItems: [IncomeItem]
@@ -433,13 +432,7 @@ struct StatsView: View {
             .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showingAchievements) {
-            AchievementListView(
-                statuses: achievementStatuses,
-                selectedAchievement: $selectedAchievement
-            )
-        }
-        .sheet(item: $selectedAchievement) { status in
-            AchievementDetailSheet(status: status)
+            AchievementListView(statuses: achievementStatuses)
         }
         .task {
             do {
@@ -1197,8 +1190,8 @@ struct StatsView: View {
 
 private struct AchievementListView: View {
     let statuses: [BudgetAchievementStatus]
-    @Binding var selectedAchievement: BudgetAchievementStatus?
     @Environment(\.dismiss) private var dismiss
+    @State private var selectedAchievement: BudgetAchievementStatus?
 
     private let columns = [
         GridItem(.flexible(), spacing: 12),
@@ -1256,6 +1249,9 @@ private struct AchievementListView: View {
                         dismiss()
                     }
                 }
+            }
+            .sheet(item: $selectedAchievement) { status in
+                AchievementDetailSheet(status: status)
             }
         }
     }
