@@ -67,7 +67,11 @@ struct AddExpenseSheet: View {
                     Section {
                         TextField("Item", text: $title)
                             .textInputAutocapitalization(.words)
+                            .submitLabel(.next)
                             .focused($focusedField, equals: .title)
+                            .onSubmit {
+                                focusedField = .amount
+                            }
                             .accessibilityIdentifier("addExpense.titleField")
 
                         TextField("Amount", text: $amountText)
@@ -138,28 +142,7 @@ struct AddExpenseSheet: View {
             }
             .toolbar {
                 ToolbarItemGroup(placement: .keyboard) {
-                    if focusedField == .title {
-                        EmptyView()
-                    } else if focusedField == .amount {
-                        Spacer()
-
-                        Button("Details") {
-                            focusedField = .note
-                        }
-                        .disabled(isSaveDisabled)
-
-                        Button("Save") {
-                            saveExpense()
-                        }
-                        .disabled(isSaveDisabled)
-                    } else if focusedField == .note {
-                        Spacer()
-
-                        Button("Save") {
-                            saveExpense()
-                        }
-                        .disabled(isSaveDisabled)
-                    }
+                    EmptyView()
                 }
             }
             .alert("Couldn’t Save Expense", isPresented: errorAlertBinding) {
