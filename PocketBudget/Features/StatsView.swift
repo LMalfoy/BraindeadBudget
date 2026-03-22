@@ -168,6 +168,17 @@ struct StatsView: View {
                         )
                         .foregroundStyle(.green.opacity(0.12))
                     }
+                    .chartYAxis {
+                        AxisMarks(position: .leading) { value in
+                            AxisGridLine()
+                            AxisTick()
+                            AxisValueLabel {
+                                if let amount = value.as(Double.self) {
+                                    Text(euroAxisLabel(amount))
+                                }
+                            }
+                        }
+                    }
                     .frame(height: ChartPanelMetrics.lineChartHeight)
 
                     Text("Positive values mean budget room carried into the next month.")
@@ -175,6 +186,7 @@ struct StatsView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            .padding(.vertical, ChartPanelMetrics.sectionVerticalInset)
         }
     }
 }
@@ -263,9 +275,21 @@ private struct MonthlySpendingTrendPage: View {
                         }
                     }
                 }
+                .chartYAxis {
+                    AxisMarks(position: .leading) { value in
+                        AxisGridLine()
+                        AxisTick()
+                        AxisValueLabel {
+                            if let amount = value.as(Double.self) {
+                                Text(euroAxisLabel(amount))
+                            }
+                        }
+                    }
+                }
                 .frame(height: ChartPanelMetrics.lineChartHeight)
             }
         }
+        .padding(.vertical, ChartPanelMetrics.sectionVerticalInset)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
@@ -370,6 +394,17 @@ private struct CategoryTrendPage: View {
                     )
                     .foregroundStyle(color(for: point.colorName))
                 }
+                .chartYAxis {
+                    AxisMarks(position: .leading) { value in
+                        AxisGridLine()
+                        AxisTick()
+                        AxisValueLabel {
+                            if let amount = value.as(Double.self) {
+                                Text(euroAxisLabel(amount))
+                            }
+                        }
+                    }
+                }
                 .frame(height: ChartPanelMetrics.lineChartHeight)
 
                 ChartLegendList(
@@ -385,6 +420,7 @@ private struct CategoryTrendPage: View {
                 )
             }
         }
+        .padding(.vertical, ChartPanelMetrics.sectionVerticalInset)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 

@@ -409,7 +409,7 @@ struct ExpenseHistorySheet: View {
                             .foregroundStyle(value.as(Double.self) == 0 ? Color.secondary : Color.secondary.opacity(0.35))
                         AxisValueLabel {
                             if let amount = value.as(Double.self) {
-                                Text(amount.formatted(.currency(code: currencyCode)))
+                                Text(euroAxisLabel(amount))
                             }
                         }
                     }

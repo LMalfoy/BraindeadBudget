@@ -14,9 +14,15 @@ enum ChartPanelMetrics {
     static let subtitleFont: Font = .subheadline
     static let headerSpacing: CGFloat = 4
     static let contentSpacing: CGFloat = 12
+    static let sectionVerticalInset: CGFloat = 8
     static let pieChartHeight: CGFloat = 210
     static let lineChartHeight: CGFloat = 260
-    static let legendHeight: CGFloat = 214
+    static let legendVisibleRowCount: CGFloat = 5
+    static let legendRowHeight: CGFloat = 22
+    static let legendRowSpacing: CGFloat = 10
+    static let legendHeight: CGFloat =
+        (legendVisibleRowCount * legendRowHeight) +
+        ((legendVisibleRowCount - 1) * legendRowSpacing)
 }
 
 struct ChartLegendEntry: Identifiable {
@@ -137,6 +143,8 @@ struct DonutChartPanel: View {
         VStack(alignment: .leading, spacing: ChartPanelMetrics.contentSpacing) {
             ChartPanelHeader(title: title, subtitle: subtitle)
 
+            Spacer(minLength: 0)
+
             ZStack {
                 Chart(slices) { slice in
                     SectorMark(
@@ -157,6 +165,8 @@ struct DonutChartPanel: View {
             .frame(height: chartHeight)
 
             ChartLegendList(entries: legendEntries, minHeight: legendHeight)
+
+            Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
@@ -178,7 +188,21 @@ struct ChartLegendList: View {
     let minHeight: CGFloat
 
     var body: some View {
-        VStack(spacing: 10) {
+        Group {
+            if entries.count > Int(ChartPanelMetrics.legendVisibleRowCount) {
+                ScrollView {
+                    legendRows
+                }
+            } else {
+                legendRows
+            }
+        }
+        .frame(maxWidth: .infinity, minHeight: minHeight, maxHeight: minHeight, alignment: .top)
+        .scrollIndicators(.hidden)
+    }
+
+    private var legendRows: some View {
+        VStack(spacing: ChartPanelMetrics.legendRowSpacing) {
             ForEach(entries) { entry in
                 HStack(spacing: 10) {
                     Circle()
@@ -196,9 +220,9 @@ struct ChartLegendList: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+                .frame(height: ChartPanelMetrics.legendRowHeight)
             }
         }
-        .frame(maxWidth: .infinity, minHeight: minHeight, maxHeight: minHeight, alignment: .top)
     }
 }
 
@@ -225,6 +249,10 @@ private struct PageIndexBackgroundModifier: ViewModifier {
             content
         }
     }
+}
+
+func euroAxisLabel(_ amount: Double) -> String {
+    "\(Int(amount.rounded())) €"
 }
 
 struct DashboardView: View {
@@ -311,7 +339,7 @@ struct DashboardView: View {
                         currencyCode: currencyCode,
                         hasCompletedSetup: hasBaselineData
                     )
-                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 12, trailing: 16))
+                    .listRowInsets(Self.cardInsets)
                 }
 
                 Section {
@@ -522,7 +550,7 @@ private struct DashboardInsightCardView: View {
 
     var body: some View {
         ChartPanelCard {
-            SwipeableChartCard(height: 400) {
+            SwipeableChartCard(height: 430) {
                 categoryInsight
                 trajectoryInsight
             }
@@ -541,8 +569,11 @@ private struct DashboardInsightCardView: View {
                     valueLabel: $0.total.formatted(.currency(code: currencyCode))
                 )
             },
-            emptyStateText: "Add a few expenses to see where this month is going."
+            emptyStateText: "Add a few expenses to see where this month is going.",
+            chartHeight: 176,
+            legendHeight: ChartPanelMetrics.legendHeight
         )
+        .padding(.vertical, ChartPanelMetrics.sectionVerticalInset)
         .accessibilityIdentifier("dashboard.categoryInsight")
     }
 
@@ -553,11 +584,9 @@ private struct DashboardInsightCardView: View {
             if trajectory.isEmpty {
                 ChartEmptyState(
                     text: "Add a few expenses to see how spending has moved through the month.",
-                    height: 320
+                    height: 300
                 )
             } else {
-                Spacer(minLength: 0)
-
                 Chart {
                     ForEach(trajectory) { point in
                         let isNegativeState = (trajectory.last?.remainingBudget ?? 0) < 0
@@ -606,7 +635,7 @@ private struct DashboardInsightCardView: View {
                         AxisTick()
                         AxisValueLabel {
                             if let amount = value.as(Double.self) {
-                                Text(amount, format: .currency(code: currencyCode).precision(.fractionLength(0)))
+                                Text(euroAxisLabel(amount))
                             }
                         }
                     }
@@ -618,10 +647,9 @@ private struct DashboardInsightCardView: View {
                 .chartYScale(domain: yAxisDomain)
                 .frame(height: 270)
                 .clipped()
-
-                Spacer(minLength: 0)
             }
         }
+        .padding(.vertical, ChartPanelMetrics.sectionVerticalInset)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .accessibilityIdentifier("dashboard.trajectoryInsight")
     }
