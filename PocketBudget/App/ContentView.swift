@@ -9,6 +9,14 @@
 
 import SwiftUI
 
+enum AppTheme {
+    static let primaryGreen = Color(red: 0.18, green: 0.63, blue: 0.42)
+    static let secondaryGreen = Color(red: 0.28, green: 0.72, blue: 0.50)
+    static let warningRed = Color(red: 0.82, green: 0.28, blue: 0.25)
+    static let neutralGray = Color(uiColor: .systemGray4)
+    static let panelBackground = Color(uiColor: .secondarySystemBackground)
+}
+
 struct ContentView: View {
     private enum Tab: Hashable {
         case dashboard

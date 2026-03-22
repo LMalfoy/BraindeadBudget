@@ -174,7 +174,7 @@ struct BudgetSettingsSheet: View {
             LabeledContent(mode == .onboarding ? "Calculated Monthly Budget" : "Available to Spend") {
                 Text(availableBudget.formatted(.currency(code: currencyCode)))
                     .fontWeight(.semibold)
-                    .foregroundStyle(availableBudget < 0 ? .red : .primary)
+                    .foregroundStyle(availableBudget < 0 ? AppTheme.warningRed : .primary)
             }
             .accessibilityIdentifier("budgetSetup.availableBudgetValue")
 
@@ -182,7 +182,7 @@ struct BudgetSettingsSheet: View {
                 LabeledContent("Available Right Now") {
                     Text(currentAvailableBudget.formatted(.currency(code: currencyCode)))
                         .fontWeight(.semibold)
-                        .foregroundStyle(currentAvailableBudget < 0 ? .red : .primary)
+                        .foregroundStyle(currentAvailableBudget < 0 ? AppTheme.warningRed : .primary)
                 }
                 .accessibilityIdentifier("budgetSetup.initialAvailableBudgetValue")
             }
@@ -211,6 +211,7 @@ struct BudgetSettingsSheet: View {
                 activeEditor = BaselineItemDraft(kind: .income)
             } label: {
                 Label("Add Income", systemImage: "plus.circle.fill")
+                    .foregroundStyle(AppTheme.primaryGreen)
             }
             .accessibilityIdentifier("budgetSetup.addIncomeButton")
         } header: {
@@ -236,6 +237,7 @@ struct BudgetSettingsSheet: View {
                 activeEditor = BaselineItemDraft(kind: .recurringExpense)
             } label: {
                 Label("Add Recurring Cost", systemImage: "plus.circle.fill")
+                    .foregroundStyle(AppTheme.secondaryGreen)
             }
             .accessibilityIdentifier("budgetSetup.addRecurringButton")
         } header: {

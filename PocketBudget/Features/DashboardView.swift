@@ -48,7 +48,7 @@ struct ChartPanelCard<Content: View>: View {
             content
         }
         .padding(ChartPanelMetrics.cardPadding)
-        .background(Color(uiColor: .secondarySystemBackground))
+        .background(AppTheme.panelBackground)
         .clipShape(RoundedRectangle(cornerRadius: ChartPanelMetrics.cardCornerRadius, style: .continuous))
     }
 }
@@ -390,7 +390,7 @@ struct DashboardView: View {
                     .font(.headline)
                     .padding(.horizontal, 22)
                     .padding(.vertical, 16)
-                    .background(hasBaselineData ? Color.green : Color(uiColor: .systemGray4))
+                    .background(hasBaselineData ? AppTheme.primaryGreen : AppTheme.neutralGray)
                     .foregroundStyle(.white)
                     .clipShape(Capsule())
                     .shadow(color: .black.opacity(0.12), radius: 12, y: 6)
@@ -435,49 +435,113 @@ private struct InitialSetupFlowView: View {
         if hasAcceptedIntro {
             BudgetSettingsSheet(mode: .onboarding)
         } else {
-            OnboardingIntroView {
+            OnboardingTutorialView {
                 hasAcceptedIntro = true
             }
         }
     }
 }
 
-private struct OnboardingIntroView: View {
+private struct OnboardingTutorialPage: Identifiable {
+    let id: Int
+    let title: String
+    let bodyText: String
+    let buttonTitle: String
+}
+
+private struct OnboardingTutorialView: View {
+    @State private var selectedPage = 0
+
     let onContinue: () -> Void
+
+    private let pages = [
+        OnboardingTutorialPage(
+            id: 0,
+            title: "Welcome",
+            bodyText: "Thanks for trying this budgeting app.\n\nThe idea is simple:\nset up your monthly budget once — then just track your spending during the month.\n\nEverything runs locally on your device.\nYour financial data never leaves your phone.",
+            buttonTitle: "Next"
+        ),
+        OnboardingTutorialPage(
+            id: 1,
+            title: "Set up your monthly budget",
+            bodyText: "First, define your monthly budget.\n\nAdd your income and your recurring costs, such as:\n- housing / rent\n- insurance\n- subscriptions\n- loan payments\n- savings\n\nThis step may take a few minutes, but you only need to do it once.\n\nThe difference between income and recurring costs becomes your available monthly budget.",
+            buttonTitle: "Next"
+        ),
+        OnboardingTutorialPage(
+            id: 2,
+            title: "Track spending quickly",
+            bodyText: "After setup, the app becomes very simple.\n\nWhenever you spend money, tap “Add Expense” and record it.\n\nThe goal is to track spending quickly and always know how much of your monthly budget is left.",
+            buttonTitle: "Next"
+        ),
+        OnboardingTutorialPage(
+            id: 3,
+            title: "Fast tracking",
+            bodyText: "The app is designed to be fast.\n\nYou can also add the widget to your home screen to quickly log expenses without opening the app.\n\nThe dashboard will show you your current budget status and spending trends.",
+            buttonTitle: "Next"
+        ),
+        OnboardingTutorialPage(
+            id: 4,
+            title: "You're ready",
+            bodyText: "That's it.\n\nSet up your budget and start tracking your spending.\n\nHave fun using the app.\n\n— Kevin Sicking",
+            buttonTitle: "Start Setup"
+        )
+    ]
 
     var body: some View {
         NavigationStack {
-            VStack(alignment: .leading, spacing: 24) {
-                Spacer(minLength: 0)
+            VStack(spacing: 24) {
+                TabView(selection: $selectedPage) {
+                    ForEach(pages) { page in
+                        VStack(alignment: .leading, spacing: 18) {
+                            Spacer(minLength: 0)
 
-                VStack(alignment: .leading, spacing: 14) {
-                    Text("How BudgetRook Works")
-                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                            VStack(alignment: .leading, spacing: 14) {
+                                Text(page.title)
+                                    .font(.system(size: 32, weight: .bold, design: .rounded))
 
-                    Text("BudgetRook starts from your monthly income and recurring costs to calculate what is available to spend.")
-                        .font(.body)
-                        .foregroundStyle(.secondary)
+                                Text(page.bodyText)
+                                    .font(.body)
+                                    .foregroundStyle(.secondary)
+                            }
 
-                    Text("You then log day-to-day expenses and can see the current month at a glance, with deeper monthly and trend views available when needed.")
-                        .font(.body)
-                        .foregroundStyle(.secondary)
+                            Spacer(minLength: 0)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                        .padding(.horizontal, 24)
+                        .padding(.top, 24)
+                        .tag(page.id)
+                    }
                 }
+                .tabViewStyle(.page(indexDisplayMode: .automatic))
+                .indexViewStyle(.page(backgroundDisplayMode: .always))
 
-                Spacer(minLength: 0)
-
-                Button("Continue to Setup") {
-                    onContinue()
+                Button(currentPage.buttonTitle) {
+                    if selectedPage == pages.count - 1 {
+                        onContinue()
+                    } else {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            selectedPage += 1
+                        }
+                    }
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .frame(maxWidth: .infinity, alignment: .center)
-                .accessibilityIdentifier("onboardingIntro.continueButton")
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(AppTheme.primaryGreen)
+                .foregroundStyle(.white)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .padding(.horizontal, 24)
+                .padding(.bottom, 24)
+                .accessibilityIdentifier("onboardingTutorial.primaryButton")
             }
-            .padding(24)
-            .navigationTitle("Welcome")
+            .navigationTitle(currentPage.title)
             .navigationBarTitleDisplayMode(.inline)
         }
         .interactiveDismissDisabled(true)
+    }
+
+    private var currentPage: OnboardingTutorialPage {
+        pages[selectedPage]
     }
 }
 
@@ -504,7 +568,7 @@ private struct SummaryCardView: View {
 
                     Text(formatted(remainingBudget))
                         .font(.system(size: 34, weight: .bold, design: .rounded))
-                        .foregroundStyle(remainingBudget < 0 ? .red : .green)
+                        .foregroundStyle(remainingBudget < 0 ? AppTheme.warningRed : AppTheme.primaryGreen)
                         .accessibilityIdentifier("dashboard.remainingBudgetValue")
                 }
 
@@ -783,7 +847,7 @@ private struct AppCardStyle: ViewModifier {
     func body(content: Content) -> some View {
         content
             .padding(ChartPanelMetrics.cardPadding)
-            .background(Color(uiColor: .secondarySystemBackground))
+            .background(AppTheme.panelBackground)
             .clipShape(RoundedRectangle(cornerRadius: ChartPanelMetrics.cardCornerRadius, style: .continuous))
     }
 }

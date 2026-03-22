@@ -136,7 +136,7 @@ struct AddExpenseSheet: View {
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
-                        .background(isSaveDisabled ? Color(uiColor: .systemGray4) : Color.green)
+                        .background(isSaveDisabled ? AppTheme.neutralGray : AppTheme.primaryGreen)
                         .foregroundStyle(.white)
                         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 }
