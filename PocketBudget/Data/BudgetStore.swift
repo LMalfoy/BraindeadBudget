@@ -98,6 +98,16 @@ struct MonthlySpendingPoint: Identifiable, Equatable {
     var id: Date { month }
 }
 
+struct CategoryTrendPoint: Identifiable, Equatable {
+    let month: Date
+    let category: ExpenseCategory
+    let total: Double
+
+    var id: String {
+        "\(category.rawValue)-\(month.timeIntervalSinceReferenceDate)"
+    }
+}
+
 struct DashboardSnapshot: Equatable {
     let monthlyBudget: Double
     let previousMonthCarryover: Double
@@ -1236,6 +1246,42 @@ struct BudgetStore {
                     )
                 )
             )
+        }
+    }
+
+    static func categoryTrendHistory(
+        for expenses: [Expense],
+        months: Int = 6,
+        budgetPeriodAnchorDay: Int = 1,
+        calendar: Calendar = .current,
+        referenceDate: Date = .now
+    ) -> [CategoryTrendPoint] {
+        guard months > 0 else {
+            return []
+        }
+
+        let referenceMonth = periodStart(containing: referenceDate, budgetPeriodAnchorDay: budgetPeriodAnchorDay, calendar: calendar)
+
+        return (0..<months).compactMap { offset in
+            calendar.date(byAdding: .month, value: offset - (months - 1), to: referenceMonth)
+        }
+        .flatMap { month in
+            let monthExpenses = currentMonthExpenses(
+                from: expenses,
+                budgetPeriodAnchorDay: budgetPeriodAnchorDay,
+                calendar: calendar,
+                referenceDate: month
+            )
+
+            return ExpenseCategory.allCases.map { category in
+                CategoryTrendPoint(
+                    month: month,
+                    category: category,
+                    total: monthExpenses
+                        .filter { $0.category == category }
+                        .reduce(0) { $0 + $1.amount }
+                )
+            }
         }
     }
 

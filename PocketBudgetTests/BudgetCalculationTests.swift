@@ -696,6 +696,44 @@ final class BudgetCalculationTests: XCTestCase {
         }
     }
 
+    func testCategoryTrendHistoryBuildsTrailingSixMonthSeriesPerCategory() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 6, day: 20, calendar: calendar)
+        let expenses = [
+            Expense(title: "Groceries", category: .food, amount: 20, date: makeDate(year: 2026, month: 5, day: 2, calendar: calendar)),
+            Expense(title: "Train", category: .transport, amount: 15, date: makeDate(year: 2026, month: 6, day: 3, calendar: calendar)),
+            Expense(title: "Dinner", category: .food, amount: 30, date: makeDate(year: 2026, month: 6, day: 8, calendar: calendar))
+        ]
+
+        let history = BudgetStore.categoryTrendHistory(
+            for: expenses,
+            months: 6,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertEqual(history.count, 24)
+
+        let juneFood = history.first {
+            calendar.component(.month, from: $0.month) == 6 && $0.category == .food
+        }
+        let juneTransport = history.first {
+            calendar.component(.month, from: $0.month) == 6 && $0.category == .transport
+        }
+        let aprilFood = history.first {
+            calendar.component(.month, from: $0.month) == 4 && $0.category == .food
+        }
+
+        XCTAssertNotNil(juneFood)
+        XCTAssertNotNil(juneTransport)
+        XCTAssertNotNil(aprilFood)
+        XCTAssertEqual(juneFood?.total ?? .nan, 30, accuracy: 0.001)
+        XCTAssertEqual(juneTransport?.total ?? .nan, 15, accuracy: 0.001)
+        XCTAssertEqual(aprilFood?.total ?? .nan, 0, accuracy: 0.001)
+    }
+
     func testFixedCostRatioAndDistributionUseRecurringCostCategories() {
         let incomeItems = [
             IncomeItem(name: "Salary", amount: 3000)

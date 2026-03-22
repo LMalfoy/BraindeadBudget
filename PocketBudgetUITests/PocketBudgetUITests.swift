@@ -1,15 +1,5 @@
 /*
- End-to-end UI tests for the most important user flows.
-
- These tests simulate how a real user moves through the app, for example:
- - first setup
- - adding an expense
- - opening settings
- - resetting the app
- - navigating statistics
-
- They are intentionally focused on high-value flows instead of every possible
- detail, because UI tests are slower and more fragile than unit tests.
+ End-to-end UI tests for the consolidated three-page product.
  */
 
 import XCTest
@@ -28,12 +18,12 @@ final class PocketBudgetUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["dashboard.remainingBudgetValue"].waitForExistence(timeout: 2))
     }
 
-    func testUserCanDeleteExpenseFromHistory() throws {
+    func testUserCanDeleteExpenseFromMonthPage() throws {
         let app = XCUIApplication()
         launchAndCompleteBudgetSetup(in: app)
         addExpense(named: "Coffee", amount: "5.50", categoryIdentifier: "food", in: app)
 
-        app.tabBars.buttons["History"].tap()
+        app.tabBars.buttons["Month"].tap()
 
         let coffeeText = app.staticTexts["Coffee"]
         XCTAssertTrue(coffeeText.waitForExistence(timeout: 2))
@@ -48,13 +38,12 @@ final class PocketBudgetUITests: XCTestCase {
         let app = XCUIApplication()
         launchAndCompleteBudgetSetup(in: app)
 
-        let settingsButton = app.tabBars.buttons["Settings"].firstMatch
+        let settingsButton = app.buttons["root.settingsButton"].firstMatch
         XCTAssertTrue(settingsButton.waitForExistence(timeout: 5))
         settingsButton.tap()
 
         let manageBudgetButton = app.buttons["settings.manageBudgetButton"].firstMatch
         XCTAssertTrue(manageBudgetButton.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["settings.budgetPeriodAnchorButton"].firstMatch.waitForExistence(timeout: 5))
         manageBudgetButton.tap()
 
         let finishButton = app.buttons["budgetSetup.finishButton"].firstMatch
@@ -65,12 +54,9 @@ final class PocketBudgetUITests: XCTestCase {
         let app = XCUIApplication()
         launchAndCompleteBudgetSetup(in: app)
 
-        let settingsButton = app.tabBars.buttons["Settings"].firstMatch
+        let settingsButton = app.buttons["root.settingsButton"].firstMatch
         XCTAssertTrue(settingsButton.waitForExistence(timeout: 5))
         settingsButton.tap()
-
-        XCTAssertTrue(app.staticTexts["Appearance"].firstMatch.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Currency"].firstMatch.waitForExistence(timeout: 5))
 
         let eraseButton = app.buttons["settings.eraseAllDataButton"].firstMatch
         XCTAssertTrue(eraseButton.waitForExistence(timeout: 5))
@@ -80,270 +66,36 @@ final class PocketBudgetUITests: XCTestCase {
         XCTAssertTrue(confirmButton.waitForExistence(timeout: 5))
         confirmButton.tap()
 
-        app.tabBars.buttons["Home"].tap()
         XCTAssertTrue(app.buttons["onboardingIntro.continueButton"].firstMatch.waitForExistence(timeout: 5))
     }
 
-    func testUserCanOpenStatsArea() throws {
+    func testUserCanOpenTrendsPage() throws {
         let app = XCUIApplication()
         launchAndCompleteBudgetSetup(in: app)
         addExpense(named: "Coffee", amount: "5.50", categoryIdentifier: "food", in: app)
 
-        let statsButton = app.tabBars.buttons["Stats"].firstMatch
-        XCTAssertTrue(statsButton.waitForExistence(timeout: 5))
-        statsButton.tap()
+        let trendsButton = app.tabBars.buttons["Trends"].firstMatch
+        XCTAssertTrue(trendsButton.waitForExistence(timeout: 5))
+        trendsButton.tap()
 
-        XCTAssertTrue(app.staticTexts["Total Spending"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Monthly Spending"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Remaining Budget / Carryover"].firstMatch.waitForExistence(timeout: 5))
     }
 
-    func testStatsAreaShowsBudgetTrajectory() throws {
+    func testMonthPageShowsCurrentMonthBreakdownAndFilters() throws {
         let app = XCUIApplication()
         launchAndCompleteBudgetSetup(in: app)
         addExpense(named: "Coffee", amount: "5.50", categoryIdentifier: "food", in: app)
 
-        let statsButton = app.tabBars.buttons["Stats"].firstMatch
-        XCTAssertTrue(statsButton.waitForExistence(timeout: 5))
-        statsButton.tap()
-        openStatsSubpage(named: "Budget Spending", in: app)
+        app.tabBars.buttons["Month"].tap()
 
-        XCTAssertTrue(app.otherElements["stats.trajectoryModule"].firstMatch.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["You still have strong budget room for the rest of the month."].firstMatch.waitForExistence(timeout: 5))
-    }
-
-    func testStatsAreaShowsTemporalPattern() throws {
-        let app = XCUIApplication()
-        launchAndCompleteBudgetSetup(in: app)
-        addExpense(named: "Coffee", amount: "5.50", categoryIdentifier: "food", in: app)
-
-        let statsButton = app.tabBars.buttons["Stats"].firstMatch
-        XCTAssertTrue(statsButton.waitForExistence(timeout: 5))
-        statsButton.tap()
-        openStatsSubpage(named: "Budget Spending", in: app)
-        app.swipeUp()
-        app.swipeUp()
-
-        XCTAssertTrue(app.staticTexts["Spending Pattern"].firstMatch.waitForExistence(timeout: 5))
-    }
-
-    func testStatsAreaShowsMonthComparison() throws {
-        let app = XCUIApplication()
-        launchAndCompleteBudgetSetup(in: app)
-        addExpense(named: "Coffee", amount: "5.50", categoryIdentifier: "food", in: app)
-
-        let statsButton = app.tabBars.buttons["Stats"].firstMatch
-        XCTAssertTrue(statsButton.waitForExistence(timeout: 5))
-        statsButton.tap()
-        openStatsSubpage(named: "Budget Spending", in: app)
-        app.swipeUp()
-        app.swipeUp()
-
-        XCTAssertTrue(app.staticTexts["Month Comparison"].firstMatch.waitForExistence(timeout: 5))
-    }
-
-    func testStatsAreaShowsCarryoverModule() throws {
-        let app = XCUIApplication()
-        launchAndCompleteBudgetSetup(in: app)
-        addExpense(named: "Coffee", amount: "5.50", categoryIdentifier: "food", in: app)
-
-        let statsButton = app.tabBars.buttons["Stats"].firstMatch
-        XCTAssertTrue(statsButton.waitForExistence(timeout: 5))
-        statsButton.tap()
-        openStatsSubpage(named: "Budget Spending", in: app)
-
-        XCTAssertTrue(app.staticTexts["Carryover"].firstMatch.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.otherElements["stats.carryoverModule"].firstMatch.waitForExistence(timeout: 5))
-    }
-
-    func testStatsAreaShowsBudgetProgression() throws {
-        let app = XCUIApplication()
-        launchAndCompleteBudgetSetup(in: app)
-        addExpense(named: "Coffee", amount: "5.50", categoryIdentifier: "food", in: app)
-
-        let statsButton = app.tabBars.buttons["Stats"].firstMatch
-        XCTAssertTrue(statsButton.waitForExistence(timeout: 5))
-        statsButton.tap()
-
-        XCTAssertTrue(app.staticTexts["Budget Progression"].firstMatch.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Pawn I"].firstMatch.waitForExistence(timeout: 5))
-    }
-
-    func testUserCanOpenBudgetProgressionInfo() throws {
-        let app = XCUIApplication()
-        launchAndCompleteBudgetSetup(in: app)
-
-        app.tabBars.buttons["Stats"].tap()
-
-        let infoButton = app.buttons["stats.progressionInfoButton"].firstMatch
-        XCTAssertTrue(infoButton.waitForExistence(timeout: 5))
-        infoButton.tap()
-
-        XCTAssertTrue(app.navigationBars["Progression"].firstMatch.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Budget Progression is based on how much budget you save by the end of completed budget periods."].firstMatch.waitForExistence(timeout: 5))
-    }
-
-    func testUserCanOpenAboutInfo() throws {
-        let app = XCUIApplication()
-        launchAndCompleteBudgetSetup(in: app)
-
-        app.tabBars.buttons["Settings"].tap()
-
-        let infoButton = app.buttons["settings.aboutInfoButton"].firstMatch
-        XCTAssertTrue(infoButton.waitForExistence(timeout: 5))
-        infoButton.tap()
-
-        XCTAssertTrue(app.navigationBars["About BudgetRook"].firstMatch.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["BudgetRook is a simple personal budgeting app built around one core question: how much money is still available to spend in the current budget period?"].firstMatch.waitForExistence(timeout: 5))
-    }
-
-    func testUserCanSwitchStatsPerspective() throws {
-        let app = XCUIApplication()
-        launchAndCompleteBudgetSetup(in: app)
-
-        let statsButton = app.tabBars.buttons["Stats"].firstMatch
-        XCTAssertTrue(statsButton.waitForExistence(timeout: 5))
-        statsButton.tap()
-
-        openStatsSubpage(named: "Recurring Spending", in: app)
-
-        XCTAssertTrue(app.staticTexts["Fixed Cost Ratio"].firstMatch.waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Spending by Category"].firstMatch.waitForExistence(timeout: 5))
-    }
 
-    func testTotalSpendingShowsFixedCostModules() throws {
-        let app = XCUIApplication()
-        launchAndCompleteBudgetSetup(in: app)
+        let foodFilter = app.buttons["month.categoryFilter.food"].firstMatch
+        XCTAssertTrue(foodFilter.waitForExistence(timeout: 5))
+        foodFilter.tap()
 
-        app.tabBars.buttons["Settings"].tap()
-        let manageBudgetButton = app.buttons["settings.manageBudgetButton"].firstMatch
-        XCTAssertTrue(manageBudgetButton.waitForExistence(timeout: 5))
-        manageBudgetButton.tap()
-
-        let addRecurringButton = app.buttons["budgetSetup.addRecurringButton"].firstMatch
-        XCTAssertTrue(addRecurringButton.waitForExistence(timeout: 5))
-        addRecurringButton.tap()
-
-        let nameField = app.textFields["baselineItem.nameField"].firstMatch
-        XCTAssertTrue(nameField.waitForExistence(timeout: 5))
-        nameField.tap()
-        nameField.typeText("Rent")
-
-        let housingTile = app.buttons["baselineItem.recurringCategory.housingUtilities"].firstMatch
-        XCTAssertTrue(housingTile.waitForExistence(timeout: 5))
-        housingTile.tap()
-
-        let amountField = app.textFields["baselineItem.amountField"].firstMatch
-        XCTAssertTrue(amountField.waitForExistence(timeout: 5))
-        amountField.tap()
-        amountField.typeText("1200")
-
-        let saveButton = app.buttons["baselineItem.saveButton"].firstMatch
-        XCTAssertTrue(saveButton.waitForExistence(timeout: 5))
-        saveButton.tap()
-
-        app.buttons["Close"].tap()
-
-        app.tabBars.buttons["Stats"].tap()
-        openStatsSubpage(named: "Recurring Spending", in: app)
-
-        XCTAssertTrue(app.staticTexts["Fixed Cost Ratio"].firstMatch.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Spending by Category"].firstMatch.waitForExistence(timeout: 5))
-    }
-
-    func testTotalSpendingShowsSubscriptionAndSavingsModules() throws {
-        let app = XCUIApplication()
-        launchAndCompleteBudgetSetup(in: app)
-
-        app.tabBars.buttons["Settings"].tap()
-        let manageBudgetButton = app.buttons["settings.manageBudgetButton"].firstMatch
-        XCTAssertTrue(manageBudgetButton.waitForExistence(timeout: 5))
-        manageBudgetButton.tap()
-
-        addRecurringCost(named: "Netflix", amount: "20", categoryIdentifier: "subscriptions", in: app)
-        addRecurringCost(named: "Savings", amount: "300", categoryIdentifier: "savings", in: app)
-
-        app.buttons["Close"].tap()
-
-        app.tabBars.buttons["Stats"].tap()
-        openStatsSubpage(named: "Recurring Spending", in: app)
-        app.swipeUp()
-
-        XCTAssertTrue(app.staticTexts["Subscription Load"].firstMatch.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Savings Stability"].firstMatch.waitForExistence(timeout: 5))
-    }
-
-    func testUserCanOpenExpenseHistory() throws {
-        let app = XCUIApplication()
-        launchAndCompleteBudgetSetup(in: app)
-        addExpense(named: "Coffee", amount: "5.50", categoryIdentifier: "food", in: app)
-
-        let historyButton = app.tabBars.buttons["History"].firstMatch
-        XCTAssertTrue(historyButton.waitForExistence(timeout: 5))
-        historyButton.tap()
-
-        let monthLabel = app.buttons["history.monthLabel"].firstMatch
-        XCTAssertTrue(monthLabel.waitForExistence(timeout: 5))
-
-        let previousMonthButton = app.buttons["history.previousMonthButton"].firstMatch
-        XCTAssertTrue(previousMonthButton.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["history.nextMonthButton"].firstMatch.waitForExistence(timeout: 5))
-    }
-
-    func testUserCanSelectMonthFromHistoryHeader() throws {
-        let app = XCUIApplication()
-        launchAndCompleteBudgetSetup(in: app)
-        app.tabBars.buttons["History"].tap()
-
-        let monthLabelButton = app.buttons["history.monthLabel"].firstMatch
-        XCTAssertTrue(monthLabelButton.waitForExistence(timeout: 5))
-        monthLabelButton.tap()
-
-        let doneButton = app.buttons["history.monthPicker.doneButton"].firstMatch
-        XCTAssertTrue(doneButton.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.navigationBars["Select Month"].firstMatch.waitForExistence(timeout: 5))
-        doneButton.tap()
-
-        XCTAssertTrue(monthLabelButton.waitForExistence(timeout: 5))
-    }
-
-    func testHistoryMonthNavigationWorksForEmptyMonths() throws {
-        let app = XCUIApplication()
-        launchAndCompleteBudgetSetup(in: app)
-        app.tabBars.buttons["History"].tap()
-
-        let monthLabelButton = app.buttons["history.monthLabel"].firstMatch
-        XCTAssertTrue(monthLabelButton.waitForExistence(timeout: 5))
-        let initialLabel = monthLabelButton.label
-
-        let nextMonthButton = app.buttons["history.nextMonthButton"].firstMatch
-        XCTAssertTrue(nextMonthButton.waitForExistence(timeout: 5))
-        nextMonthButton.tap()
-
-        XCTAssertNotEqual(monthLabelButton.label, initialLabel)
-    }
-
-    func testUserCanSubmitExpenseFromAmountField() throws {
-        let app = XCUIApplication()
-        launchAndCompleteBudgetSetup(in: app)
-
-        let addExpenseButton = app.buttons["dashboard.addExpenseButton"].firstMatch
-        XCTAssertTrue(addExpenseButton.waitForExistence(timeout: 5))
-        addExpenseButton.tap()
-
-        let titleField = app.textFields["addExpense.titleField"].firstMatch
-        XCTAssertTrue(titleField.waitForExistence(timeout: 5))
-        titleField.tap()
-        titleField.typeText("Tea")
-
-        let amountField = app.textFields["addExpense.amountField"].firstMatch
-        XCTAssertTrue(amountField.waitForExistence(timeout: 5))
-        amountField.tap()
-        amountField.typeText("3.50")
-
-        let saveButton = app.buttons["addExpense.saveButton"].firstMatch
-        XCTAssertTrue(saveButton.waitForExistence(timeout: 5))
-        saveButton.tap()
-
-        XCTAssertTrue(app.staticTexts["Tea"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Coffee"].firstMatch.waitForExistence(timeout: 5))
     }
 
     private func launchAndCompleteBudgetSetup(in app: XCUIApplication) {
@@ -409,47 +161,5 @@ final class PocketBudgetUITests: XCTestCase {
         let saveButton = app.buttons["addExpense.saveButton"].firstMatch
         XCTAssertTrue(saveButton.waitForExistence(timeout: 5))
         saveButton.tap()
-    }
-
-    private func addRecurringCost(
-        named title: String,
-        amount: String,
-        categoryIdentifier: String,
-        in app: XCUIApplication
-    ) {
-        let addRecurringButton = app.buttons["budgetSetup.addRecurringButton"].firstMatch
-        XCTAssertTrue(addRecurringButton.waitForExistence(timeout: 5))
-        addRecurringButton.tap()
-
-        let nameField = app.textFields["baselineItem.nameField"].firstMatch
-        XCTAssertTrue(nameField.waitForExistence(timeout: 5))
-        nameField.tap()
-        nameField.typeText(title)
-
-        let categoryButton = app.buttons["baselineItem.recurringCategory.\(categoryIdentifier)"].firstMatch
-        XCTAssertTrue(categoryButton.waitForExistence(timeout: 5))
-        categoryButton.tap()
-
-        let amountField = app.textFields["baselineItem.amountField"].firstMatch
-        XCTAssertTrue(amountField.waitForExistence(timeout: 5))
-        amountField.tap()
-        amountField.typeText(amount)
-
-        let saveButton = app.buttons["baselineItem.saveButton"].firstMatch
-        XCTAssertTrue(saveButton.waitForExistence(timeout: 5))
-        saveButton.tap()
-    }
-
-    private func openStatsSubpage(named title: String, in app: XCUIApplication) {
-        let targetButton = app.buttons[title].firstMatch
-
-        if targetButton.isHittable {
-            targetButton.tap()
-            return
-        }
-
-        app.swipeUp()
-        XCTAssertTrue(targetButton.waitForExistence(timeout: 5))
-        targetButton.tap()
     }
 }

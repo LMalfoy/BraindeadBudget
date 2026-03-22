@@ -1,77 +1,47 @@
 /*
- Main tab container for the app.
+ Main tab container for the consolidated product.
 
- This file does not contain business logic. Its job is only to wire the four
- top-level user areas together:
- - Home dashboard
- - Expense history
- - Statistics
- - Settings
-
- If you want to understand how the app is structured from a user perspective,
- this is the first file to read after `PocketBudgetApp.swift`.
+ The app is intentionally organized around three time horizons:
+ - Dashboard: where do I stand right now?
+ - Month: how is the current month distributed?
+ - Trends: how are finances changing over time?
  */
 
 import SwiftUI
 
-@MainActor
-enum AchievementNotificationDispatcher {
-    static func postUnlocks(_ unlocks: [AchievementUnlock]) {
-        let definitions = Dictionary(
-            uniqueKeysWithValues: BudgetStore.achievementDefinitions().map { ($0.id.rawValue, $0.title) }
-        )
-
-        for unlock in unlocks {
-            if let title = definitions[unlock.achievementID] {
-                NotificationCenter.default.post(name: .achievementUnlocked, object: title)
-            }
-        }
-    }
-}
-
 struct ContentView: View {
     private enum Tab: Hashable {
-        case home
-        case history
-        case stats
-        case settings
+        case dashboard
+        case month
+        case trends
     }
 
-    @State private var selectedTab: Tab = .home
-    @State private var achievementBanner: AchievementUnlockBanner?
+    @State private var selectedTab: Tab = .dashboard
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            NavigationStack {
+            RootTabView {
                 DashboardView()
             }
-            .tag(Tab.home)
+            .tag(Tab.dashboard)
             .tabItem {
-                Label("Home", systemImage: "house")
+                Label("Dashboard", systemImage: "house")
             }
 
-            NavigationStack {
+            RootTabView {
                 ExpenseHistorySheet()
             }
-            .tag(Tab.history)
+            .tag(Tab.month)
             .tabItem {
-                Label("History", systemImage: "list.bullet.rectangle")
+                Label("Month", systemImage: "calendar")
             }
 
-            NavigationStack {
+            RootTabView {
                 StatsView()
             }
-            .tag(Tab.stats)
+            .tag(Tab.trends)
             .tabItem {
-                Label("Stats", systemImage: "chart.pie")
-            }
-
-            NavigationStack {
-                SettingsSheet()
-            }
-            .tag(Tab.settings)
-            .tabItem {
-                Label("Settings", systemImage: "gearshape")
+                Label("Trends", systemImage: "chart.line.uptrend.xyaxis")
             }
         }
         .onOpenURL { url in
@@ -80,35 +50,38 @@ struct ContentView: View {
             }
 
             if url.host == "add-expense" {
-                selectedTab = .home
+                selectedTab = .dashboard
                 NotificationCenter.default.post(name: .openQuickAddExpense, object: nil)
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .openExpenseHistoryMonth)) { _ in
-            selectedTab = .history
+            selectedTab = .month
         }
-        .overlay(alignment: .top) {
-            if let achievementBanner {
-                AchievementUnlockToastView(banner: achievementBanner)
-                    .padding(.top, 12)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-            }
-        }
-        .animation(.spring(response: 0.32, dampingFraction: 0.9), value: achievementBanner)
-        .onReceive(NotificationCenter.default.publisher(for: .achievementUnlocked)) { notification in
-            guard let title = notification.object as? String else {
-                return
-            }
+    }
+}
 
-            achievementBanner = AchievementUnlockBanner(title: title)
+private struct RootTabView<Content: View>: View {
+    @State private var showingSettings = false
 
-            Task {
-                try? await Task.sleep(for: .seconds(2.4))
-                await MainActor.run {
-                    if achievementBanner?.title == title {
-                        achievementBanner = nil
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        NavigationStack {
+            content()
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            showingSettings = true
+                        } label: {
+                            Image(systemName: "gearshape")
+                        }
+                        .accessibilityIdentifier("root.settingsButton")
                     }
                 }
+        }
+        .sheet(isPresented: $showingSettings) {
+            NavigationStack {
+                SettingsSheet()
             }
         }
     }
@@ -117,33 +90,4 @@ struct ContentView: View {
 extension Notification.Name {
     static let openQuickAddExpense = Notification.Name("openQuickAddExpense")
     static let openExpenseHistoryMonth = Notification.Name("openExpenseHistoryMonth")
-    static let achievementUnlocked = Notification.Name("achievementUnlocked")
-}
-
-private struct AchievementUnlockToastView: View {
-    let banner: AchievementUnlockBanner
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "rosette")
-                .foregroundStyle(.yellow)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Achievement unlocked")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-
-                Text(banner.title)
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(.primary)
-            }
-
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .background(.regularMaterial, in: Capsule())
-        .shadow(color: .black.opacity(0.14), radius: 10, y: 6)
-        .padding(.horizontal, 16)
-    }
 }

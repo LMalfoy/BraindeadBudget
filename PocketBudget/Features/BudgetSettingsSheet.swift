@@ -274,16 +274,6 @@ struct BudgetSettingsSheet: View {
                 initialBudgetAnchorMonth: mode == .onboarding ? Self.monthAnchor(for: .now) : nil
             )
             hasCompletedSetup = true
-            let unlocks = try store.syncAchievements(
-                hasCompletedSetup: hasCompletedSetup,
-                incomeItems: incomeItems,
-                recurringExpenseItems: recurringExpenseItems,
-                expenses: [],
-                budgetPeriodAnchorDay: settings.first?.budgetPeriodAnchorDay ?? 1,
-                initialAvailableBudget: mode == .onboarding ? parsedInitialAvailableBudget : settings.first?.initialAvailableBudget,
-                initialBudgetAnchorMonth: mode == .onboarding ? Self.monthAnchor(for: .now) : settings.first?.initialBudgetAnchorMonth
-            )
-            AchievementNotificationDispatcher.postUnlocks(unlocks)
             dismiss()
         } catch {
             errorMessage = error.localizedDescription

@@ -1,21 +1,10 @@
 /*
- Main home screen.
+ Main dashboard for the current budget period.
 
- The dashboard answers the app's most important question:
- "How much money is still available in the current budget period?"
-
- It combines:
- - the calculated monthly baseline
- - carryover from the previous period
- - real recorded expenses for the current period
- - a quick category overview
- - recent expense activity
-
- This file is also responsible for showing first-run onboarding when setup has
- not yet been completed.
+ This screen is intentionally short and answers one question quickly:
+ where does the current month stand right now?
  */
 
-import Charts
 import Foundation
 import SwiftData
 import SwiftUI
@@ -54,10 +43,6 @@ struct DashboardView: View {
         !incomeItems.isEmpty
     }
 
-    private var recentExpenses: [Expense] {
-        Array(expenses.prefix(10))
-    }
-
     private func makeDashboardSnapshot(referenceDate: Date = .now) -> DashboardSnapshot {
         BudgetStore.dashboardSnapshot(
             incomeItems: incomeItems,
@@ -68,6 +53,17 @@ struct DashboardView: View {
             initialBudgetAnchorMonth: initialBudgetAnchorMonth,
             referenceDate: referenceDate
         )
+    }
+
+    private var currentMonthExpenses: [Expense] {
+        BudgetStore.currentMonthExpenses(
+            from: expenses,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay
+        )
+    }
+
+    private var recentExpenses: [Expense] {
+        Array(currentMonthExpenses.sorted { $0.date > $1.date }.prefix(8))
     }
 
     private var currencyCode: String {
@@ -88,14 +84,11 @@ struct DashboardView: View {
             List {
                 Section {
                     SummaryCardView(
-                        monthLabel: Date.now.formatted(.dateTime.month(.wide)),
-                        baselineMonthlyBudget: snapshot.monthlyBudget,
-                        carryoverAmount: snapshot.previousMonthCarryover,
+                        currentBudget: snapshot.monthlyBudget + snapshot.previousMonthCarryover,
+                        baselineBudget: snapshot.monthlyBudget,
+                        carryover: snapshot.previousMonthCarryover,
                         totalSpent: snapshot.totalSpent,
                         remainingBudget: snapshot.remainingBudget,
-                        dailySafeSpend: snapshot.dailySafeSpend,
-                        daysRemainingInCurrentPeriod: snapshot.daysRemainingInCurrentPeriod,
-                        safeSpendStreak: snapshot.safeSpendStreak,
                         currencyCode: currencyCode,
                         hasCompletedSetup: hasBaselineData
                     )
@@ -103,10 +96,11 @@ struct DashboardView: View {
                 }
 
                 Section {
-                    CategoryOverviewCardView(
-                        categorySpending: snapshot.categorySpending,
-                        topCategory: snapshot.topCategory,
-                        currencyCode: currencyCode
+                    RecurringLoadCardView(
+                        recurringTotal: recurringExpenseItems.reduce(0) { $0 + $1.amount },
+                        subscriptionLoad: BudgetStore.subscriptionLoad(for: recurringExpenseItems),
+                        currencyCode: currencyCode,
+                        hasCompletedSetup: hasBaselineData
                     )
                     .listRowInsets(Self.cardInsets)
                 }
@@ -114,8 +108,8 @@ struct DashboardView: View {
                 Section {
                     if recentExpenses.isEmpty {
                         Text(hasBaselineData
-                             ? "No expenses yet. Tap Add Expense to log your first purchase."
-                             : "Complete your budget setup first, then start logging daily expenses.")
+                             ? "No expenses logged in the current month yet."
+                             : "Complete your budget setup first, then start logging expenses.")
                             .foregroundStyle(.secondary)
                             .padding(.vertical, 10)
                     } else {
@@ -153,6 +147,7 @@ struct DashboardView: View {
             .padding(.bottom, 20)
             .accessibilityIdentifier("dashboard.addExpenseButton")
         }
+        .navigationTitle("Dashboard")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingAddExpense) {
             AddExpenseSheet(currencyCode: currencyCode) { title, category, amount, date, note in
@@ -163,16 +158,6 @@ struct DashboardView: View {
                     date: date,
                     note: note
                 )
-                let unlocks = try store.syncAchievements(
-                    hasCompletedSetup: hasCompletedSetup,
-                    incomeItems: incomeItems,
-                    recurringExpenseItems: recurringExpenseItems,
-                    expenses: expenses,
-                    budgetPeriodAnchorDay: budgetPeriodAnchorDay,
-                    initialAvailableBudget: initialAvailableBudget,
-                    initialBudgetAnchorMonth: initialBudgetAnchorMonth
-                )
-                AchievementNotificationDispatcher.postUnlocks(unlocks)
             }
         }
         .fullScreenCover(isPresented: setupCoverBinding) {
@@ -184,22 +169,6 @@ struct DashboardView: View {
             }
 
             showingAddExpense = true
-        }
-        .task {
-            do {
-                let unlocks = try store.syncAchievements(
-                    hasCompletedSetup: hasCompletedSetup,
-                    incomeItems: incomeItems,
-                    recurringExpenseItems: recurringExpenseItems,
-                    expenses: expenses,
-                    budgetPeriodAnchorDay: budgetPeriodAnchorDay,
-                    initialAvailableBudget: initialAvailableBudget,
-                    initialBudgetAnchorMonth: initialBudgetAnchorMonth
-                )
-                AchievementNotificationDispatcher.postUnlocks(unlocks)
-            } catch {
-                // Dashboard should stay usable even if achievement syncing fails.
-            }
         }
     }
 
@@ -236,11 +205,7 @@ private struct OnboardingIntroView: View {
                         .font(.body)
                         .foregroundStyle(.secondary)
 
-                    Text("You then track daily spending against that budget, while Statistics separates total spending, budget spending, and recurring spending.")
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-
-                    Text("Chess progression rewards money saved at the end of completed budget periods.")
+                    Text("You then log day-to-day expenses and can see the current month at a glance, with deeper monthly and trend views available when needed.")
                         .font(.body)
                         .foregroundStyle(.secondary)
                 }
@@ -264,115 +229,70 @@ private struct OnboardingIntroView: View {
 }
 
 private struct SummaryCardView: View {
-    let monthLabel: String
-    let baselineMonthlyBudget: Double
-    let carryoverAmount: Double
+    let currentBudget: Double
+    let baselineBudget: Double
+    let carryover: Double
     let totalSpent: Double
     let remainingBudget: Double
-    let dailySafeSpend: Double
-    let daysRemainingInCurrentPeriod: Int
-    let safeSpendStreak: Int
     let currencyCode: String
     let hasCompletedSetup: Bool
 
-    @State private var showingInfo = false
+    private var budgetProgressTotal: Double {
+        max(currentBudget, 0)
+    }
+
+    private var budgetProgressValue: Double {
+        min(max(totalSpent, 0), max(budgetProgressTotal, 0))
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             if hasCompletedSetup {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(alignment: .top) {
-                        Text("Budget Overview")
-                            .font(.headline.weight(.semibold))
+                Text("Current Month")
+                    .font(.headline.weight(.semibold))
 
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Remaining Budget")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
+                    Text(formatted(remainingBudget))
+                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                        .foregroundStyle(remainingBudget < 0 ? .red : .green)
+                        .accessibilityIdentifier("dashboard.remainingBudgetValue")
+                }
+
+                VStack(spacing: 10) {
+                    summaryRow(title: "Budget", value: formatted(currentBudget))
+                    summaryRow(title: "Spent", value: formatted(totalSpent))
+                    summaryRow(title: "Baseline", value: formatted(baselineBudget))
+                    summaryRow(title: "Carryover", value: formatted(carryover))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Budget vs Actual")
+                            .font(.subheadline.weight(.semibold))
                         Spacer()
-
-                        Button {
-                            showingInfo = true
-                        } label: {
-                            Image(systemName: "info.circle")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.secondary)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("dashboard.summaryInfoButton")
-                    }
-
-                    summaryRow(title: "Baseline Budget", value: formatted(baselineMonthlyBudget))
-                    summaryRow(title: "Carryover", value: formatted(carryoverAmount))
-                    summaryRow(title: "Spent in \(monthLabel)", value: formatted(totalSpent))
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Remaining")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-
-                        Text(formatted(remainingBudget))
-                            .font(.system(size: 34, weight: .bold, design: .rounded))
-                            .foregroundStyle(remainingBudget < 0 ? .red : .green)
-                            .accessibilityIdentifier("dashboard.remainingBudgetValue")
-                    }
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Daily Safe Spend")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-
-                        Text(formatted(dailySafeSpend))
-                            .font(.title3.weight(.semibold))
-                            .foregroundStyle(dailySafeSpend < 0 ? .red : .green)
-
-                        Text("\(daysRemainingInCurrentPeriod) day\(daysRemainingInCurrentPeriod == 1 ? "" : "s") left in this budget period")
-                            .font(.footnote)
+                        Text(progressText)
+                            .font(.caption.weight(.medium))
                             .foregroundStyle(.secondary)
                     }
+
+                    ProgressView(value: budgetProgressValue, total: max(budgetProgressTotal, 1))
+                        .tint(remainingBudget < 0 ? .red : .green)
                 }
             } else {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Set up your income and recurring monthly costs to calculate what is available to spend.")
                         .foregroundStyle(.secondary)
-                    Text("Once setup is complete, PocketBudget subtracts this month's expenses from that calculated budget.")
+                    Text("Once setup is complete, the dashboard shows your budget, spending, and remaining room for the current month.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
             }
         }
-        .overlay(alignment: .bottomTrailing) {
-            if safeSpendStreak > 0 {
-                streakIndicator
-                    .padding(.trailing, 4)
-                    .padding(.bottom, 4)
-            }
-        }
         .dashboardCardStyle()
-        .sheet(isPresented: $showingInfo) {
-            DashboardSummaryInfoSheet()
-        }
-    }
-
-    private var streakIndicator: some View {
-        ZStack(alignment: .bottomTrailing) {
-            Image(systemName: "flame.fill")
-                .font(.system(size: 26, weight: .bold))
-                .foregroundStyle(.blue.gradient)
-                .frame(width: 34, height: 34)
-                .accessibilityHidden(true)
-
-            Text("\(safeSpendStreak)")
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(.white)
-                .frame(minWidth: 18, minHeight: 18)
-                .padding(.horizontal, 4)
-                .background(Circle().fill(Color.blue))
-                .overlay(
-                    Circle()
-                        .stroke(Color(uiColor: .secondarySystemBackground), lineWidth: 2)
-                )
-                .offset(x: 5, y: 5)
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Safe spending streak")
-        .accessibilityValue("\(safeSpendStreak) days")
     }
 
     @ViewBuilder
@@ -386,45 +306,58 @@ private struct SummaryCardView: View {
         }
     }
 
+    private var progressText: String {
+        guard budgetProgressTotal > 0 else {
+            return "No budget available"
+        }
+
+        let share = budgetProgressValue / budgetProgressTotal
+        return share.formatted(.percent.precision(.fractionLength(0)))
+    }
+
     private func formatted(_ amount: Double) -> String {
         amount.formatted(.currency(code: currencyCode))
     }
 }
 
-private struct DashboardSummaryInfoSheet: View {
-    @Environment(\.dismiss) private var dismiss
+private struct RecurringLoadCardView: View {
+    let recurringTotal: Double
+    let subscriptionLoad: SubscriptionLoadSummary
+    let currencyCode: String
+    let hasCompletedSetup: Bool
 
     var body: some View {
-        NavigationStack {
-            VStack(alignment: .leading, spacing: 18) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Remaining")
-                        .font(.headline)
-                    Text("Amount left in the current budget period after your baseline budget, carryover, and recorded expenses are taken into account.")
-                        .foregroundStyle(.secondary)
-                }
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Recurring Load")
+                .font(.headline.weight(.semibold))
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Daily Safe Spend")
-                        .font(.headline)
-                    Text("A simple per-day guideline based on your remaining budget and the number of days left in the current budget period.")
-                        .foregroundStyle(.secondary)
+            if hasCompletedSetup {
+                HStack {
+                    overviewItem(title: "Recurring", value: recurringTotal.formatted(.currency(code: currencyCode)))
+                    Spacer()
+                    overviewItem(title: "Subscriptions", value: "\(subscriptionLoad.count)")
+                    Spacer()
+                    overviewItem(title: "Subscription Cost", value: subscriptionLoad.totalMonthlyCost.formatted(.currency(code: currencyCode)))
                 }
-
-                Spacer()
-            }
-            .padding(24)
-            .navigationTitle("Budget Info")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                }
+            } else {
+                Text("Recurring costs and subscriptions appear here once your budget is configured.")
+                    .foregroundStyle(.secondary)
             }
         }
-        .presentationDetents([.medium])
+        .dashboardCardStyle()
+    }
+
+    @ViewBuilder
+    private func overviewItem(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Text(value)
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(.primary)
+        }
     }
 }
 
@@ -474,66 +407,6 @@ private struct ExpenseRowView: View {
                 .foregroundStyle(.tertiary)
         }
         .padding(.vertical, 4)
-    }
-}
-
-private struct CategoryOverviewCardView: View {
-    let categorySpending: [CategorySpendingSummary]
-    let topCategory: CategorySpendingSummary?
-    let currencyCode: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            if categorySpending.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("No category data yet for this month.")
-                        .foregroundStyle(.secondary)
-
-                    Text("Add a few expenses to see where your money is going.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-            } else {
-                Chart(categorySpending) { summary in
-                    SectorMark(
-                        angle: .value("Amount", summary.total),
-                        innerRadius: .ratio(0.58),
-                        angularInset: 2
-                    )
-                    .foregroundStyle(summary.category.color)
-                }
-                .chartLegend(.hidden)
-                .frame(height: 180)
-
-                if let topCategory {
-                    Text(
-                        "Top category: \(topCategory.category.title) (\(topCategory.total.formatted(.currency(code: currencyCode))))"
-                    )
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.secondary)
-                }
-
-                VStack(spacing: 10) {
-                    ForEach(categorySpending) { summary in
-                        HStack(spacing: 10) {
-                            Circle()
-                                .fill(summary.category.color)
-                                .frame(width: 10, height: 10)
-
-                            Text(summary.category.title)
-                                .foregroundStyle(.primary)
-
-                            Spacer()
-
-                            Text(summary.total.formatted(.currency(code: currencyCode)))
-                                .fontWeight(.medium)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-            }
-        }
-        .dashboardCardStyle()
     }
 }
 

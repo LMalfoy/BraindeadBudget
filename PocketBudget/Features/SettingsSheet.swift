@@ -155,16 +155,6 @@ struct SettingsSheet: View {
                 }
                 .accessibilityIdentifier("settings.authorSection")
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Chess Icons")
-                        .foregroundStyle(.secondary)
-
-                    Text("Cburnett chess set via Wikimedia Commons / Wikipedia")
-                    Text("Transparent light and dark piece variants used in-app")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-                .accessibilityIdentifier("settings.chessIconsSection")
             } header: {
                 HStack {
                     Text("About")
@@ -191,13 +181,13 @@ struct SettingsSheet: View {
             NavigationStack {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        Text("BudgetRook is a simple personal budgeting app built around one core question: how much money is still available to spend in the current budget period?")
+                        Text("BudgetRook is a simple personal budgeting app built around one core question: how much money is left in the current month?")
                             .foregroundStyle(.secondary)
 
-                        Text("It separates total spending, budget spending, and recurring spending so your monthly overview stays clear without becoming accounting software.")
+                        Text("Dashboard shows the current month instantly, Month explains how the current month is distributed, and Trends shows how recent months are changing.")
                             .foregroundStyle(.secondary)
 
-                        Text("The app is designed for fast daily capture, clear monthly awareness, and lightweight long-term progression.")
+                        Text("The app is designed to stay lightweight, clear, and focused on monthly financial awareness.")
                             .foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
