@@ -581,6 +581,104 @@ final class BudgetCalculationTests: XCTestCase {
         }
     }
 
+    func testSpendingHistoryBuildsTrailingSixMonthSeriesForEachTrendKind() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 6, day: 20, calendar: calendar)
+        let expenses = [
+            Expense(title: "Jan Groceries", category: .food, amount: 10, date: makeDate(year: 2026, month: 1, day: 5, calendar: calendar)),
+            Expense(title: "Mar Train", category: .transport, amount: 25, date: makeDate(year: 2026, month: 3, day: 14, calendar: calendar)),
+            Expense(title: "Jun Cinema", category: .fun, amount: 40, date: makeDate(year: 2026, month: 6, day: 3, calendar: calendar))
+        ]
+        let recurringExpenseItems = [
+            RecurringExpenseItem(name: "Spotify", amount: 15, category: .subscriptions),
+            RecurringExpenseItem(name: "Insurance", amount: 35, category: .insurance)
+        ]
+
+        let variableHistory = BudgetStore.spendingHistory(
+            for: expenses,
+            recurringExpenseItems: recurringExpenseItems,
+            kind: .variable,
+            months: 6,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+        let recurringHistory = BudgetStore.spendingHistory(
+            for: expenses,
+            recurringExpenseItems: recurringExpenseItems,
+            kind: .recurring,
+            months: 6,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+        let totalHistory = BudgetStore.spendingHistory(
+            for: expenses,
+            recurringExpenseItems: recurringExpenseItems,
+            kind: .total,
+            months: 6,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertEqual(variableHistory.count, 6)
+
+        let expectedVariableTotals = [10.0, 0, 25, 0, 0, 40]
+        let expectedRecurringTotals = Array(repeating: 50.0, count: 6)
+        let expectedTotalTotals = [60.0, 50, 75, 50, 50, 90]
+
+        for (actual, expected) in zip(variableHistory.map(\.total), expectedVariableTotals) {
+            XCTAssertEqual(actual, expected, accuracy: 0.001)
+        }
+        for (actual, expected) in zip(recurringHistory.map(\.total), expectedRecurringTotals) {
+            XCTAssertEqual(actual, expected, accuracy: 0.001)
+        }
+        for (actual, expected) in zip(totalHistory.map(\.total), expectedTotalTotals) {
+            XCTAssertEqual(actual, expected, accuracy: 0.001)
+        }
+    }
+
+    func testTotalCategoryTrendHistoryCombinesVariableAndRecurringCategoriesAcrossWindow() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 6, day: 20, calendar: calendar)
+        let expenses = [
+            Expense(title: "Groceries", category: .food, amount: 12, date: makeDate(year: 2026, month: 6, day: 4, calendar: calendar))
+        ]
+        let recurringExpenseItems = [
+            RecurringExpenseItem(name: "Spotify", amount: 9, category: .subscriptions),
+            RecurringExpenseItem(name: "Insurance", amount: 30, category: .insurance)
+        ]
+
+        let history = BudgetStore.totalCategoryTrendHistory(
+            expenses: expenses,
+            recurringExpenseItems: recurringExpenseItems,
+            months: 2,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertEqual(history.count, 12)
+
+        let juneStart = calendar.date(from: DateComponents(year: 2026, month: 6, day: 1))!
+        XCTAssertTrue(history.contains(where: {
+            calendar.isDate($0.month, equalTo: juneStart, toGranularity: .month) &&
+            $0.categoryKey == ExpenseCategory.food.rawValue &&
+            abs($0.total - 12) < 0.001
+        }))
+        XCTAssertTrue(history.contains(where: {
+            calendar.isDate($0.month, equalTo: juneStart, toGranularity: .month) &&
+            $0.categoryKey == RecurringExpenseCategory.subscriptions.rawValue &&
+            abs($0.total - 9) < 0.001
+        }))
+        XCTAssertTrue(history.contains(where: {
+            calendar.isDate($0.month, equalTo: juneStart, toGranularity: .month) &&
+            $0.categoryKey == RecurringExpenseCategory.insurance.rawValue &&
+            abs($0.total - 30) < 0.001
+        }))
+    }
+
     func testBudgetProgressionStartsAtPawnIWithoutCompletedTrackedPeriods() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -712,6 +810,44 @@ final class BudgetCalculationTests: XCTestCase {
         for (actual, expected) in zip(history.map(\.total), expectedTotals) {
             XCTAssertEqual(actual, expected, accuracy: 0.001)
         }
+    }
+
+    func testSpendingHistoryBuildsRecurringAndTotalSixMonthSeries() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 6, day: 20, calendar: calendar)
+        let expenses = [
+            Expense(title: "May", category: .food, amount: 30, date: makeDate(year: 2026, month: 5, day: 2, calendar: calendar)),
+            Expense(title: "Jun", category: .food, amount: 50, date: makeDate(year: 2026, month: 6, day: 2, calendar: calendar))
+        ]
+        let recurringExpenseItems = [
+            RecurringExpenseItem(name: "Netflix", amount: 20, category: .subscriptions),
+            RecurringExpenseItem(name: "Insurance", amount: 80, category: .insurance)
+        ]
+
+        let recurringHistory = BudgetStore.spendingHistory(
+            for: expenses,
+            recurringExpenseItems: recurringExpenseItems,
+            kind: .recurring,
+            months: 6,
+            budgetPeriodAnchorDay: 1,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+        let totalHistory = BudgetStore.spendingHistory(
+            for: expenses,
+            recurringExpenseItems: recurringExpenseItems,
+            kind: .total,
+            months: 6,
+            budgetPeriodAnchorDay: 1,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertEqual(recurringHistory.count, 6)
+        XCTAssertTrue(recurringHistory.allSatisfy { abs($0.total - 100) < 0.001 })
+        XCTAssertEqual(totalHistory.map(\.total), [100, 100, 100, 100, 130, 150])
     }
 
     func testCategoryTrendHistoryBuildsTrailingSixMonthSeriesPerCategory() {

@@ -181,6 +181,37 @@ final class BudgetStoreTests: XCTestCase {
         XCTAssertEqual(updatedExpense.note, "Edited")
     }
 
+    func testAddAndUpdateExpenseAllowNegativeAmountsForIncomeEntries() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let store = BudgetStore(context: context)
+
+        try store.addExpense(
+            title: "Refund",
+            category: .fun,
+            amount: -12.5,
+            date: .now,
+            note: "Income entry"
+        )
+
+        let expense = try XCTUnwrap(context.fetch(FetchDescriptor<Expense>()).first)
+        XCTAssertEqual(expense.amount, -12.5)
+
+        try store.updateExpense(
+            expense,
+            title: "Salary Adjustment",
+            category: .household,
+            amount: -25,
+            date: .now,
+            note: "Updated income entry"
+        )
+
+        let updatedExpense = try XCTUnwrap(context.fetch(FetchDescriptor<Expense>()).first)
+        XCTAssertEqual(updatedExpense.amount, -25)
+        XCTAssertEqual(updatedExpense.title, "Salary Adjustment")
+        XCTAssertEqual(updatedExpense.category, .household)
+    }
+
     func testSyncAchievementsDoesNotCreateDuplicateUnlocks() throws {
         let container = try makeContainer()
         let context = ModelContext(container)

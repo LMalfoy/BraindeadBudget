@@ -12,6 +12,22 @@ struct AddExpenseSheet: View {
         case note
     }
 
+    private enum EntryKind: String, CaseIterable, Identifiable {
+        case expense
+        case income
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .expense:
+                return "Expense"
+            case .income:
+                return "Income"
+            }
+        }
+    }
+
     @Environment(\.dismiss) private var dismiss
     @FocusState private var focusedField: Field?
 
@@ -23,6 +39,7 @@ struct AddExpenseSheet: View {
     @State private var amountText = ""
     @State private var date = Date.now
     @State private var note = ""
+    @State private var entryKind: EntryKind = .expense
     @State private var errorMessage: String?
     @State private var hasRequestedInitialFocus = false
     private var parsedAmount: Double? {
@@ -98,6 +115,14 @@ struct AddExpenseSheet: View {
                             .lineLimit(2...4)
                             .focused($focusedField, equals: .note)
                             .accessibilityIdentifier("addExpense.noteField")
+
+                        Picker("Entry Type", selection: $entryKind) {
+                            ForEach(EntryKind.allCases) { kind in
+                                Text(kind.title).tag(kind)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .accessibilityIdentifier("addExpense.entryTypePicker")
                     } header: {
                         Text("Details")
                     }
@@ -199,7 +224,7 @@ struct AddExpenseSheet: View {
             try onSave(
                 title.trimmingCharacters(in: .whitespacesAndNewlines),
                 selectedCategory,
-                amount,
+                signedAmount(from: amount),
                 date,
                 note.trimmingCharacters(in: .whitespacesAndNewlines)
             )
@@ -217,6 +242,10 @@ struct AddExpenseSheet: View {
         }
 
         return Double(trimmed.replacingOccurrences(of: ",", with: "."))
+    }
+
+    private func signedAmount(from amount: Double) -> Double {
+        entryKind == .income ? -abs(amount) : abs(amount)
     }
 
     private func requestInitialFocusIfNeeded() {

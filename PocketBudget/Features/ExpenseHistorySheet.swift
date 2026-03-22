@@ -349,76 +349,75 @@ struct ExpenseHistorySheet: View {
     }
 
     private var monthCategoryCard: some View {
-        TabView {
-            MonthCategoryChartPage(
-                title: "Variable Spending by Category",
-                slices: variableCategorySlices,
-                currencyCode: currencyCode,
-                emptyStateText: "No variable spending recorded for this month."
-            )
+        ChartPanelCard {
+            SwipeableChartCard(height: 470, showsInteractiveBackground: true) {
+                MonthCategoryChartPage(
+                    title: "Variable Spending by Category",
+                    slices: variableCategorySlices,
+                    currencyCode: currencyCode,
+                    emptyStateText: "No variable spending recorded for this month."
+                )
 
-            MonthCategoryChartPage(
-                title: "Recurring Spending by Category",
-                slices: recurringCategorySlices,
-                currencyCode: currencyCode,
-                emptyStateText: "No recurring costs configured."
-            )
+                MonthCategoryChartPage(
+                    title: "Recurring Spending by Category",
+                    slices: recurringCategorySlices,
+                    currencyCode: currencyCode,
+                    emptyStateText: "No recurring costs configured."
+                )
 
-            MonthCategoryChartPage(
-                title: "Total Spending by Category",
-                slices: totalCategorySlices,
-                currencyCode: currencyCode,
-                emptyStateText: "No spending data available for this month."
-            )
+                MonthCategoryChartPage(
+                    title: "Total Spending by Category",
+                    slices: totalCategorySlices,
+                    currencyCode: currencyCode,
+                    emptyStateText: "No spending data available for this month."
+                )
+            }
         }
-        .frame(height: 470)
-        .tabViewStyle(.page(indexDisplayMode: .automatic))
-        .indexViewStyle(.page(backgroundDisplayMode: .interactive))
     }
 
     private var budgetTrajectoryCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Budget Trajectory")
-                .font(.headline)
+        ChartPanelCard {
+            VStack(alignment: .leading, spacing: ChartPanelMetrics.contentSpacing) {
+                ChartPanelHeader(title: "Budget Trajectory")
 
-            Chart {
-                ForEach(selectedMonthTrajectory) { point in
-                    AreaMark(
-                        x: .value("Date", point.date),
-                        yStart: .value("Budget", 0),
-                        yEnd: .value("Budget", point.remainingBudget)
-                    )
-                    .foregroundStyle(point.remainingBudget >= 0 ? Color.green.opacity(0.18) : Color.red.opacity(0.2))
+                Chart {
+                    ForEach(selectedMonthTrajectory) { point in
+                        AreaMark(
+                            x: .value("Date", point.date),
+                            yStart: .value("Budget", 0),
+                            yEnd: .value("Budget", point.remainingBudget)
+                        )
+                        .foregroundStyle(point.remainingBudget >= 0 ? Color.green.opacity(0.18) : Color.red.opacity(0.2))
 
-                    LineMark(
-                        x: .value("Date", point.date),
-                        y: .value("Budget", point.remainingBudget)
-                    )
-                    .foregroundStyle(point.remainingBudget >= 0 ? Color.green : Color.red)
-                    .lineStyle(.init(lineWidth: 2.5))
+                        LineMark(
+                            x: .value("Date", point.date),
+                            y: .value("Budget", point.remainingBudget)
+                        )
+                        .foregroundStyle(point.remainingBudget >= 0 ? Color.green : Color.red)
+                        .lineStyle(.init(lineWidth: 2.5))
+                    }
                 }
-            }
-            .chartXAxis {
-                AxisMarks(values: trajectoryAxisDates) { value in
-                    AxisGridLine()
-                    AxisValueLabel(format: .dateTime.day().month(.abbreviated))
+                .chartXAxis {
+                    AxisMarks(values: trajectoryAxisDates) { value in
+                        AxisGridLine()
+                        AxisValueLabel(format: .dateTime.day().month(.abbreviated))
+                    }
                 }
-            }
-            .chartYAxis {
-                AxisMarks(position: .leading) { value in
-                    AxisGridLine(stroke: StrokeStyle(lineWidth: value.as(Double.self) == 0 ? 1.5 : 0.75, dash: value.as(Double.self) == 0 ? [5, 4] : []))
-                        .foregroundStyle(value.as(Double.self) == 0 ? Color.secondary : Color.secondary.opacity(0.35))
-                    AxisValueLabel {
-                        if let amount = value.as(Double.self) {
-                            Text(amount.formatted(.currency(code: currencyCode)))
+                .chartYAxis {
+                    AxisMarks(position: .leading) { value in
+                        AxisGridLine(stroke: StrokeStyle(lineWidth: value.as(Double.self) == 0 ? 1.5 : 0.75, dash: value.as(Double.self) == 0 ? [5, 4] : []))
+                            .foregroundStyle(value.as(Double.self) == 0 ? Color.secondary : Color.secondary.opacity(0.35))
+                        AxisValueLabel {
+                            if let amount = value.as(Double.self) {
+                                Text(amount.formatted(.currency(code: currencyCode)))
+                            }
                         }
                     }
                 }
+                .frame(height: 220)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 10)
             }
-            .frame(height: 220)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 10)
-            .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
         .padding(.vertical, 4)
     }
@@ -639,70 +638,27 @@ private struct MonthRecurringBreakdownSection: Identifiable, Equatable {
 }
 
 private struct MonthCategoryChartPage: View {
-    private static let legendHeight: CGFloat = 214
-
     let title: String
     let slices: [MonthCategorySlice]
     let currencyCode: String
     let emptyStateText: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text(title)
-                .font(.headline)
-                .frame(height: 24, alignment: .topLeading)
-
-            ZStack {
-                Chart(slices) { slice in
-                    SectorMark(
-                        angle: .value("Amount", slice.total),
-                        innerRadius: .ratio(0.58),
-                        angularInset: 2
-                    )
-                    .foregroundStyle(slice.color)
-                }
-                .chartLegend(.hidden)
-                .frame(height: 190)
-                .opacity(slices.isEmpty ? 0 : 1)
-
-                if slices.isEmpty {
-                    Text(emptyStateText)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-                }
-            }
-            .frame(height: 190)
-
-            legendArea
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding(16)
-        .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .padding(.horizontal, 2)
-        .padding(.vertical, 6)
-    }
-
-    private var legendArea: some View {
-        VStack(spacing: 10) {
-            ForEach(slices) { slice in
-                HStack(spacing: 10) {
-                    Circle()
-                        .fill(slice.color)
-                        .frame(width: 10, height: 10)
-
-                    Text(slice.title)
-                        .foregroundStyle(.primary)
-
-                    Spacer()
-
-                    Text(slice.total.formatted(.currency(code: currencyCode)))
-                        .fontWeight(.medium)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, minHeight: Self.legendHeight, maxHeight: Self.legendHeight, alignment: .top)
+        DonutChartPanel(
+            title: title,
+            slices: slices.map {
+                DonutChartDatum(
+                    id: $0.id,
+                    title: $0.title,
+                    total: $0.total,
+                    color: $0.color,
+                    valueLabel: $0.total.formatted(.currency(code: currencyCode))
+                )
+            },
+            emptyStateText: emptyStateText,
+            chartHeight: 190,
+            legendHeight: ChartPanelMetrics.legendHeight
+        )
     }
 }
 
@@ -835,6 +791,22 @@ private struct ExpenseEditorSheet: View {
         case note
     }
 
+    private enum EntryKind: String, CaseIterable, Identifiable {
+        case expense
+        case income
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .expense:
+                return "Expense"
+            case .income:
+                return "Income"
+            }
+        }
+    }
+
     @Environment(\.dismiss) private var dismiss
     @FocusState private var focusedField: Field?
 
@@ -847,6 +819,7 @@ private struct ExpenseEditorSheet: View {
     @State private var amountText: String
     @State private var date: Date
     @State private var note: String
+    @State private var entryKind: EntryKind
     @State private var errorMessage: String?
 
     init(
@@ -859,9 +832,10 @@ private struct ExpenseEditorSheet: View {
         self.onSave = onSave
         _selectedCategory = State(initialValue: expense.category)
         _title = State(initialValue: expense.title)
-        _amountText = State(initialValue: Self.formatAmount(expense.amount))
+        _amountText = State(initialValue: Self.formatAmount(abs(expense.amount)))
         _date = State(initialValue: expense.date)
         _note = State(initialValue: expense.note)
+        _entryKind = State(initialValue: expense.amount < 0 ? .income : .expense)
     }
 
     private var parsedAmount: Double? {
@@ -927,6 +901,14 @@ private struct ExpenseEditorSheet: View {
                         .lineLimit(2...4)
                         .focused($focusedField, equals: .note)
                         .accessibilityIdentifier("editExpense.noteField")
+
+                    Picker("Entry Type", selection: $entryKind) {
+                        ForEach(EntryKind.allCases) { kind in
+                            Text(kind.title).tag(kind)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .accessibilityIdentifier("editExpense.entryTypePicker")
                 } header: {
                     Text("Details")
                 }
@@ -1007,7 +989,7 @@ private struct ExpenseEditorSheet: View {
                 expense,
                 title.trimmingCharacters(in: .whitespacesAndNewlines),
                 selectedCategory,
-                amount,
+                signedAmount(from: amount),
                 date,
                 note.trimmingCharacters(in: .whitespacesAndNewlines)
             )
@@ -1032,6 +1014,10 @@ private struct ExpenseEditorSheet: View {
         }
 
         return amount.formatted(.number.precision(.fractionLength(2)))
+    }
+
+    private func signedAmount(from amount: Double) -> Double {
+        entryKind == .income ? -abs(amount) : abs(amount)
     }
 }
 

@@ -7,6 +7,226 @@ import Foundation
 import SwiftData
 import SwiftUI
 
+enum ChartPanelMetrics {
+    static let cardPadding: CGFloat = 18
+    static let cardCornerRadius: CGFloat = 18
+    static let titleFont: Font = .headline
+    static let subtitleFont: Font = .subheadline
+    static let headerSpacing: CGFloat = 4
+    static let contentSpacing: CGFloat = 12
+    static let pieChartHeight: CGFloat = 210
+    static let lineChartHeight: CGFloat = 260
+    static let legendHeight: CGFloat = 214
+}
+
+struct ChartLegendEntry: Identifiable {
+    let id: String
+    let title: String
+    let value: String?
+    let color: Color
+}
+
+struct DonutChartDatum: Identifiable {
+    let id: String
+    let title: String
+    let total: Double
+    let color: Color
+    let valueLabel: String
+}
+
+struct ChartPanelCard<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            content
+        }
+        .padding(ChartPanelMetrics.cardPadding)
+        .background(Color(uiColor: .secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: ChartPanelMetrics.cardCornerRadius, style: .continuous))
+    }
+}
+
+struct ChartPanelHeader: View {
+    let title: String
+    let subtitle: String?
+
+    init(title: String, subtitle: String? = nil) {
+        self.title = title
+        self.subtitle = subtitle
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: ChartPanelMetrics.headerSpacing) {
+            Text(title)
+                .font(ChartPanelMetrics.titleFont)
+                .fontWeight(.semibold)
+                .foregroundStyle(.primary)
+
+            if let subtitle, !subtitle.isEmpty {
+                Text(subtitle)
+                    .font(ChartPanelMetrics.subtitleFont)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+}
+
+struct SwipeableChartCard<Content: View>: View {
+    let height: CGFloat
+    let showsInteractiveBackground: Bool
+    let selection: Binding<Int>?
+    @ViewBuilder let content: Content
+
+    init(
+        height: CGFloat,
+        showsInteractiveBackground: Bool = false,
+        selection: Binding<Int>? = nil,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.height = height
+        self.showsInteractiveBackground = showsInteractiveBackground
+        self.selection = selection
+        self.content = content()
+    }
+
+    var body: some View {
+        Group {
+            if let selection {
+                TabView(selection: selection) {
+                    content
+                }
+            } else {
+                TabView {
+                    content
+                }
+            }
+        }
+        .frame(height: height)
+        .tabViewStyle(.page(indexDisplayMode: .automatic))
+        .modifier(PageIndexBackgroundModifier(isEnabled: showsInteractiveBackground))
+    }
+}
+
+struct DonutChartPanel: View {
+    let title: String
+    let subtitle: String?
+    let slices: [DonutChartDatum]
+    let emptyStateText: String
+    let chartHeight: CGFloat
+    let legendHeight: CGFloat
+
+    init(
+        title: String,
+        subtitle: String? = nil,
+        slices: [DonutChartDatum],
+        emptyStateText: String,
+        chartHeight: CGFloat = ChartPanelMetrics.pieChartHeight,
+        legendHeight: CGFloat = ChartPanelMetrics.legendHeight
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self.slices = slices
+        self.emptyStateText = emptyStateText
+        self.chartHeight = chartHeight
+        self.legendHeight = legendHeight
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: ChartPanelMetrics.contentSpacing) {
+            ChartPanelHeader(title: title, subtitle: subtitle)
+
+            ZStack {
+                Chart(slices) { slice in
+                    SectorMark(
+                        angle: .value("Amount", slice.total),
+                        innerRadius: .ratio(0.58),
+                        angularInset: 2
+                    )
+                    .foregroundStyle(slice.color)
+                }
+                .chartLegend(.hidden)
+                .frame(height: chartHeight)
+                .opacity(slices.isEmpty ? 0 : 1)
+
+                if slices.isEmpty {
+                    ChartEmptyState(text: emptyStateText, height: chartHeight)
+                }
+            }
+            .frame(height: chartHeight)
+
+            ChartLegendList(entries: legendEntries, minHeight: legendHeight)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private var legendEntries: [ChartLegendEntry] {
+        slices.map {
+            ChartLegendEntry(
+                id: $0.id,
+                title: $0.title,
+                value: $0.valueLabel,
+                color: $0.color
+            )
+        }
+    }
+}
+
+struct ChartLegendList: View {
+    let entries: [ChartLegendEntry]
+    let minHeight: CGFloat
+
+    var body: some View {
+        VStack(spacing: 10) {
+            ForEach(entries) { entry in
+                HStack(spacing: 10) {
+                    Circle()
+                        .fill(entry.color)
+                        .frame(width: 10, height: 10)
+
+                    Text(entry.title)
+                        .foregroundStyle(.primary)
+
+                    Spacer()
+
+                    if let value = entry.value {
+                        Text(value)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, minHeight: minHeight, maxHeight: minHeight, alignment: .top)
+    }
+}
+
+struct ChartEmptyState: View {
+    let text: String
+    let height: CGFloat
+
+    var body: some View {
+        Text(text)
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity, minHeight: height, maxHeight: height, alignment: .center)
+    }
+}
+
+private struct PageIndexBackgroundModifier: ViewModifier {
+    let isEnabled: Bool
+
+    func body(content: Content) -> some View {
+        if isEnabled {
+            content.indexViewStyle(.page(backgroundDisplayMode: .interactive))
+        } else {
+            content
+        }
+    }
+}
+
 struct DashboardView: View {
     @Environment(\.modelContext) private var modelContext
     @AppStorage("hasCompletedBaselineSetup") private var hasCompletedSetup = false
@@ -276,7 +496,7 @@ private struct SummaryCardView: View {
                 }
             }
         }
-        .dashboardCardStyle()
+        .modifier(AppCardStyle())
     }
 
     @ViewBuilder
@@ -301,70 +521,40 @@ private struct DashboardInsightCardView: View {
     let currencyCode: String
 
     var body: some View {
-        TabView {
+        ChartPanelCard {
+            SwipeableChartCard(height: 400) {
                 categoryInsight
-
                 trajectoryInsight
             }
-            .frame(height: 400)
-            .tabViewStyle(.page(indexDisplayMode: .automatic))
-            .dashboardCardStyle()
+        }
     }
 
     private var categoryInsight: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Spending by Category")
-                .font(.headline.weight(.semibold))
-
-            if categorySpending.isEmpty {
-                Text("Add a few expenses to see where this month is going.")
-                    .foregroundStyle(.secondary)
-            } else {
-                Chart(categorySpending) { summary in
-                    SectorMark(
-                        angle: .value("Amount", summary.total),
-                        innerRadius: .ratio(0.58),
-                        angularInset: 2
-                    )
-                    .foregroundStyle(summary.category.color)
-                }
-                .chartLegend(.hidden)
-                .frame(height: 210)
-
-                VStack(spacing: 10) {
-                    ForEach(categorySpending) { summary in
-                        HStack(spacing: 10) {
-                            Circle()
-                                .fill(summary.category.color)
-                                .frame(width: 10, height: 10)
-
-                            Text(summary.category.title)
-                                .foregroundStyle(.primary)
-
-                            Spacer()
-
-                            Text(summary.total.formatted(.currency(code: currencyCode)))
-                                .fontWeight(.medium)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding(.bottom, 6)
+        DonutChartPanel(
+            title: "Spending by Category",
+            slices: categorySpending.map {
+                DonutChartDatum(
+                    id: $0.category.rawValue,
+                    title: $0.category.title,
+                    total: $0.total,
+                    color: $0.category.color,
+                    valueLabel: $0.total.formatted(.currency(code: currencyCode))
+                )
+            },
+            emptyStateText: "Add a few expenses to see where this month is going."
+        )
         .accessibilityIdentifier("dashboard.categoryInsight")
     }
 
     private var trajectoryInsight: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("Budget Trajectory")
-                .font(.headline.weight(.semibold))
+        VStack(alignment: .leading, spacing: ChartPanelMetrics.contentSpacing) {
+            ChartPanelHeader(title: "Budget Trajectory")
 
             if trajectory.isEmpty {
-                Text("Add a few expenses to see how spending has moved through the month.")
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 12)
+                ChartEmptyState(
+                    text: "Add a few expenses to see how spending has moved through the month.",
+                    height: 320
+                )
             } else {
                 Spacer(minLength: 0)
 
@@ -557,10 +747,11 @@ private extension ExpenseCategory {
     }
 }
 
-private extension View {
-    func dashboardCardStyle() -> some View {
-        padding(18)
+private struct AppCardStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .padding(ChartPanelMetrics.cardPadding)
             .background(Color(uiColor: .secondarySystemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: ChartPanelMetrics.cardCornerRadius, style: .continuous))
     }
 }

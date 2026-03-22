@@ -145,37 +145,37 @@ struct StatsView: View {
     }
 
     private var carryoverCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Remaining Budget / Carryover")
-                .font(.headline)
-                .frame(maxWidth: .infinity, minHeight: 48, maxHeight: 48, alignment: .topLeading)
+        ChartPanelCard {
+            VStack(alignment: .leading, spacing: ChartPanelMetrics.contentSpacing) {
+                ChartPanelHeader(title: "Remaining Budget / Carryover")
 
-            if carryoverHistory.allSatisfy({ $0.amount == 0 }) {
-                Text("Carryover appears here once previous months start ending above or below budget.")
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, minHeight: 260, maxHeight: 260, alignment: .center)
-            } else {
-                Chart(carryoverHistory) { point in
-                    LineMark(
-                        x: .value("Month", point.month, unit: .month),
-                        y: .value("Carryover", point.amount)
+                if carryoverHistory.allSatisfy({ $0.amount == 0 }) {
+                    ChartEmptyState(
+                        text: "Carryover appears here once previous months start ending above or below budget.",
+                        height: ChartPanelMetrics.lineChartHeight
                     )
-                    .foregroundStyle(.green)
+                } else {
+                    Chart(carryoverHistory) { point in
+                        LineMark(
+                            x: .value("Month", point.month, unit: .month),
+                            y: .value("Carryover", point.amount)
+                        )
+                        .foregroundStyle(.green)
 
-                    AreaMark(
-                        x: .value("Month", point.month, unit: .month),
-                        y: .value("Carryover", point.amount)
-                    )
-                    .foregroundStyle(.green.opacity(0.12))
+                        AreaMark(
+                            x: .value("Month", point.month, unit: .month),
+                            y: .value("Carryover", point.amount)
+                        )
+                        .foregroundStyle(.green.opacity(0.12))
+                    }
+                    .frame(height: ChartPanelMetrics.lineChartHeight)
+
+                    Text("Positive values mean budget room carried into the next month.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
-                .frame(height: 260)
-
-                Text("Positive values mean budget room carried into the next month.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
             }
         }
-        .trendsCardStyle()
     }
 }
 
@@ -199,59 +199,49 @@ private struct MonthlySpendingSwipeCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Monthly Trends")
-                .font(.headline)
-                .frame(maxWidth: .infinity, minHeight: 34, maxHeight: 34, alignment: .topLeading)
+        ChartPanelCard {
+            VStack(alignment: .leading, spacing: ChartPanelMetrics.contentSpacing) {
+                ChartPanelHeader(title: "Monthly Trends", subtitle: selectedTitle)
 
-            Text(selectedTitle)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .topLeading)
+                SwipeableChartCard(height: 310, selection: $selectedPage) {
+                    MonthlySpendingTrendPage(
+                        history: variableHistory,
+                        currencyCode: currencyCode,
+                        tint: .blue
+                    )
+                    .tag(0)
 
-            TabView(selection: $selectedPage) {
-                MonthlySpendingTrendPage(
-                    history: variableHistory,
-                    currencyCode: currencyCode,
-                    tint: .blue
-                )
-                .tag(0)
+                    MonthlySpendingTrendPage(
+                        history: recurringHistory,
+                        currencyCode: currencyCode,
+                        tint: .teal
+                    )
+                    .tag(1)
 
-                MonthlySpendingTrendPage(
-                    history: recurringHistory,
-                    currencyCode: currencyCode,
-                    tint: .teal
-                )
-                .tag(1)
-
-                MonthlySpendingTrendPage(
-                    history: totalHistory,
-                    currencyCode: currencyCode,
-                    tint: .purple
-                )
-                .tag(2)
+                    MonthlySpendingTrendPage(
+                        history: totalHistory,
+                        currencyCode: currencyCode,
+                        tint: .purple
+                    )
+                    .tag(2)
+                }
             }
-            .tabViewStyle(.page(indexDisplayMode: .automatic))
-            .padding(.bottom, 10)
         }
-        .frame(height: 400)
-        .trendsCardStyle()
     }
 }
 
 private struct MonthlySpendingTrendPage: View {
-    private static let chartHeight: CGFloat = 240
-
     let history: [MonthlySpendingPoint]
     let currencyCode: String
     let tint: Color
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 0) {
             if history.allSatisfy({ $0.total == 0 }) {
-                Text("No spending history available in the last six months.")
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, minHeight: Self.chartHeight, maxHeight: Self.chartHeight, alignment: .center)
+                ChartEmptyState(
+                    text: "No spending history available in the last six months.",
+                    height: ChartPanelMetrics.lineChartHeight
+                )
             } else {
                 Chart {
                     ForEach(history) { point in
@@ -273,10 +263,8 @@ private struct MonthlySpendingTrendPage: View {
                         }
                     }
                 }
-                .frame(height: Self.chartHeight)
+                .frame(height: ChartPanelMetrics.lineChartHeight)
             }
-
-            Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
@@ -317,47 +305,35 @@ private struct CategoryTrendSwipeCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Category Trends")
-                .font(.headline)
-                .frame(maxWidth: .infinity, minHeight: 34, maxHeight: 34, alignment: .topLeading)
+        ChartPanelCard {
+            VStack(alignment: .leading, spacing: ChartPanelMetrics.contentSpacing) {
+                ChartPanelHeader(title: "Category Trends", subtitle: selectedTitle)
 
-            Text(selectedTitle)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .topLeading)
+                SwipeableChartCard(height: 410, selection: $selectedPage) {
+                    CategoryTrendPage(
+                        history: variableHistory,
+                        currencyCode: currencyCode
+                    )
+                    .tag(0)
 
-            TabView(selection: $selectedPage) {
-                CategoryTrendPage(
-                    history: variableHistory,
-                    currencyCode: currencyCode
-                )
-                .tag(0)
+                    CategoryTrendPage(
+                        history: recurringHistory,
+                        currencyCode: currencyCode
+                    )
+                    .tag(1)
 
-                CategoryTrendPage(
-                    history: recurringHistory,
-                    currencyCode: currencyCode
-                )
-                .tag(1)
-
-                CategoryTrendPage(
-                    history: totalHistory,
-                    currencyCode: currencyCode
-                )
-                .tag(2)
+                    CategoryTrendPage(
+                        history: totalHistory,
+                        currencyCode: currencyCode
+                    )
+                    .tag(2)
+                }
             }
-            .tabViewStyle(.page(indexDisplayMode: .automatic))
-            .padding(.bottom, 10)
         }
-        .frame(height: 500)
-        .trendsCardStyle()
     }
 }
 
 private struct CategoryTrendPage: View {
-    private static let chartHeight: CGFloat = 226
-    private static let legendHeight: CGFloat = 214
-
     let history: [NamedCategoryTrendPoint]
     let currencyCode: String
 
@@ -376,14 +352,15 @@ private struct CategoryTrendPage: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: ChartPanelMetrics.contentSpacing) {
             if history.isEmpty || history.allSatisfy({ $0.total == 0 }) {
-                Text("No category history available in the last six months.")
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, minHeight: Self.chartHeight, maxHeight: Self.chartHeight, alignment: .center)
+                ChartEmptyState(
+                    text: "No category history available in the last six months.",
+                    height: ChartPanelMetrics.lineChartHeight
+                )
 
-                Spacer(minLength: 0)
-                    .frame(height: Self.legendHeight)
+                Color.clear
+                    .frame(height: ChartPanelMetrics.legendHeight)
             } else {
                 Chart(history) { point in
                     LineMark(
@@ -393,26 +370,20 @@ private struct CategoryTrendPage: View {
                     )
                     .foregroundStyle(color(for: point.colorName))
                 }
-                .frame(height: Self.chartHeight)
+                .frame(height: ChartPanelMetrics.lineChartHeight)
 
-                VStack(spacing: 10) {
-                    ForEach(legendItems) { item in
-                        HStack(spacing: 10) {
-                            Circle()
-                                .fill(color(for: item.colorName))
-                                .frame(width: 10, height: 10)
-
-                            Text(item.categoryTitle)
-                                .foregroundStyle(.primary)
-
-                            Spacer()
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity, minHeight: Self.legendHeight, maxHeight: Self.legendHeight, alignment: .top)
+                ChartLegendList(
+                    entries: legendItems.map {
+                        ChartLegendEntry(
+                            id: $0.categoryKey,
+                            title: $0.categoryTitle,
+                            value: nil,
+                            color: color(for: $0.colorName)
+                        )
+                    },
+                    minHeight: ChartPanelMetrics.legendHeight
+                )
             }
-
-            Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
@@ -449,12 +420,4 @@ private struct NamedCategoryLegendItem: Identifiable {
     let colorName: String
 
     var id: String { categoryKey }
-}
-
-private extension View {
-    func trendsCardStyle() -> some View {
-        padding(18)
-            .background(Color(uiColor: .secondarySystemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-    }
 }

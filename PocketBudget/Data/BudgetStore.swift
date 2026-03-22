@@ -98,6 +98,23 @@ struct MonthlySpendingPoint: Identifiable, Equatable {
     var id: Date { month }
 }
 
+enum TrendSeriesKind: String, CaseIterable, Equatable {
+    case variable
+    case recurring
+    case total
+
+    var title: String {
+        switch self {
+        case .variable:
+            return "Variable Spending"
+        case .recurring:
+            return "Recurring Spending"
+        case .total:
+            return "Total Spending"
+        }
+    }
+}
+
 struct CategoryTrendPoint: Identifiable, Equatable {
     let month: Date
     let category: ExpenseCategory
@@ -105,6 +122,18 @@ struct CategoryTrendPoint: Identifiable, Equatable {
 
     var id: String {
         "\(category.rawValue)-\(month.timeIntervalSinceReferenceDate)"
+    }
+}
+
+struct NamedCategoryTrendPoint: Identifiable, Equatable {
+    let month: Date
+    let categoryKey: String
+    let categoryTitle: String
+    let colorName: String
+    let total: Double
+
+    var id: String {
+        "\(categoryKey)-\(month.timeIntervalSinceReferenceDate)"
     }
 }
 
@@ -432,7 +461,7 @@ struct BudgetStore {
             throw BudgetStoreError.invalidExpenseTitle
         }
 
-        guard amount > 0 else {
+        guard amount != 0 else {
             throw BudgetStoreError.invalidExpenseAmount
         }
 
@@ -470,7 +499,7 @@ struct BudgetStore {
             throw BudgetStoreError.invalidExpenseTitle
         }
 
-        guard amount > 0 else {
+        guard amount != 0 else {
             throw BudgetStoreError.invalidExpenseAmount
         }
 
@@ -1304,6 +1333,75 @@ struct BudgetStore {
         }
     }
 
+    static func recurringSpendingHistory(
+        recurringExpenseItems: [RecurringExpenseItem],
+        months: Int = 6,
+        budgetPeriodAnchorDay: Int = 1,
+        calendar: Calendar = .current,
+        referenceDate: Date = .now
+    ) -> [MonthlySpendingPoint] {
+        guard months > 0 else {
+            return []
+        }
+
+        let referenceMonth = periodStart(containing: referenceDate, budgetPeriodAnchorDay: budgetPeriodAnchorDay, calendar: calendar)
+        let recurringTotal = totalRecurringExpenses(for: recurringExpenseItems)
+
+        return (0..<months).compactMap { offset in
+            guard let month = calendar.date(byAdding: .month, value: offset - (months - 1), to: referenceMonth) else {
+                return nil
+            }
+
+            return MonthlySpendingPoint(month: month, total: recurringTotal)
+        }
+    }
+
+    static func spendingHistory(
+        for expenses: [Expense],
+        recurringExpenseItems: [RecurringExpenseItem],
+        kind: TrendSeriesKind,
+        months: Int = 6,
+        budgetPeriodAnchorDay: Int = 1,
+        calendar: Calendar = .current,
+        referenceDate: Date = .now
+    ) -> [MonthlySpendingPoint] {
+        let variableHistory = monthComparisonHistory(
+            for: expenses,
+            months: months,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        switch kind {
+        case .variable:
+            return variableHistory
+        case .recurring:
+            return recurringSpendingHistory(
+                recurringExpenseItems: recurringExpenseItems,
+                months: months,
+                budgetPeriodAnchorDay: budgetPeriodAnchorDay,
+                calendar: calendar,
+                referenceDate: referenceDate
+            )
+        case .total:
+            let recurringHistory = recurringSpendingHistory(
+                recurringExpenseItems: recurringExpenseItems,
+                months: months,
+                budgetPeriodAnchorDay: budgetPeriodAnchorDay,
+                calendar: calendar,
+                referenceDate: referenceDate
+            )
+
+            return zip(variableHistory, recurringHistory).map { variablePoint, recurringPoint in
+                MonthlySpendingPoint(
+                    month: variablePoint.month,
+                    total: variablePoint.total + recurringPoint.total
+                )
+            }
+        }
+    }
+
     static func categoryTrendHistory(
         for expenses: [Expense],
         months: Int = 6,
@@ -1338,6 +1436,73 @@ struct BudgetStore {
                 )
             }
         }
+    }
+
+    static func recurringCategoryTrendHistory(
+        recurringExpenseItems: [RecurringExpenseItem],
+        months: Int = 6,
+        budgetPeriodAnchorDay: Int = 1,
+        calendar: Calendar = .current,
+        referenceDate: Date = .now
+    ) -> [NamedCategoryTrendPoint] {
+        guard months > 0 else {
+            return []
+        }
+
+        let referenceMonth = periodStart(containing: referenceDate, budgetPeriodAnchorDay: budgetPeriodAnchorDay, calendar: calendar)
+        let distribution = fixedCostDistribution(for: recurringExpenseItems)
+
+        return (0..<months).compactMap { offset in
+            calendar.date(byAdding: .month, value: offset - (months - 1), to: referenceMonth)
+        }
+        .flatMap { month in
+            distribution.map { summary in
+                NamedCategoryTrendPoint(
+                    month: month,
+                    categoryKey: summary.category.rawValue,
+                    categoryTitle: summary.category.title,
+                    colorName: summary.category.rawValue,
+                    total: summary.total
+                )
+            }
+        }
+    }
+
+    static func totalCategoryTrendHistory(
+        expenses: [Expense],
+        recurringExpenseItems: [RecurringExpenseItem],
+        months: Int = 6,
+        budgetPeriodAnchorDay: Int = 1,
+        calendar: Calendar = .current,
+        referenceDate: Date = .now
+    ) -> [NamedCategoryTrendPoint] {
+        guard months > 0 else {
+            return []
+        }
+
+        let variablePoints = categoryTrendHistory(
+            for: expenses,
+            months: months,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
+            calendar: calendar,
+            referenceDate: referenceDate
+        ).map {
+            NamedCategoryTrendPoint(
+                month: $0.month,
+                categoryKey: $0.category.rawValue,
+                categoryTitle: $0.category.title,
+                colorName: $0.category.rawValue,
+                total: $0.total
+            )
+        }
+
+        return variablePoints + recurringCategoryTrendHistory(
+            recurringExpenseItems: recurringExpenseItems,
+            months: months,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
     }
 
     static func carryoverHistory(
