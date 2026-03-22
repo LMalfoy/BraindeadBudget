@@ -587,6 +587,8 @@ private struct DashboardInsightCardView: View {
                     height: 300
                 )
             } else {
+                Spacer(minLength: 0)
+
                 Chart {
                     ForEach(trajectory) { point in
                         let isNegativeState = (trajectory.last?.remainingBudget ?? 0) < 0
@@ -647,6 +649,8 @@ private struct DashboardInsightCardView: View {
                 .chartYScale(domain: yAxisDomain)
                 .frame(height: 270)
                 .clipped()
+
+                Spacer(minLength: 0)
             }
         }
         .padding(.vertical, ChartPanelMetrics.sectionVerticalInset)
