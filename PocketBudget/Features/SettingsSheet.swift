@@ -20,6 +20,7 @@ struct SettingsSheet: View {
 
     @AppStorage("appAppearance") private var appAppearance = AppAppearanceOption.system.rawValue
     @AppStorage("hasCompletedBaselineSetup") private var hasCompletedSetup = false
+    @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \BudgetSettings.updatedAt, order: .reverse) private var budgets: [BudgetSettings]
 
@@ -174,6 +175,13 @@ struct SettingsSheet: View {
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Done") {
+                    dismiss()
+                }
+            }
+        }
         .sheet(isPresented: $showingBudgetSettings) {
             BudgetSettingsSheet(mode: .manage)
         }
