@@ -486,7 +486,25 @@ final class BudgetCalculationTests: XCTestCase {
 
         XCTAssertEqual(trajectory.first?.remainingBudget ?? .nan, 100, accuracy: 0.001)
         XCTAssertEqual(trajectory.last?.remainingBudget ?? .nan, 75, accuracy: 0.001)
-        XCTAssertGreaterThanOrEqual(trajectory.count, 16)
+        XCTAssertEqual(trajectory.count, 31)
+        XCTAssertTrue(calendar.isDate(trajectory.last?.date ?? .distantPast, inSameDayAs: makeDate(year: 2026, month: 3, day: 31, calendar: calendar)))
+    }
+
+    func testRecurringItemsSortByHighestCostWithinCategory() {
+        let recurringExpenseItems = [
+            RecurringExpenseItem(name: "Netflix", amount: 15, category: .subscriptions),
+            RecurringExpenseItem(name: "ChatGPT", amount: 25, category: .subscriptions),
+            RecurringExpenseItem(name: "Health Insurance", amount: 120, category: .insurance),
+            RecurringExpenseItem(name: "Spotify", amount: 15, category: .subscriptions)
+        ]
+
+        let items = BudgetStore.recurringItems(
+            for: recurringExpenseItems,
+            category: .subscriptions
+        )
+
+        XCTAssertEqual(items.map(\.name), ["ChatGPT", "Netflix", "Spotify"])
+        XCTAssertEqual(items.map(\.amount), [25, 15, 15])
     }
 
     func testTemporalSpendingGroupsExpensesIntoEarlyMidLateMonth() {

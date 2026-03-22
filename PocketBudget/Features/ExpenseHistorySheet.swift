@@ -22,10 +22,17 @@ struct ExpenseHistorySheet: View {
 
     @State private var editingExpense: Expense?
     @State private var selectedCategoryFilter: ExpenseCategory?
+    @State private var selectedMonth = Self.displayMonth(for: .now)
+    @State private var pendingMonthSelection = Self.displayMonth(for: .now)
+    @State private var showingMonthPicker = false
     @State private var errorMessage: String?
 
     private var store: BudgetStore {
         BudgetStore(context: modelContext)
+    }
+
+    private var calendar: Calendar {
+        .current
     }
 
     private var currencyCode: String {
@@ -44,23 +51,33 @@ struct ExpenseHistorySheet: View {
         budgets.first?.budgetPeriodAnchorDay ?? 1
     }
 
-    private var currentMonthExpenses: [Expense] {
-        BudgetStore.currentMonthExpenses(
-            from: expenses,
-            budgetPeriodAnchorDay: budgetPeriodAnchorDay
+    private var selectedMonthReferenceDate: Date {
+        Self.referenceDate(
+            for: selectedMonth,
+            anchorDay: budgetPeriodAnchorDay,
+            calendar: calendar
         )
     }
 
     private var monthCategorySpending: [CategorySpendingSummary] {
-        BudgetStore.categorySpendingSummaries(for: currentMonthExpenses)
+        BudgetStore.categorySpendingSummaries(for: selectedMonthExpenses)
     }
 
-    private var filteredMonthExpenses: [Expense] {
+    private var selectedMonthExpenses: [Expense] {
+        BudgetStore.expenses(
+            from: expenses,
+            inMonthContaining: selectedMonthReferenceDate,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
+            calendar: calendar
+        )
+    }
+
+    private var filteredSelectedMonthExpenses: [Expense] {
         guard let selectedCategoryFilter else {
-            return currentMonthExpenses.sorted { $0.date > $1.date }
+            return selectedMonthExpenses.sorted { $0.date > $1.date }
         }
 
-        return currentMonthExpenses
+        return selectedMonthExpenses
             .filter { $0.category == selectedCategoryFilter }
             .sorted { $0.date > $1.date }
     }
@@ -72,44 +89,98 @@ struct ExpenseHistorySheet: View {
         )
     }
 
-    private var currentMonthDigest: MonthlyHistoryDigest {
+    private var selectedMonthDigest: MonthlyHistoryDigest {
         BudgetStore.monthlyHistoryDigest(
             monthlyBudget: monthlyBudget,
             expenses: expenses,
             budgetPeriodAnchorDay: budgetPeriodAnchorDay,
             initialAvailableBudget: initialAvailableBudget,
-            initialBudgetAnchorMonth: initialBudgetAnchorMonth
+            initialBudgetAnchorMonth: initialBudgetAnchorMonth,
+            calendar: calendar,
+            referenceDate: selectedMonthReferenceDate
         )
     }
 
-    private var currentMonthTrajectory: [BudgetTrajectoryPoint] {
+    private var selectedMonthTrajectory: [BudgetTrajectoryPoint] {
         BudgetStore.budgetTrajectory(
             monthlyBudget: monthlyBudget,
             expenses: expenses,
             budgetPeriodAnchorDay: budgetPeriodAnchorDay,
             initialAvailableBudget: initialAvailableBudget,
-            initialBudgetAnchorMonth: initialBudgetAnchorMonth
+            initialBudgetAnchorMonth: initialBudgetAnchorMonth,
+            calendar: calendar,
+            referenceDate: selectedMonthReferenceDate
         )
     }
 
     private var recurringSpending: Double {
-        recurringExpenseItems.reduce(0) { $0 + $1.amount }
+        BudgetStore.totalRecurringExpenses(for: recurringExpenseItems)
     }
 
     private var totalSpending: Double {
-        currentMonthDigest.totalSpent + recurringSpending
+        selectedMonthDigest.totalSpent + recurringSpending
     }
 
     private var biggestExpense: Expense? {
-        currentMonthExpenses.max { $0.amount < $1.amount }
+        selectedMonthExpenses.max { $0.amount < $1.amount }
     }
 
-    private var biggestCategoryTitle: String {
-        monthCategorySpending.first?.category.title ?? "None"
+    private var selectedMonthLabel: String {
+        selectedMonth.formatted(.dateTime.month(.wide).year())
     }
 
-    private var monthLabel: String {
-        Date.now.formatted(.dateTime.month(.wide).year())
+    private var variableCategorySlices: [MonthCategorySlice] {
+        monthCategorySpending.map {
+            MonthCategorySlice(title: $0.category.title, total: $0.total, color: $0.category.color)
+        }
+    }
+
+    private var recurringCategorySlices: [MonthCategorySlice] {
+        BudgetStore.fixedCostDistribution(for: recurringExpenseItems).map {
+            MonthCategorySlice(title: $0.category.title, total: $0.total, color: $0.category.color)
+        }
+    }
+
+    private var totalCategorySlices: [MonthCategorySlice] {
+        (variableCategorySlices + recurringCategorySlices)
+            .sorted { lhs, rhs in
+                if lhs.total == rhs.total {
+                    return lhs.title < rhs.title
+                }
+
+                return lhs.total > rhs.total
+            }
+    }
+
+    private var recurringBreakdownSections: [MonthRecurringBreakdownSection] {
+        [
+            recurringBreakdownSection(for: .subscriptions, title: "Subscriptions"),
+            recurringBreakdownSection(for: .insurance, title: "Insurance")
+        ]
+    }
+
+    private var trajectoryAxisDates: [Date] {
+        guard !selectedMonthTrajectory.isEmpty else {
+            return []
+        }
+
+        let rawDates = selectedMonthTrajectory.map { calendar.startOfDay(for: $0.date) }
+        let strideDates = rawDates.enumerated().compactMap { index, date in
+            index.isMultiple(of: 7) ? date : nil
+        }
+        let combined = Array(Set(strideDates + [rawDates.first!, rawDates.last!])).sorted()
+        return combined
+    }
+
+    private var selectedMonthYear: Int {
+        calendar.component(.year, from: selectedMonth)
+    }
+
+    private var yearOptions: [Int] {
+        let currentYear = calendar.component(.year, from: .now)
+        let lowerBound = min(currentYear - 5, selectedMonthYear - 5)
+        let upperBound = max(currentYear + 5, selectedMonthYear + 5)
+        return Array(lowerBound...upperBound)
     }
 
     private var errorAlertBinding: Binding<Bool> {
@@ -126,18 +197,40 @@ struct ExpenseHistorySheet: View {
     var body: some View {
         List {
             Section {
-                monthOverviewCard
+                monthNavigationHeader
+                    .padding(.vertical, 4)
             }
 
             Section {
-                if filteredMonthExpenses.isEmpty {
+                monthSummaryCard
+            }
+
+            Section {
+                monthCategoryCard
+            }
+
+            Section {
+                budgetTrajectoryCard
+            }
+
+            Section {
+                recurringBreakdownCard
+            } header: {
+                Text("Recurring Breakdown")
+            }
+
+            Section {
+                transactionFilterBar
+                    .padding(.vertical, 4)
+
+                if filteredSelectedMonthExpenses.isEmpty {
                     Text(selectedCategoryFilter == nil
-                         ? "No expenses recorded for the current month."
-                         : "No expenses recorded for this category in the current month.")
+                         ? "No transactions recorded for this month."
+                         : "No transactions recorded for this category in this month.")
                         .foregroundStyle(.secondary)
                         .padding(.vertical, 10)
                 } else {
-                    ForEach(filteredMonthExpenses) { expense in
+                    ForEach(filteredSelectedMonthExpenses) { expense in
                         ExpenseHistoryRowView(expense: expense, currencyCode: currencyCode)
                             .contentShape(Rectangle())
                             .onTapGesture {
@@ -147,7 +240,7 @@ struct ExpenseHistorySheet: View {
                     .onDelete(perform: deleteExpenses)
                 }
             } header: {
-                Text("Current Month Expenses")
+                Text("Transactions")
             }
         }
         .contentMargins(.top, 0, for: .scrollContent)
@@ -172,147 +265,215 @@ struct ExpenseHistorySheet: View {
         } message: {
             Text(errorMessage ?? "Something went wrong.")
         }
-        .onReceive(NotificationCenter.default.publisher(for: .openExpenseHistoryMonth)) { _ in
+        .sheet(isPresented: $showingMonthPicker) {
+            MonthPickerSheet(
+                selectedMonth: $pendingMonthSelection,
+                yearOptions: yearOptions
+            ) {
+                selectedMonth = Self.displayMonth(for: pendingMonthSelection)
+                showingMonthPicker = false
+            } onCancel: {
+                pendingMonthSelection = selectedMonth
+                showingMonthPicker = false
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openExpenseHistoryMonth)) { notification in
             selectedCategoryFilter = nil
+
+            if let monthDate = notification.object as? Date {
+                let normalizedMonth = Self.displayMonth(for: monthDate)
+                selectedMonth = normalizedMonth
+                pendingMonthSelection = normalizedMonth
+            }
         }
     }
 
-    private var monthOverviewCard: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            Text(monthLabel)
-                .font(.headline)
+    private var monthNavigationHeader: some View {
+        HStack {
+            Button {
+                shiftSelectedMonth(by: -1)
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.headline.weight(.semibold))
+                    .frame(width: 32, height: 32)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("month.previousButton")
 
+            Spacer()
+
+            Button {
+                pendingMonthSelection = selectedMonth
+                showingMonthPicker = true
+            } label: {
+                HStack(spacing: 6) {
+                    Text(selectedMonthLabel)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.primary)
+
+                    Image(systemName: "chevron.down")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("month.pickerButton")
+
+            Spacer()
+
+            Button {
+                shiftSelectedMonth(by: 1)
+            } label: {
+                Image(systemName: "chevron.right")
+                    .font(.headline.weight(.semibold))
+                    .frame(width: 32, height: 32)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("month.nextButton")
+        }
+    }
+
+    private var monthSummaryCard: some View {
+        VStack(alignment: .leading, spacing: 18) {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                monthMetric(title: "Variable Spending", value: currentMonthDigest.totalSpent.formatted(.currency(code: currencyCode)))
+                monthMetric(title: "Variable Spending", value: selectedMonthDigest.totalSpent.formatted(.currency(code: currencyCode)))
                 monthMetric(title: "Recurring Spending", value: recurringSpending.formatted(.currency(code: currencyCode)))
                 monthMetric(title: "Total Spending", value: totalSpending.formatted(.currency(code: currencyCode)))
-                monthMetric(title: "Biggest Category", value: biggestCategoryTitle)
-            }
-
-            if !monthCategorySpending.isEmpty {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Spending by Category")
-                        .font(.headline)
-
-                    Chart(monthCategorySpending) { summary in
-                        SectorMark(
-                            angle: .value("Amount", summary.total),
-                            innerRadius: .ratio(0.58),
-                            angularInset: 2
-                        )
-                        .foregroundStyle(summary.category.color)
-                    }
-                    .chartLegend(.hidden)
-                    .frame(height: 180)
-
-                    historyCategoryTiles
-
-                    VStack(spacing: 10) {
-                        ForEach(monthCategorySpending) { summary in
-                            HStack(spacing: 10) {
-                                Circle()
-                                    .fill(summary.category.color)
-                                    .frame(width: 10, height: 10)
-
-                                Text(summary.category.title)
-                                    .foregroundStyle(.primary)
-
-                                Spacer()
-
-                                Text(summary.total.formatted(.currency(code: currencyCode)))
-                                    .fontWeight(.medium)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Spending Trajectory")
-                    .font(.headline)
-
-                if currentMonthTrajectory.isEmpty {
-                    Text("Add some expenses to see how spending has progressed through the month.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                } else {
-                    Chart(currentMonthTrajectory) { point in
-                        LineMark(
-                            x: .value("Date", point.date),
-                            y: .value("Remaining", point.remainingBudget)
-                        )
-                        .foregroundStyle(.green)
-
-                        AreaMark(
-                            x: .value("Date", point.date),
-                            y: .value("Remaining", point.remainingBudget)
-                        )
-                        .foregroundStyle(.green.opacity(0.12))
-                    }
-                    .frame(height: 180)
-                }
-            }
-
-            if let biggestExpense {
-                Text("Biggest expense this month: \(biggestExpense.title) (\(biggestExpense.amount.formatted(.currency(code: currencyCode))))")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                monthMetric(
+                    title: "Biggest Expense",
+                    value: biggestExpense.map { "\($0.title) (\($0.amount.formatted(.currency(code: currencyCode))))" } ?? "None"
+                )
             }
         }
         .padding(.vertical, 4)
     }
 
-    private var historyCategoryTiles: some View {
-        HStack(spacing: 10) {
-            ForEach(ExpenseCategory.allCases) { category in
-                Button {
-                    toggleCategoryFilter(category)
-                } label: {
-                    VStack(spacing: 8) {
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(category.color.opacity(selectedCategoryFilter == category ? 0.95 : 0.22))
-                            .frame(height: 44)
-                            .overlay {
-                                Image(systemName: category.symbolName)
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundStyle(selectedCategoryFilter == category ? .white : category.color)
-                            }
+    private var monthCategoryCard: some View {
+        TabView {
+            MonthCategoryChartPage(
+                title: "Variable Spending by Category",
+                slices: variableCategorySlices,
+                currencyCode: currencyCode,
+                emptyStateText: "No variable spending recorded for this month."
+            )
 
-                        Text(category.title)
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.primary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("month.categoryFilter.\(category.rawValue)")
+            MonthCategoryChartPage(
+                title: "Recurring Spending by Category",
+                slices: recurringCategorySlices,
+                currencyCode: currencyCode,
+                emptyStateText: "No recurring costs configured."
+            )
+
+            MonthCategoryChartPage(
+                title: "Total Spending by Category",
+                slices: totalCategorySlices,
+                currencyCode: currencyCode,
+                emptyStateText: "No spending data available for this month."
+            )
+        }
+        .frame(height: 360)
+        .tabViewStyle(.page(indexDisplayMode: .automatic))
+        .indexViewStyle(.page(backgroundDisplayMode: .interactive))
+    }
+
+    private var budgetTrajectoryCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Budget Trajectory")
+                .font(.headline)
+
+            Chart(selectedMonthTrajectory) { point in
+                AreaMark(
+                    x: .value("Date", point.date),
+                    yStart: .value("Budget", 0),
+                    yEnd: .value("Budget", point.remainingBudget)
+                )
+                .foregroundStyle(point.remainingBudget >= 0 ? Color.green.opacity(0.18) : Color.red.opacity(0.2))
+
+                LineMark(
+                    x: .value("Date", point.date),
+                    y: .value("Budget", point.remainingBudget)
+                )
+                .foregroundStyle(point.remainingBudget >= 0 ? Color.green : Color.red)
+                .lineStyle(.init(lineWidth: 2.5))
             }
-
-            Button {
-                selectedCategoryFilter = nil
-            } label: {
-                VStack(spacing: 8) {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(selectedCategoryFilter == nil ? Color.accentColor.opacity(0.95) : Color(uiColor: .secondarySystemBackground))
-                        .frame(height: 44)
-                        .overlay {
-                            Image(systemName: "line.3.horizontal.decrease.circle")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundStyle(selectedCategoryFilter == nil ? .white : .secondary)
+            .chartXAxis {
+                AxisMarks(values: trajectoryAxisDates) { value in
+                    AxisGridLine()
+                    AxisValueLabel(format: .dateTime.day().month(.abbreviated))
+                }
+            }
+            .chartYAxis {
+                AxisMarks(position: .leading) { value in
+                    AxisGridLine(stroke: StrokeStyle(lineWidth: value.as(Double.self) == 0 ? 1.5 : 0.75, dash: value.as(Double.self) == 0 ? [5, 4] : []))
+                        .foregroundStyle(value.as(Double.self) == 0 ? Color.secondary : Color.secondary.opacity(0.35))
+                    AxisValueLabel {
+                        if let amount = value.as(Double.self) {
+                            Text(amount.formatted(.currency(code: currencyCode)))
                         }
-
-                    Text("All")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
+                    }
                 }
-                .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("month.categoryFilter.all")
+            .frame(height: 220)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var recurringBreakdownCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            ForEach(recurringBreakdownSections) { section in
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text(section.title)
+                            .font(.headline)
+
+                        Spacer()
+
+                        Text(section.total.formatted(.currency(code: currencyCode)))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+
+                    if section.items.isEmpty {
+                        Text("No \(section.title.lowercased()) recorded.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(section.items) { item in
+                            HStack {
+                                Text(item.name)
+                                    .foregroundStyle(.primary)
+
+                                Spacer()
+
+                                Text(item.amount.formatted(.currency(code: currencyCode)))
+                                    .foregroundStyle(.secondary)
+                            }
+                            .font(.subheadline)
+                        }
+                    }
+                }
+                .padding(14)
+                .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var transactionFilterBar: some View {
+        HStack(spacing: 10) {
+            transactionFilterButton(title: "All", isSelected: selectedCategoryFilter == nil) {
+                selectedCategoryFilter = nil
+            }
+
+            ForEach(ExpenseCategory.allCases) { category in
+                transactionFilterButton(
+                    title: category.title,
+                    isSelected: selectedCategoryFilter == category,
+                    tint: category.color
+                ) {
+                    toggleCategoryFilter(category)
+                }
+            }
         }
     }
 
@@ -322,6 +483,50 @@ struct ExpenseHistorySheet: View {
         } else {
             selectedCategoryFilter = category
         }
+    }
+
+    private func shiftSelectedMonth(by value: Int) {
+        guard let shiftedMonth = calendar.date(byAdding: .month, value: value, to: selectedMonth) else {
+            return
+        }
+
+        selectedMonth = Self.displayMonth(for: shiftedMonth)
+        pendingMonthSelection = selectedMonth
+        selectedCategoryFilter = nil
+    }
+
+    private func recurringBreakdownSection(
+        for category: RecurringExpenseCategory,
+        title: String
+    ) -> MonthRecurringBreakdownSection {
+        let items = BudgetStore.recurringItems(for: recurringExpenseItems, category: category)
+        return MonthRecurringBreakdownSection(
+            title: title,
+            total: items.reduce(0) { $0 + $1.amount },
+            items: items
+        )
+    }
+
+    @ViewBuilder
+    private func transactionFilterButton(
+        title: String,
+        isSelected: Bool,
+        tint: Color = .accentColor,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(isSelected ? Color.white : tint)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(isSelected ? tint : tint.opacity(0.16))
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("month.categoryFilter.\(title.lowercased())")
     }
 
     @ViewBuilder
@@ -344,7 +549,7 @@ struct ExpenseHistorySheet: View {
 
     private func deleteExpenses(at offsets: IndexSet) {
         do {
-            let itemsToDelete = offsets.map { filteredMonthExpenses[$0] }
+            let itemsToDelete = offsets.map { filteredSelectedMonthExpenses[$0] }
 
             for expense in itemsToDelete {
                 try store.deleteExpense(expense)
@@ -352,6 +557,179 @@ struct ExpenseHistorySheet: View {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    private static func displayMonth(for date: Date, calendar: Calendar = .current) -> Date {
+        calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? date
+    }
+
+    private static func referenceDate(
+        for month: Date,
+        anchorDay: Int,
+        calendar: Calendar
+    ) -> Date {
+        let monthStart = displayMonth(for: month, calendar: calendar)
+        let maxDay = calendar.range(of: .day, in: .month, for: monthStart)?.count ?? 28
+        let day = min(max(1, anchorDay), maxDay)
+        return calendar.date(byAdding: .day, value: day - 1, to: monthStart) ?? monthStart
+    }
+}
+
+private struct MonthCategorySlice: Identifiable, Equatable {
+    let title: String
+    let total: Double
+    let color: Color
+
+    var id: String { title }
+}
+
+private struct MonthRecurringBreakdownSection: Identifiable, Equatable {
+    let title: String
+    let total: Double
+    let items: [RecurringItemSummary]
+
+    var id: String { title }
+}
+
+private struct MonthCategoryChartPage: View {
+    let title: String
+    let slices: [MonthCategorySlice]
+    let currencyCode: String
+    let emptyStateText: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(title)
+                .font(.headline)
+
+            if slices.isEmpty {
+                Spacer(minLength: 0)
+
+                Text(emptyStateText)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+
+                Spacer(minLength: 0)
+            } else {
+                Chart(slices) { slice in
+                    SectorMark(
+                        angle: .value("Amount", slice.total),
+                        innerRadius: .ratio(0.58),
+                        angularInset: 2
+                    )
+                    .foregroundStyle(slice.color)
+                }
+                .chartLegend(.hidden)
+                .frame(height: 190)
+
+                VStack(spacing: 10) {
+                    ForEach(slices) { slice in
+                        HStack(spacing: 10) {
+                            Circle()
+                                .fill(slice.color)
+                                .frame(width: 10, height: 10)
+
+                            Text(slice.title)
+                                .foregroundStyle(.primary)
+
+                            Spacer()
+
+                            Text(slice.total.formatted(.currency(code: currencyCode)))
+                                .fontWeight(.medium)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(16)
+        .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .padding(.horizontal, 2)
+        .padding(.vertical, 6)
+    }
+}
+
+private struct MonthPickerSheet: View {
+    @Binding var selectedMonth: Date
+
+    let yearOptions: [Int]
+    let onDone: () -> Void
+    let onCancel: () -> Void
+
+    private let calendar = Calendar.current
+
+    private var selectedMonthNumber: Binding<Int> {
+        Binding(
+            get: { calendar.component(.month, from: selectedMonth) },
+            set: { month in
+                updateSelectedMonth(month: month, year: calendar.component(.year, from: selectedMonth))
+            }
+        )
+    }
+
+    private var selectedYearNumber: Binding<Int> {
+        Binding(
+            get: { calendar.component(.year, from: selectedMonth) },
+            set: { year in
+                updateSelectedMonth(month: calendar.component(.month, from: selectedMonth), year: year)
+            }
+        )
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 16) {
+                HStack(spacing: 0) {
+                    Picker("Month", selection: selectedMonthNumber) {
+                        ForEach(1...12, id: \.self) { month in
+                            Text(monthName(for: month)).tag(month)
+                        }
+                    }
+                    .pickerStyle(.wheel)
+
+                    Picker("Year", selection: selectedYearNumber) {
+                        ForEach(yearOptions, id: \.self) { year in
+                            Text("\(year)").tag(year)
+                        }
+                    }
+                    .pickerStyle(.wheel)
+                }
+                .frame(height: 180)
+
+                Spacer()
+            }
+            .padding(.top, 12)
+            .navigationTitle("Select Month")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        onCancel()
+                    }
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        onDone()
+                    }
+                }
+            }
+        }
+        .presentationDetents([.height(300)])
+        .presentationDragIndicator(.visible)
+    }
+
+    private func updateSelectedMonth(month: Int, year: Int) {
+        let components = DateComponents(year: year, month: month, day: 1)
+        selectedMonth = calendar.date(from: components) ?? selectedMonth
+    }
+
+    private func monthName(for month: Int) -> String {
+        let components = DateComponents(year: 2024, month: month, day: 1)
+        let date = calendar.date(from: components) ?? .now
+        return date.formatted(.dateTime.month(.wide))
     }
 }
 
@@ -626,6 +1004,23 @@ private extension ExpenseCategory {
             return "house.fill"
         case .fun:
             return "sparkles"
+        }
+    }
+}
+
+private extension RecurringExpenseCategory {
+    var color: Color {
+        switch self {
+        case .housingUtilities:
+            return .indigo
+        case .subscriptions:
+            return .teal
+        case .insurance:
+            return .cyan
+        case .savings:
+            return .mint
+        case .debt:
+            return .red
         }
     }
 }

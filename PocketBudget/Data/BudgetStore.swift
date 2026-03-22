@@ -151,6 +151,12 @@ struct SubscriptionItemSummary: Identifiable, Equatable {
     let amount: Double
 }
 
+struct RecurringItemSummary: Identifiable, Equatable {
+    let id: UUID
+    let name: String
+    let amount: Double
+}
+
 struct SavingsStabilitySummary: Equatable {
     let monthlyIncome: Double
     let savingsAmount: Double
@@ -774,9 +780,17 @@ struct BudgetStore {
     static func subscriptionItems(
         for recurringExpenseItems: [RecurringExpenseItem]
     ) -> [SubscriptionItemSummary] {
-        recurringExpenseItems
-            .filter { $0.category == .subscriptions }
+        recurringItems(for: recurringExpenseItems, category: .subscriptions)
             .map { SubscriptionItemSummary(id: $0.id, name: $0.name, amount: $0.amount) }
+    }
+
+    static func recurringItems(
+        for recurringExpenseItems: [RecurringExpenseItem],
+        category: RecurringExpenseCategory
+    ) -> [RecurringItemSummary] {
+        recurringExpenseItems
+            .filter { $0.category == category }
+            .map { RecurringItemSummary(id: $0.id, name: $0.name, amount: $0.amount) }
             .sorted { lhs, rhs in
                 if lhs.amount == rhs.amount {
                     return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
@@ -1053,7 +1067,7 @@ struct BudgetStore {
         )
 
         let periodStartDate = periodStart(containing: referenceDate, budgetPeriodAnchorDay: budgetPeriodAnchorDay, calendar: calendar)
-        let today = calendar.startOfDay(for: referenceDate)
+        let periodEndDate = nextPeriodStart(after: periodStartDate, budgetPeriodAnchorDay: budgetPeriodAnchorDay, calendar: calendar)
         let groupedExpenses = Dictionary(grouping: currentMonthExpenses) { calendar.startOfDay(for: $0.date) }
 
         var points: [BudgetTrajectoryPoint] = [
@@ -1062,7 +1076,7 @@ struct BudgetStore {
         var cursor = periodStartDate
         var runningRemaining = startingBudget
 
-        while cursor <= today {
+        while cursor < periodEndDate {
             let dayTotal = totalSpent(for: groupedExpenses[cursor, default: []])
             runningRemaining -= dayTotal
 
