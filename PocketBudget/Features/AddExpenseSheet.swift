@@ -1,17 +1,5 @@
 /*
  Fast expense-entry screen.
-
- This sheet is optimized for the app's main habit loop: recording a new expense
- with as little friction as possible.
-
- The intended order is:
- - choose category
- - enter title
- - enter amount
- - optionally adjust date or note
-
- The sheet does not talk to SwiftData directly. Instead, it validates user
- input locally and sends the result upward through the `onSave` closure.
  */
 
 import Foundation
@@ -77,19 +65,9 @@ struct AddExpenseSheet: View {
             VStack(spacing: 0) {
                 Form {
                     Section {
-                        categoryPicker
-                    } header: {
-                        Text("Category")
-                    }
-
-                    Section {
                         TextField("Item", text: $title)
                             .textInputAutocapitalization(.words)
-                            .submitLabel(.next)
                             .focused($focusedField, equals: .title)
-                            .onSubmit {
-                                focusedField = .amount
-                            }
                             .accessibilityIdentifier("addExpense.titleField")
 
                         TextField("Amount", text: $amountText)
@@ -101,6 +79,12 @@ struct AddExpenseSheet: View {
                         Text("Expense")
                     } footer: {
                         Text("Amounts are displayed using \(currencyCode).")
+                    }
+
+                    Section {
+                        categoryPicker
+                    } header: {
+                        Text("Category")
                     }
 
                     Section {
@@ -149,6 +133,32 @@ struct AddExpenseSheet: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         dismiss()
+                    }
+                }
+            }
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    if focusedField == .title {
+                        EmptyView()
+                    } else if focusedField == .amount {
+                        Spacer()
+
+                        Button("Details") {
+                            focusedField = .note
+                        }
+                        .disabled(isSaveDisabled)
+
+                        Button("Save") {
+                            saveExpense()
+                        }
+                        .disabled(isSaveDisabled)
+                    } else if focusedField == .note {
+                        Spacer()
+
+                        Button("Save") {
+                            saveExpense()
+                        }
+                        .disabled(isSaveDisabled)
                     }
                 }
             }
@@ -203,7 +213,13 @@ struct AddExpenseSheet: View {
         }
 
         do {
-            try onSave(title, selectedCategory, amount, date, note)
+            try onSave(
+                title.trimmingCharacters(in: .whitespacesAndNewlines),
+                selectedCategory,
+                amount,
+                date,
+                note.trimmingCharacters(in: .whitespacesAndNewlines)
+            )
             dismiss()
         } catch {
             errorMessage = error.localizedDescription

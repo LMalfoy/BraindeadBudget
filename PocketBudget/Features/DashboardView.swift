@@ -1,10 +1,8 @@
 /*
  Main dashboard for the current budget period.
-
- This screen is intentionally short and answers one question quickly:
- where does the current month stand right now?
  */
 
+import Charts
 import Foundation
 import SwiftData
 import SwiftUI
@@ -84,8 +82,9 @@ struct DashboardView: View {
             List {
                 Section {
                     SummaryCardView(
-                        currentBudget: snapshot.monthlyBudget + snapshot.previousMonthCarryover,
-                        baselineBudget: snapshot.monthlyBudget,
+                        monthLabel: Date.now.formatted(.dateTime.month(.wide).year()),
+                        availableThisMonth: snapshot.availableThisMonth,
+                        monthlyBudget: snapshot.monthlyBudget,
                         carryover: snapshot.previousMonthCarryover,
                         totalSpent: snapshot.totalSpent,
                         remainingBudget: snapshot.remainingBudget,
@@ -96,11 +95,16 @@ struct DashboardView: View {
                 }
 
                 Section {
-                    RecurringLoadCardView(
-                        recurringTotal: recurringExpenseItems.reduce(0) { $0 + $1.amount },
-                        subscriptionLoad: BudgetStore.subscriptionLoad(for: recurringExpenseItems),
-                        currencyCode: currencyCode,
-                        hasCompletedSetup: hasBaselineData
+                    DashboardInsightCardView(
+                        categorySpending: snapshot.categorySpending,
+                        trajectory: BudgetStore.budgetTrajectory(
+                            monthlyBudget: snapshot.monthlyBudget,
+                            expenses: expenses,
+                            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
+                            initialAvailableBudget: initialAvailableBudget,
+                            initialBudgetAnchorMonth: initialBudgetAnchorMonth
+                        ),
+                        currencyCode: currencyCode
                     )
                     .listRowInsets(Self.cardInsets)
                 }
@@ -229,30 +233,23 @@ private struct OnboardingIntroView: View {
 }
 
 private struct SummaryCardView: View {
-    let currentBudget: Double
-    let baselineBudget: Double
+    let monthLabel: String
+    let availableThisMonth: Double
+    let monthlyBudget: Double
     let carryover: Double
     let totalSpent: Double
     let remainingBudget: Double
     let currencyCode: String
     let hasCompletedSetup: Bool
 
-    private var budgetProgressTotal: Double {
-        max(currentBudget, 0)
-    }
-
-    private var budgetProgressValue: Double {
-        min(max(totalSpent, 0), max(budgetProgressTotal, 0))
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             if hasCompletedSetup {
-                Text("Current Month")
+                Text(monthLabel)
                     .font(.headline.weight(.semibold))
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Remaining Budget")
+                    Text(remainingBudget < 0 ? "Over Budget" : "Remaining Budget")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
 
@@ -263,24 +260,10 @@ private struct SummaryCardView: View {
                 }
 
                 VStack(spacing: 10) {
-                    summaryRow(title: "Budget", value: formatted(currentBudget))
-                    summaryRow(title: "Spent", value: formatted(totalSpent))
-                    summaryRow(title: "Baseline", value: formatted(baselineBudget))
+                    summaryRow(title: "Baseline Budget", value: formatted(monthlyBudget))
                     summaryRow(title: "Carryover", value: formatted(carryover))
-                }
-
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("Budget vs Actual")
-                            .font(.subheadline.weight(.semibold))
-                        Spacer()
-                        Text(progressText)
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(.secondary)
-                    }
-
-                    ProgressView(value: budgetProgressValue, total: max(budgetProgressTotal, 1))
-                        .tint(remainingBudget < 0 ? .red : .green)
+                    summaryRow(title: "Available This Month", value: formatted(availableThisMonth))
+                    summaryRow(title: "Spent So Far", value: formatted(totalSpent))
                 }
             } else {
                 VStack(alignment: .leading, spacing: 8) {
@@ -306,58 +289,206 @@ private struct SummaryCardView: View {
         }
     }
 
-    private var progressText: String {
-        guard budgetProgressTotal > 0 else {
-            return "No budget available"
-        }
-
-        let share = budgetProgressValue / budgetProgressTotal
-        return share.formatted(.percent.precision(.fractionLength(0)))
-    }
-
     private func formatted(_ amount: Double) -> String {
         amount.formatted(.currency(code: currencyCode))
     }
 }
 
-private struct RecurringLoadCardView: View {
-    let recurringTotal: Double
-    let subscriptionLoad: SubscriptionLoadSummary
+private struct DashboardInsightCardView: View {
+    let categorySpending: [CategorySpendingSummary]
+    let trajectory: [BudgetTrajectoryPoint]
     let currencyCode: String
-    let hasCompletedSetup: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Recurring Load")
-                .font(.headline.weight(.semibold))
+        TabView {
+                categoryInsight
 
-            if hasCompletedSetup {
-                HStack {
-                    overviewItem(title: "Recurring", value: recurringTotal.formatted(.currency(code: currencyCode)))
-                    Spacer()
-                    overviewItem(title: "Subscriptions", value: "\(subscriptionLoad.count)")
-                    Spacer()
-                    overviewItem(title: "Subscription Cost", value: subscriptionLoad.totalMonthlyCost.formatted(.currency(code: currencyCode)))
-                }
-            } else {
-                Text("Recurring costs and subscriptions appear here once your budget is configured.")
-                    .foregroundStyle(.secondary)
+                trajectoryInsight
             }
-        }
-        .dashboardCardStyle()
+            .frame(height: 400)
+            .tabViewStyle(.page(indexDisplayMode: .automatic))
+            .dashboardCardStyle()
     }
 
-    @ViewBuilder
-    private func overviewItem(title: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            Text(value)
+    private var categoryInsight: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Spending by Category")
                 .font(.headline.weight(.semibold))
-                .foregroundStyle(.primary)
+
+            if categorySpending.isEmpty {
+                Text("Add a few expenses to see where this month is going.")
+                    .foregroundStyle(.secondary)
+            } else {
+                Chart(categorySpending) { summary in
+                    SectorMark(
+                        angle: .value("Amount", summary.total),
+                        innerRadius: .ratio(0.58),
+                        angularInset: 2
+                    )
+                    .foregroundStyle(summary.category.color)
+                }
+                .chartLegend(.hidden)
+                .frame(height: 210)
+
+                VStack(spacing: 10) {
+                    ForEach(categorySpending) { summary in
+                        HStack(spacing: 10) {
+                            Circle()
+                                .fill(summary.category.color)
+                                .frame(width: 10, height: 10)
+
+                            Text(summary.category.title)
+                                .foregroundStyle(.primary)
+
+                            Spacer()
+
+                            Text(summary.total.formatted(.currency(code: currencyCode)))
+                                .fontWeight(.medium)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(.bottom, 6)
+        .accessibilityIdentifier("dashboard.categoryInsight")
+    }
+
+    private var trajectoryInsight: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Budget Trajectory")
+                .font(.headline.weight(.semibold))
+
+            if trajectory.isEmpty {
+                Text("Add a few expenses to see how spending has moved through the month.")
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 12)
+            } else {
+                Spacer(minLength: 0)
+
+                Chart {
+                    ForEach(trajectory) { point in
+                        let isNegativeState = (trajectory.last?.remainingBudget ?? 0) < 0
+
+                        LineMark(
+                            x: .value("Date", point.date),
+                            y: .value("Remaining", point.remainingBudget)
+                        )
+                        .foregroundStyle((trajectory.last?.remainingBudget ?? 0) < 0 ? .red : .green)
+                        .interpolationMethod(.linear)
+
+                        AreaMark(
+                            x: .value("Date", point.date),
+                            yStart: .value(
+                                "Baseline",
+                                isNegativeState ? yAxisDomain.upperBound : 0
+                            ),
+                            yEnd: .value("Remaining", point.remainingBudget)
+                        )
+                        .foregroundStyle(
+                            isNegativeState
+                                ? .red.opacity(0.12)
+                                : .green.opacity(0.12)
+                        )
+                    }
+                }
+                .chartXAxis {
+                    AxisMarks(values: xAxisMarks) { value in
+                        AxisGridLine()
+                        AxisTick()
+                        AxisValueLabel {
+                            if let date = value.as(Date.self) {
+                                Text(date, format: .dateTime.day().month(.abbreviated))
+                            }
+                        }
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks(position: .leading) { value in
+                        if let amount = value.as(Double.self), abs(amount) < 0.0001 {
+                            AxisGridLine(stroke: StrokeStyle(lineWidth: 1.5, dash: [4, 4]))
+                                .foregroundStyle(.secondary.opacity(0.65))
+                        } else {
+                            AxisGridLine()
+                        }
+                        AxisTick()
+                        AxisValueLabel {
+                            if let amount = value.as(Double.self) {
+                                Text(amount, format: .currency(code: currencyCode).precision(.fractionLength(0)))
+                            }
+                        }
+                    }
+                }
+                .chartPlotStyle { plotArea in
+                    plotArea
+                        .padding(.top, 12)
+                }
+                .chartYScale(domain: yAxisDomain)
+                .frame(height: 270)
+                .clipped()
+
+                Spacer(minLength: 0)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .accessibilityIdentifier("dashboard.trajectoryInsight")
+    }
+
+    private var yAxisDomain: ClosedRange<Double> {
+        let values = trajectory.map(\.remainingBudget)
+        let minimum = values.min() ?? 0
+        let maximum = values.max() ?? 0
+        let lowerBound = min(minimum < 0 ? roundedFloor(minimum) : 0, 0)
+        let upperBound: Double
+
+        if maximum <= 0 {
+            let referenceMagnitude = max(abs(minimum), 1)
+            upperBound = roundedCeiling(referenceMagnitude * 0.12)
+        } else {
+            upperBound = max(roundedCeiling(maximum), 0)
+        }
+
+        return lowerBound...max(upperBound, lowerBound + 1)
+    }
+
+    private var xAxisMarks: [Date] {
+        guard let start = trajectory.first?.date, let end = trajectory.last?.date else {
+            return []
+        }
+
+        let calendar = Calendar.current
+        let totalDays = max(calendar.dateComponents([.day], from: start, to: end).day ?? 0, 0)
+        let step = max(totalDays / 3, 1)
+
+        var marks = [calendar.startOfDay(for: start)]
+        var cursor = calendar.startOfDay(for: start)
+
+        while let next = calendar.date(byAdding: .day, value: step, to: cursor), next < end {
+            marks.append(next)
+            cursor = next
+        }
+
+        let endOfDay = calendar.startOfDay(for: end)
+        if marks.last != endOfDay {
+            marks.append(endOfDay)
+        }
+
+        return marks
+    }
+
+    private func roundedCeiling(_ value: Double) -> Double {
+        guard value != 0 else { return 100 }
+        let magnitude = pow(10.0, floor(log10(abs(value))))
+        let step = max(magnitude / 2, 1)
+        return ceil(value / step) * step
+    }
+
+    private func roundedFloor(_ value: Double) -> Double {
+        guard value != 0 else { return 0 }
+        let magnitude = pow(10.0, floor(log10(abs(value))))
+        let step = max(magnitude / 2, 1)
+        return floor(value / step) * step
     }
 }
 

@@ -109,8 +109,11 @@ struct CategoryTrendPoint: Identifiable, Equatable {
 }
 
 struct DashboardSnapshot: Equatable {
+    let monthlyIncome: Double
+    let recurringCosts: Double
     let monthlyBudget: Double
     let previousMonthCarryover: Double
+    let availableThisMonth: Double
     let remainingBudget: Double
     let totalSpent: Double
     let dailySafeSpend: Double
@@ -669,10 +672,9 @@ struct BudgetStore {
         calendar: Calendar = .current,
         referenceDate: Date = .now
     ) -> DashboardSnapshot {
-        let monthlyBudget = availableMonthlyBudget(
-            incomeItems: incomeItems,
-            recurringExpenseItems: recurringExpenseItems
-        )
+        let monthlyIncome = totalIncome(for: incomeItems)
+        let recurringCosts = totalRecurringExpenses(for: recurringExpenseItems)
+        let monthlyBudget = monthlyIncome - recurringCosts
         let currentPeriodExpenses = currentMonthExpenses(
             from: expenses,
             budgetPeriodAnchorDay: budgetPeriodAnchorDay,
@@ -689,15 +691,8 @@ struct BudgetStore {
             calendar: calendar,
             referenceDate: referenceDate
         )
-        let remainingBudget = remainingBudget(
-            monthlyBudget: monthlyBudget,
-            expenses: expenses,
-            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
-            initialAvailableBudget: initialAvailableBudget,
-            initialBudgetAnchorMonth: initialBudgetAnchorMonth,
-            calendar: calendar,
-            referenceDate: referenceDate
-        )
+        let availableThisMonth = monthlyBudget + previousMonthCarryover
+        let remainingBudget = availableThisMonth - totalSpent
         let categorySpending = categorySpending(
             for: expenses,
             budgetPeriodAnchorDay: budgetPeriodAnchorDay,
@@ -720,8 +715,11 @@ struct BudgetStore {
         )
 
         return DashboardSnapshot(
+            monthlyIncome: monthlyIncome,
+            recurringCosts: recurringCosts,
             monthlyBudget: monthlyBudget,
             previousMonthCarryover: previousMonthCarryover,
+            availableThisMonth: availableThisMonth,
             remainingBudget: remainingBudget,
             totalSpent: totalSpent,
             dailySafeSpend: max(0, remainingBudget) / Double(daysRemaining),
@@ -1044,9 +1042,7 @@ struct BudgetStore {
             calendar: calendar,
             referenceDate: referenceDate
         )
-        .sorted { $0.date < $1.date }
-
-        let startingBudget = adjustedMonthlyBudget(
+        let startingBudget = monthlyBudget + previousMonthCarryover(
             monthlyBudget: monthlyBudget,
             expenses: expenses,
             budgetPeriodAnchorDay: budgetPeriodAnchorDay,
@@ -1056,19 +1052,64 @@ struct BudgetStore {
             referenceDate: referenceDate
         )
 
-        guard !currentMonthExpenses.isEmpty else {
-            return []
-        }
+        let periodStartDate = periodStart(containing: referenceDate, budgetPeriodAnchorDay: budgetPeriodAnchorDay, calendar: calendar)
+        let today = calendar.startOfDay(for: referenceDate)
+        let groupedExpenses = Dictionary(grouping: currentMonthExpenses) { calendar.startOfDay(for: $0.date) }
 
-        var runningSpent = 0.0
+        var points: [BudgetTrajectoryPoint] = [
+            BudgetTrajectoryPoint(date: periodStartDate, remainingBudget: startingBudget)
+        ]
+        var cursor = periodStartDate
+        var runningRemaining = startingBudget
 
-        return currentMonthExpenses.map { expense in
-            runningSpent += expense.amount
-            return BudgetTrajectoryPoint(
-                date: expense.date,
-                remainingBudget: startingBudget - runningSpent
+        while cursor <= today {
+            let dayTotal = totalSpent(for: groupedExpenses[cursor, default: []])
+            runningRemaining -= dayTotal
+
+            let markerDate: Date
+            if cursor == periodStartDate {
+                markerDate = calendar.date(byAdding: .hour, value: 12, to: cursor) ?? cursor
+            } else {
+                markerDate = cursor
+            }
+
+            points.append(
+                BudgetTrajectoryPoint(
+                    date: markerDate,
+                    remainingBudget: runningRemaining
+                )
             )
+
+            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: cursor) else {
+                break
+            }
+            cursor = nextDay
         }
+
+        return points
+            .sorted { $0.date < $1.date }
+            .reduce(into: [BudgetTrajectoryPoint]()) { partialResult, point in
+                if let last = partialResult.last, calendar.isDate(last.date, inSameDayAs: point.date) {
+                    partialResult[partialResult.count - 1] = point
+                } else {
+                    partialResult.append(point)
+                }
+            }
+            .map { point in
+                BudgetTrajectoryPoint(
+                    date: calendar.startOfDay(for: point.date),
+                    remainingBudget: point.remainingBudget
+                )
+            }
+            .enumerated()
+            .map { index, point in
+                if index == 0 {
+                    return point
+                }
+
+                let adjustedDate = calendar.date(byAdding: .minute, value: index, to: point.date) ?? point.date
+                return BudgetTrajectoryPoint(date: adjustedDate, remainingBudget: point.remainingBudget)
+            }
     }
 
     static func temporalSpending(
@@ -1480,6 +1521,9 @@ struct BudgetStore {
             calendar: calendar,
             referenceDate: referenceDate
         )
+        guard runningRemaining >= 0 else {
+            return 0
+        }
         let currentPeriodExpenses = Self.expenses(
             from: expenses,
             inMonthContaining: referenceDate,
