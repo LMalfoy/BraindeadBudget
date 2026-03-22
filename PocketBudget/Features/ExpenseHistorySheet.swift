@@ -371,7 +371,7 @@ struct ExpenseHistorySheet: View {
                 emptyStateText: "No spending data available for this month."
             )
         }
-        .frame(height: 360)
+        .frame(height: 470)
         .tabViewStyle(.page(indexDisplayMode: .automatic))
         .indexViewStyle(.page(backgroundDisplayMode: .interactive))
     }
@@ -381,20 +381,22 @@ struct ExpenseHistorySheet: View {
             Text("Budget Trajectory")
                 .font(.headline)
 
-            Chart(selectedMonthTrajectory) { point in
-                AreaMark(
-                    x: .value("Date", point.date),
-                    yStart: .value("Budget", 0),
-                    yEnd: .value("Budget", point.remainingBudget)
-                )
-                .foregroundStyle(point.remainingBudget >= 0 ? Color.green.opacity(0.18) : Color.red.opacity(0.2))
+            Chart {
+                ForEach(selectedMonthTrajectory) { point in
+                    AreaMark(
+                        x: .value("Date", point.date),
+                        yStart: .value("Budget", 0),
+                        yEnd: .value("Budget", point.remainingBudget)
+                    )
+                    .foregroundStyle(point.remainingBudget >= 0 ? Color.green.opacity(0.18) : Color.red.opacity(0.2))
 
-                LineMark(
-                    x: .value("Date", point.date),
-                    y: .value("Budget", point.remainingBudget)
-                )
-                .foregroundStyle(point.remainingBudget >= 0 ? Color.green : Color.red)
-                .lineStyle(.init(lineWidth: 2.5))
+                    LineMark(
+                        x: .value("Date", point.date),
+                        y: .value("Budget", point.remainingBudget)
+                    )
+                    .foregroundStyle(point.remainingBudget >= 0 ? Color.green : Color.red)
+                    .lineStyle(.init(lineWidth: 2.5))
+                }
             }
             .chartXAxis {
                 AxisMarks(values: trajectoryAxisDates) { value in
@@ -414,6 +416,9 @@ struct ExpenseHistorySheet: View {
                 }
             }
             .frame(height: 220)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 10)
+            .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
         .padding(.vertical, 4)
     }
@@ -421,15 +426,17 @@ struct ExpenseHistorySheet: View {
     private var recurringBreakdownCard: some View {
         VStack(alignment: .leading, spacing: 16) {
             ForEach(recurringBreakdownSections) { section in
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        Text(section.title)
-                            .font(.headline)
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(section.title)
+                        .font(.headline)
 
-                        Spacer()
-
-                        Text(section.total.formatted(.currency(code: currencyCode)))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Total: \(section.total.formatted(.currency(code: currencyCode)))")
                             .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.primary)
+
+                        Text(section.itemSummary)
+                            .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
 
@@ -439,16 +446,9 @@ struct ExpenseHistorySheet: View {
                             .foregroundStyle(.secondary)
                     } else {
                         ForEach(section.items) { item in
-                            HStack {
-                                Text(item.name)
-                                    .foregroundStyle(.primary)
-
-                                Spacer()
-
-                                Text(item.amount.formatted(.currency(code: currencyCode)))
-                                    .foregroundStyle(.secondary)
-                            }
-                            .font(.subheadline)
+                            Text(item.name)
+                                .font(.subheadline)
+                                .foregroundStyle(.primary)
                         }
                     }
                 }
@@ -461,13 +461,19 @@ struct ExpenseHistorySheet: View {
 
     private var transactionFilterBar: some View {
         HStack(spacing: 10) {
-            transactionFilterButton(title: "All", isSelected: selectedCategoryFilter == nil) {
+            transactionFilterButton(
+                title: "All",
+                symbolName: "line.3.horizontal.decrease.circle",
+                isSelected: selectedCategoryFilter == nil,
+                tint: .accentColor
+            ) {
                 selectedCategoryFilter = nil
             }
 
             ForEach(ExpenseCategory.allCases) { category in
                 transactionFilterButton(
                     title: category.title,
+                    symbolName: category.symbolName,
                     isSelected: selectedCategoryFilter == category,
                     tint: category.color
                 ) {
@@ -510,20 +516,29 @@ struct ExpenseHistorySheet: View {
     @ViewBuilder
     private func transactionFilterButton(
         title: String,
+        symbolName: String,
         isSelected: Bool,
         tint: Color = .accentColor,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(isSelected ? Color.white : tint)
+            VStack(spacing: 8) {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(isSelected ? tint.opacity(0.95) : tint.opacity(0.22))
+                    .frame(height: 40)
+                    .overlay {
+                        Image(systemName: symbolName)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(isSelected ? .white : tint)
+                    }
+
+                Text(title)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(
-                    Capsule(style: .continuous)
-                        .fill(isSelected ? tint : tint.opacity(0.16))
-                )
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("month.categoryFilter.\(title.lowercased())")
@@ -589,9 +604,23 @@ private struct MonthRecurringBreakdownSection: Identifiable, Equatable {
     let items: [RecurringItemSummary]
 
     var id: String { title }
+
+    var itemSummary: String {
+        let count = items.count
+        let label = title == "Insurance" ? "policies" : title.lowercased()
+        let singularLabel = title == "Insurance" ? "policy" : String(label.dropLast())
+
+        if count == 1 {
+            return "1 \(singularLabel)"
+        }
+
+        return "\(count) \(label)"
+    }
 }
 
 private struct MonthCategoryChartPage: View {
+    private static let legendHeight: CGFloat = 214
+
     let title: String
     let slices: [MonthCategorySlice]
     let currencyCode: String
@@ -601,17 +630,9 @@ private struct MonthCategoryChartPage: View {
         VStack(alignment: .leading, spacing: 14) {
             Text(title)
                 .font(.headline)
+                .frame(height: 24, alignment: .topLeading)
 
-            if slices.isEmpty {
-                Spacer(minLength: 0)
-
-                Text(emptyStateText)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-
-                Spacer(minLength: 0)
-            } else {
+            ZStack {
                 Chart(slices) { slice in
                     SectorMark(
                         angle: .value("Amount", slice.total),
@@ -622,32 +643,46 @@ private struct MonthCategoryChartPage: View {
                 }
                 .chartLegend(.hidden)
                 .frame(height: 190)
+                .opacity(slices.isEmpty ? 0 : 1)
 
-                VStack(spacing: 10) {
-                    ForEach(slices) { slice in
-                        HStack(spacing: 10) {
-                            Circle()
-                                .fill(slice.color)
-                                .frame(width: 10, height: 10)
-
-                            Text(slice.title)
-                                .foregroundStyle(.primary)
-
-                            Spacer()
-
-                            Text(slice.total.formatted(.currency(code: currencyCode)))
-                                .fontWeight(.medium)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
+                if slices.isEmpty {
+                    Text(emptyStateText)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                 }
             }
+            .frame(height: 190)
+
+            legendArea
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(16)
         .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .padding(.horizontal, 2)
         .padding(.vertical, 6)
+    }
+
+    private var legendArea: some View {
+        VStack(spacing: 10) {
+            ForEach(slices) { slice in
+                HStack(spacing: 10) {
+                    Circle()
+                        .fill(slice.color)
+                        .frame(width: 10, height: 10)
+
+                    Text(slice.title)
+                        .foregroundStyle(.primary)
+
+                    Spacer()
+
+                    Text(slice.total.formatted(.currency(code: currencyCode)))
+                        .fontWeight(.medium)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, minHeight: Self.legendHeight, maxHeight: Self.legendHeight, alignment: .top)
     }
 }
 
