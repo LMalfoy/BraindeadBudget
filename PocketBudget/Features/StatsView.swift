@@ -1,8 +1,8 @@
 /*
  Long-term trends view.
 
- This screen stays intentionally focused on recent multi-month movement rather
- than current-month detail.
+ This screen answers one question:
+ how has financial behavior changed across the last six months?
  */
 
 import Charts
@@ -41,9 +41,31 @@ struct StatsView: View {
         )
     }
 
-    private var monthlySpendingHistory: [MonthlySpendingPoint] {
-        BudgetStore.monthComparisonHistory(
+    private var variableSpendingHistory: [MonthlySpendingPoint] {
+        BudgetStore.spendingHistory(
             for: expenses,
+            recurringExpenseItems: recurringExpenseItems,
+            kind: .variable,
+            months: monthWindow,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay
+        )
+    }
+
+    private var recurringSpendingHistory: [MonthlySpendingPoint] {
+        BudgetStore.spendingHistory(
+            for: expenses,
+            recurringExpenseItems: recurringExpenseItems,
+            kind: .recurring,
+            months: monthWindow,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay
+        )
+    }
+
+    private var totalSpendingHistory: [MonthlySpendingPoint] {
+        BudgetStore.spendingHistory(
+            for: expenses,
+            recurringExpenseItems: recurringExpenseItems,
+            kind: .total,
             months: monthWindow,
             budgetPeriodAnchorDay: budgetPeriodAnchorDay
         )
@@ -60,47 +82,61 @@ struct StatsView: View {
         )
     }
 
-    private var categoryTrendHistory: [CategoryTrendPoint] {
+    private var variableCategoryTrendHistory: [NamedCategoryTrendPoint] {
         BudgetStore.categoryTrendHistory(
             for: expenses,
+            months: monthWindow,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay
+        ).map {
+            NamedCategoryTrendPoint(
+                month: $0.month,
+                categoryKey: $0.category.rawValue,
+                categoryTitle: $0.category.title,
+                colorName: $0.category.rawValue,
+                total: $0.total
+            )
+        }
+    }
+
+    private var recurringCategoryTrendHistory: [NamedCategoryTrendPoint] {
+        BudgetStore.recurringCategoryTrendHistory(
+            recurringExpenseItems: recurringExpenseItems,
             months: monthWindow,
             budgetPeriodAnchorDay: budgetPeriodAnchorDay
         )
     }
 
-    private var recurringTotal: Double {
-        recurringExpenseItems.reduce(0) { $0 + $1.amount }
-    }
-
-    private var subscriptionLoad: SubscriptionLoadSummary {
-        BudgetStore.subscriptionLoad(for: recurringExpenseItems)
-    }
-
-    private var fixedCostRatio: FixedCostRatioSummary {
-        BudgetStore.fixedCostRatio(
-            incomeItems: incomeItems,
-            recurringExpenseItems: recurringExpenseItems
+    private var totalCategoryTrendHistory: [NamedCategoryTrendPoint] {
+        BudgetStore.totalCategoryTrendHistory(
+            expenses: expenses,
+            recurringExpenseItems: recurringExpenseItems,
+            months: monthWindow,
+            budgetPeriodAnchorDay: budgetPeriodAnchorDay
         )
     }
 
     var body: some View {
         List {
             Section {
-                monthlySpendingCard
+                MonthlySpendingSwipeCard(
+                    variableHistory: variableSpendingHistory,
+                    recurringHistory: recurringSpendingHistory,
+                    totalHistory: totalSpendingHistory,
+                    currencyCode: currencyCode
+                )
+            }
+
+            Section {
+                CategoryTrendSwipeCard(
+                    variableHistory: variableCategoryTrendHistory,
+                    recurringHistory: recurringCategoryTrendHistory,
+                    totalHistory: totalCategoryTrendHistory,
+                    currencyCode: currencyCode
+                )
             }
 
             Section {
                 carryoverCard
-            }
-
-            if !categoryTrendHistory.isEmpty {
-                Section {
-                    categoryTrendCard
-                }
-            }
-
-            Section {
-                recurringLoadCard
             }
         }
         .contentMargins(.top, 0, for: .scrollContent)
@@ -108,40 +144,16 @@ struct StatsView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    private var monthlySpendingCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Monthly Spending")
-                .font(.headline)
-
-            if monthlySpendingHistory.allSatisfy({ $0.total == 0 }) {
-                Text("Add more monthly history to see spending trends over time.")
-                    .foregroundStyle(.secondary)
-            } else {
-                Chart(monthlySpendingHistory) { point in
-                    BarMark(
-                        x: .value("Month", point.month, unit: .month),
-                        y: .value("Spent", point.total)
-                    )
-                    .foregroundStyle(.blue.gradient)
-                }
-                .frame(height: 220)
-
-                Text("Last \(monthWindow) months of total monthly spending.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .trendsCardStyle()
-    }
-
     private var carryoverCard: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Remaining Budget / Carryover")
                 .font(.headline)
+                .frame(maxWidth: .infinity, minHeight: 48, maxHeight: 48, alignment: .topLeading)
 
             if carryoverHistory.allSatisfy({ $0.amount == 0 }) {
                 Text("Carryover appears here once previous months start ending above or below budget.")
                     .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, minHeight: 260, maxHeight: 260, alignment: .center)
             } else {
                 Chart(carryoverHistory) { point in
                     LineMark(
@@ -156,7 +168,7 @@ struct StatsView: View {
                     )
                     .foregroundStyle(.green.opacity(0.12))
                 }
-                .frame(height: 220)
+                .frame(height: 260)
 
                 Text("Positive values mean budget room carried into the next month.")
                     .font(.footnote)
@@ -165,87 +177,278 @@ struct StatsView: View {
         }
         .trendsCardStyle()
     }
+}
 
-    private var categoryTrendCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Category Trends")
+private struct MonthlySpendingSwipeCard: View {
+    @State private var selectedPage = 0
+
+    let variableHistory: [MonthlySpendingPoint]
+    let recurringHistory: [MonthlySpendingPoint]
+    let totalHistory: [MonthlySpendingPoint]
+    let currencyCode: String
+
+    private var selectedTitle: String {
+        switch selectedPage {
+        case 1:
+            return "Recurring Spending"
+        case 2:
+            return "Total Spending"
+        default:
+            return "Variable Spending"
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Monthly Trends")
                 .font(.headline)
+                .frame(maxWidth: .infinity, minHeight: 34, maxHeight: 34, alignment: .topLeading)
 
-            Chart(categoryTrendHistory) { point in
-                LineMark(
-                    x: .value("Month", point.month, unit: .month),
-                    y: .value("Amount", point.total),
-                    series: .value("Category", point.category.title)
+            Text(selectedTitle)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+
+            TabView(selection: $selectedPage) {
+                MonthlySpendingTrendPage(
+                    history: variableHistory,
+                    currencyCode: currencyCode,
+                    tint: .blue
                 )
-                .foregroundStyle(point.category.color)
+                .tag(0)
+
+                MonthlySpendingTrendPage(
+                    history: recurringHistory,
+                    currencyCode: currencyCode,
+                    tint: .teal
+                )
+                .tag(1)
+
+                MonthlySpendingTrendPage(
+                    history: totalHistory,
+                    currencyCode: currencyCode,
+                    tint: .purple
+                )
+                .tag(2)
             }
-            .frame(height: 220)
+            .tabViewStyle(.page(indexDisplayMode: .automatic))
+            .padding(.bottom, 10)
+        }
+        .frame(height: 400)
+        .trendsCardStyle()
+    }
+}
 
-            VStack(spacing: 10) {
-                ForEach(ExpenseCategory.allCases) { category in
-                    HStack(spacing: 10) {
-                        Circle()
-                            .fill(category.color)
-                            .frame(width: 10, height: 10)
+private struct MonthlySpendingTrendPage: View {
+    private static let chartHeight: CGFloat = 240
 
-                        Text(category.title)
-                            .foregroundStyle(.primary)
+    let history: [MonthlySpendingPoint]
+    let currencyCode: String
+    let tint: Color
 
-                        Spacer()
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if history.allSatisfy({ $0.total == 0 }) {
+                Text("No spending history available in the last six months.")
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, minHeight: Self.chartHeight, maxHeight: Self.chartHeight, alignment: .center)
+            } else {
+                Chart {
+                    ForEach(history) { point in
+                        BarMark(
+                            x: .value("Month", point.month, unit: .month),
+                            y: .value("Spent", point.total)
+                        )
+                        .foregroundStyle(tint.gradient)
+                    }
+
+                    if let trendLine {
+                        ForEach(trendLine) { point in
+                            LineMark(
+                                x: .value("Month", point.month, unit: .month),
+                                y: .value("Trend", point.total)
+                            )
+                            .foregroundStyle(.primary.opacity(0.5))
+                            .lineStyle(.init(lineWidth: 2, dash: [5, 4]))
+                        }
                     }
                 }
-            }
-        }
-        .trendsCardStyle()
-    }
-
-    private var recurringLoadCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Recurring Load")
-                .font(.headline)
-
-            VStack(spacing: 10) {
-                recurringRow(title: "Current Monthly Recurring", value: recurringTotal.formatted(.currency(code: currencyCode)))
-                recurringRow(title: "Subscriptions", value: "\(subscriptionLoad.count)")
-                recurringRow(title: "Subscription Cost", value: subscriptionLoad.totalMonthlyCost.formatted(.currency(code: currencyCode)))
-                recurringRow(
-                    title: "Recurring Share of Income",
-                    value: fixedCostRatio.recurringShare.formatted(.percent.precision(.fractionLength(0)))
-                )
+                .frame(height: Self.chartHeight)
             }
 
-            Text("Recurring items are structural costs. Historical recurring-load tracking is kept lightweight until the data model supports true change history.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            Spacer(minLength: 0)
         }
-        .trendsCardStyle()
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
-    @ViewBuilder
-    private func recurringRow(title: String, value: String) -> some View {
-        HStack {
-            Text(title)
-                .foregroundStyle(.secondary)
-            Spacer()
-            Text(value)
-                .fontWeight(.medium)
+    private var trendLine: [MonthlySpendingPoint]? {
+        guard history.count >= 2 else { return nil }
+
+        let start = history.first?.total ?? 0
+        let end = history.last?.total ?? 0
+        let step = (end - start) / Double(max(history.count - 1, 1))
+
+        return history.enumerated().map { index, point in
+            MonthlySpendingPoint(
+                month: point.month,
+                total: start + (Double(index) * step)
+            )
         }
     }
 }
 
-private extension ExpenseCategory {
-    var color: Color {
-        switch self {
-        case .food:
-            return .green
-        case .transport:
-            return .blue
-        case .household:
-            return .orange
-        case .fun:
-            return .pink
+private struct CategoryTrendSwipeCard: View {
+    @State private var selectedPage = 0
+
+    let variableHistory: [NamedCategoryTrendPoint]
+    let recurringHistory: [NamedCategoryTrendPoint]
+    let totalHistory: [NamedCategoryTrendPoint]
+    let currencyCode: String
+
+    private var selectedTitle: String {
+        switch selectedPage {
+        case 1:
+            return "Recurring Spending"
+        case 2:
+            return "Total Spending"
+        default:
+            return "Variable Spending"
         }
     }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Category Trends")
+                .font(.headline)
+                .frame(maxWidth: .infinity, minHeight: 34, maxHeight: 34, alignment: .topLeading)
+
+            Text(selectedTitle)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+
+            TabView(selection: $selectedPage) {
+                CategoryTrendPage(
+                    history: variableHistory,
+                    currencyCode: currencyCode
+                )
+                .tag(0)
+
+                CategoryTrendPage(
+                    history: recurringHistory,
+                    currencyCode: currencyCode
+                )
+                .tag(1)
+
+                CategoryTrendPage(
+                    history: totalHistory,
+                    currencyCode: currencyCode
+                )
+                .tag(2)
+            }
+            .tabViewStyle(.page(indexDisplayMode: .automatic))
+            .padding(.bottom, 10)
+        }
+        .frame(height: 500)
+        .trendsCardStyle()
+    }
+}
+
+private struct CategoryTrendPage: View {
+    private static let chartHeight: CGFloat = 226
+    private static let legendHeight: CGFloat = 214
+
+    let history: [NamedCategoryTrendPoint]
+    let currencyCode: String
+
+    private var legendItems: [NamedCategoryLegendItem] {
+        Dictionary(grouping: history, by: \.categoryKey)
+            .values
+            .compactMap { points in
+                guard let first = points.first else { return nil }
+                return NamedCategoryLegendItem(
+                    categoryKey: first.categoryKey,
+                    categoryTitle: first.categoryTitle,
+                    colorName: first.colorName
+                )
+            }
+            .sorted { $0.categoryTitle < $1.categoryTitle }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if history.isEmpty || history.allSatisfy({ $0.total == 0 }) {
+                Text("No category history available in the last six months.")
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, minHeight: Self.chartHeight, maxHeight: Self.chartHeight, alignment: .center)
+
+                Spacer(minLength: 0)
+                    .frame(height: Self.legendHeight)
+            } else {
+                Chart(history) { point in
+                    LineMark(
+                        x: .value("Month", point.month, unit: .month),
+                        y: .value("Amount", point.total),
+                        series: .value("Category", point.categoryTitle)
+                    )
+                    .foregroundStyle(color(for: point.colorName))
+                }
+                .frame(height: Self.chartHeight)
+
+                VStack(spacing: 10) {
+                    ForEach(legendItems) { item in
+                        HStack(spacing: 10) {
+                            Circle()
+                                .fill(color(for: item.colorName))
+                                .frame(width: 10, height: 10)
+
+                            Text(item.categoryTitle)
+                                .foregroundStyle(.primary)
+
+                            Spacer()
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, minHeight: Self.legendHeight, maxHeight: Self.legendHeight, alignment: .top)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private func color(for colorName: String) -> Color {
+        switch colorName {
+        case ExpenseCategory.food.rawValue:
+            return .green
+        case ExpenseCategory.transport.rawValue:
+            return .blue
+        case ExpenseCategory.household.rawValue:
+            return .orange
+        case ExpenseCategory.fun.rawValue:
+            return .pink
+        case RecurringExpenseCategory.housingUtilities.rawValue:
+            return .indigo
+        case RecurringExpenseCategory.subscriptions.rawValue:
+            return .teal
+        case RecurringExpenseCategory.insurance.rawValue:
+            return .cyan
+        case RecurringExpenseCategory.savings.rawValue:
+            return .mint
+        case RecurringExpenseCategory.debt.rawValue:
+            return .red
+        default:
+            return .gray
+        }
+    }
+}
+
+private struct NamedCategoryLegendItem: Identifiable {
+    let categoryKey: String
+    let categoryTitle: String
+    let colorName: String
+
+    var id: String { categoryKey }
 }
 
 private extension View {
