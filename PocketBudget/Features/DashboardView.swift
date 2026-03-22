@@ -91,7 +91,7 @@ struct DashboardView: View {
                         currencyCode: currencyCode,
                         hasCompletedSetup: hasBaselineData
                     )
-                    .listRowInsets(Self.cardInsets)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 12, trailing: 16))
                 }
 
                 Section {
@@ -133,6 +133,7 @@ struct DashboardView: View {
                     Text("Recent Expenses")
                 }
             }
+            .contentMargins(.top, 0, for: .scrollContent)
 
             Button {
                 showingAddExpense = true

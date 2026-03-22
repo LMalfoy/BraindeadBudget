@@ -426,16 +426,16 @@ struct ExpenseHistorySheet: View {
     private var recurringBreakdownCard: some View {
         VStack(alignment: .leading, spacing: 16) {
             ForEach(recurringBreakdownSections) { section in
-                VStack(alignment: .leading, spacing: 12) {
-                    Text(section.title)
-                        .font(.headline)
+                VStack(alignment: .leading, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(section.title)
+                            .font(.headline)
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Total: \(section.total.formatted(.currency(code: currencyCode)))")
+                        Text("\(section.totalLabel): \(section.total.formatted(.currency(code: currencyCode)))")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.primary)
 
-                        Text(section.itemSummary)
+                        Text(section.activeItemSummary)
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
@@ -445,14 +445,30 @@ struct ExpenseHistorySheet: View {
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     } else {
-                        ForEach(section.items) { item in
-                            Text(item.name)
-                                .font(.subheadline)
-                                .foregroundStyle(.primary)
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(Array(section.items.enumerated()), id: \.element.id) { index, item in
+                                HStack(alignment: .top, spacing: 8) {
+                                    Text("\(index + 1).")
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                        .frame(width: 20, alignment: .leading)
+
+                                    Text(item.name)
+                                        .font(.subheadline)
+                                        .foregroundStyle(.primary)
+
+                                    Spacer(minLength: 12)
+
+                                    Text(item.amount.formatted(.currency(code: currencyCode)))
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
                         }
+                        .padding(.top, 2)
                     }
                 }
-                .padding(14)
+                .padding(16)
                 .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
         }
@@ -605,10 +621,14 @@ private struct MonthRecurringBreakdownSection: Identifiable, Equatable {
 
     var id: String { title }
 
-    var itemSummary: String {
+    var totalLabel: String {
+        title == "Insurance" ? "Monthly Insurance Cost" : "Monthly Subscription Cost"
+    }
+
+    var activeItemSummary: String {
         let count = items.count
-        let label = title == "Insurance" ? "policies" : title.lowercased()
-        let singularLabel = title == "Insurance" ? "policy" : String(label.dropLast())
+        let label = title == "Insurance" ? "active policies" : "active subscriptions"
+        let singularLabel = title == "Insurance" ? "active policy" : "active subscription"
 
         if count == 1 {
             return "1 \(singularLabel)"
