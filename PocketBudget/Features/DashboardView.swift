@@ -20,6 +20,7 @@ enum ChartPanelMetrics {
     static let legendVisibleRowCount: CGFloat = 5
     static let legendRowHeight: CGFloat = 22
     static let legendRowSpacing: CGFloat = 10
+    static let chartToIndicatorsSpacing: CGFloat = 18
     static let legendHeight: CGFloat =
         (legendVisibleRowCount * legendRowHeight) +
         ((legendVisibleRowCount - 1) * legendRowSpacing)
@@ -251,8 +252,20 @@ private struct PageIndexBackgroundModifier: ViewModifier {
     }
 }
 
-func euroAxisLabel(_ amount: Double) -> String {
-    "\(Int(amount.rounded())) €"
+func chartCurrencyLabel(_ amount: Double, currencyCode: String) -> String {
+    amount.formatted(
+        .currency(code: currencyCode)
+            .precision(.fractionLength(0))
+    )
+}
+
+func roundedChartUpperBound(for values: [Double]) -> Double {
+    let maximum = values.max() ?? 0
+    guard maximum > 0 else { return 1 }
+
+    let magnitude = pow(10.0, floor(log10(maximum)))
+    let step = max(magnitude / 2, 1)
+    return ceil(maximum / step) * step
 }
 
 struct DashboardView: View {
@@ -336,6 +349,8 @@ struct DashboardView: View {
                         carryover: snapshot.previousMonthCarryover,
                         totalSpent: snapshot.totalSpent,
                         remainingBudget: snapshot.remainingBudget,
+                        dailySafeSpend: snapshot.dailySafeSpend,
+                        daysRemainingInCurrentPeriod: snapshot.daysRemainingInCurrentPeriod,
                         currencyCode: currencyCode,
                         hasCompletedSetup: hasBaselineData
                     )
@@ -541,6 +556,8 @@ private struct SummaryCardView: View {
     let carryover: Double
     let totalSpent: Double
     let remainingBudget: Double
+    let dailySafeSpend: Double
+    let daysRemainingInCurrentPeriod: Int
     let currencyCode: String
     let hasCompletedSetup: Bool
 
@@ -555,10 +572,20 @@ private struct SummaryCardView: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
 
-                    Text(formatted(remainingBudget))
-                        .font(.system(size: 34, weight: .bold, design: .rounded))
-                        .foregroundStyle(remainingBudget < 0 ? AppTheme.warningRed : AppTheme.primaryGreen)
-                        .accessibilityIdentifier("dashboard.remainingBudgetValue")
+                    HStack(alignment: .lastTextBaseline, spacing: 10) {
+                        Text(formatted(remainingBudget))
+                            .font(.system(size: 34, weight: .bold, design: .rounded))
+                            .foregroundStyle(remainingBudget < 0 ? AppTheme.warningRed : AppTheme.primaryGreen)
+                            .accessibilityIdentifier("dashboard.remainingBudgetValue")
+
+                        Spacer(minLength: 8)
+
+                        if daysRemainingInCurrentPeriod > 0 {
+                            Text("\(compactCurrency(dailySafeSpend))/day")
+                                .font(.footnote.weight(.medium))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
 
                 VStack(spacing: 10) {
@@ -593,6 +620,13 @@ private struct SummaryCardView: View {
 
     private func formatted(_ amount: Double) -> String {
         amount.formatted(.currency(code: currencyCode))
+    }
+
+    private func compactCurrency(_ amount: Double) -> String {
+        amount.formatted(
+            .currency(code: currencyCode)
+                .precision(.fractionLength(0))
+        )
     }
 }
 
@@ -643,6 +677,15 @@ private struct DashboardInsightCardView: View {
                 Spacer(minLength: 0)
 
                 Chart {
+                    ForEach(idealTrajectory) { point in
+                        LineMark(
+                            x: .value("Date", point.date),
+                            y: .value("Ideal Remaining", point.remainingBudget)
+                        )
+                        .foregroundStyle(.secondary.opacity(0.55))
+                        .lineStyle(.init(lineWidth: 1.5, dash: [5, 4]))
+                    }
+
                     ForEach(trajectory) { point in
                         let isNegativeState = (trajectory.last?.remainingBudget ?? 0) < 0
 
@@ -690,7 +733,7 @@ private struct DashboardInsightCardView: View {
                         AxisTick()
                         AxisValueLabel {
                             if let amount = value.as(Double.self) {
-                                Text(euroAxisLabel(amount))
+                                Text(chartCurrencyLabel(amount, currencyCode: currencyCode))
                             }
                         }
                     }
@@ -712,7 +755,7 @@ private struct DashboardInsightCardView: View {
     }
 
     private var yAxisDomain: ClosedRange<Double> {
-        let values = trajectory.map(\.remainingBudget)
+        let values = trajectory.map(\.remainingBudget) + idealTrajectory.map(\.remainingBudget)
         let minimum = values.min() ?? 0
         let maximum = values.max() ?? 0
         let lowerBound = min(minimum < 0 ? roundedFloor(minimum) : 0, 0)
@@ -726,6 +769,25 @@ private struct DashboardInsightCardView: View {
         }
 
         return lowerBound...max(upperBound, lowerBound + 1)
+    }
+
+    private var idealTrajectory: [BudgetTrajectoryPoint] {
+        guard
+            let first = trajectory.first,
+            let last = trajectory.last
+        else {
+            return []
+        }
+
+        let totalSteps = max(trajectory.count - 1, 1)
+
+        return trajectory.enumerated().map { index, point in
+            let progress = Double(index) / Double(totalSteps)
+            let target = first.remainingBudget + ((0 - first.remainingBudget) * progress)
+            let date = index == trajectory.count - 1 ? last.date : point.date
+
+            return BudgetTrajectoryPoint(date: date, remainingBudget: target)
+        }
     }
 
     private var xAxisMarks: [Date] {

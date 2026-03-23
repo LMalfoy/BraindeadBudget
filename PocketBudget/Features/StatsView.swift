@@ -30,10 +30,6 @@ struct StatsView: View {
         budgets.first?.initialBudgetAnchorMonth
     }
 
-    private var budgetPeriodAnchorDay: Int {
-        budgets.first?.budgetPeriodAnchorDay ?? 1
-    }
-
     private var monthlyBudget: Double {
         BudgetStore.availableMonthlyBudget(
             incomeItems: incomeItems,
@@ -48,7 +44,7 @@ struct StatsView: View {
             recurringExpenseItems: recurringExpenseItems,
             kind: .variable,
             months: monthWindow,
-            budgetPeriodAnchorDay: budgetPeriodAnchorDay
+            referenceDate: .now
         )
     }
 
@@ -58,7 +54,7 @@ struct StatsView: View {
             recurringExpenseItems: recurringExpenseItems,
             kind: .recurring,
             months: monthWindow,
-            budgetPeriodAnchorDay: budgetPeriodAnchorDay
+            referenceDate: .now
         )
     }
 
@@ -68,7 +64,7 @@ struct StatsView: View {
             recurringExpenseItems: recurringExpenseItems,
             kind: .total,
             months: monthWindow,
-            budgetPeriodAnchorDay: budgetPeriodAnchorDay
+            referenceDate: .now
         )
     }
 
@@ -87,7 +83,7 @@ struct StatsView: View {
         BudgetStore.categoryTrendHistory(
             for: expenses,
             months: monthWindow,
-            budgetPeriodAnchorDay: budgetPeriodAnchorDay
+            referenceDate: .now
         ).map {
             NamedCategoryTrendPoint(
                 month: $0.month,
@@ -103,7 +99,7 @@ struct StatsView: View {
         BudgetStore.recurringCategoryTrendHistory(
             recurringExpenseItems: recurringExpenseItems,
             months: monthWindow,
-            budgetPeriodAnchorDay: budgetPeriodAnchorDay
+            referenceDate: .now
         )
     }
 
@@ -112,14 +108,14 @@ struct StatsView: View {
             expenses: expenses,
             recurringExpenseItems: recurringExpenseItems,
             months: monthWindow,
-            budgetPeriodAnchorDay: budgetPeriodAnchorDay
+            referenceDate: .now
         )
     }
 
     var body: some View {
         List {
             Section {
-                MonthlySpendingSwipeCard(
+                MonthlySpendingComparisonCard(
                     variableHistory: variableSpendingHistory,
                     recurringHistory: recurringSpendingHistory,
                     totalHistory: totalSpendingHistory,
@@ -175,7 +171,7 @@ struct StatsView: View {
                             AxisTick()
                             AxisValueLabel {
                                 if let amount = value.as(Double.self) {
-                                    Text(euroAxisLabel(amount))
+                                    Text(chartCurrencyLabel(amount, currencyCode: currencyCode))
                                 }
                             }
                         }
@@ -192,120 +188,76 @@ struct StatsView: View {
     }
 }
 
-private struct MonthlySpendingSwipeCard: View {
-    @State private var selectedPage = 0
-
+private struct MonthlySpendingComparisonCard: View {
     let variableHistory: [MonthlySpendingPoint]
     let recurringHistory: [MonthlySpendingPoint]
     let totalHistory: [MonthlySpendingPoint]
     let currencyCode: String
 
-    private var selectedTitle: String {
-        switch selectedPage {
-        case 1:
-            return "Recurring Spending"
-        case 2:
-            return "Total Spending"
-        default:
-            return "Variable Spending"
+    private var comparisonPoints: [MonthlyTrendBarPoint] {
+        variableHistory.enumerated().flatMap { index, variablePoint in
+            let recurringPoint = recurringHistory[safe: index]
+            let totalPoint = totalHistory[safe: index]
+
+            return [
+                MonthlyTrendBarPoint(month: variablePoint.month, kind: .variable, total: variablePoint.total),
+                MonthlyTrendBarPoint(month: variablePoint.month, kind: .recurring, total: recurringPoint?.total ?? 0),
+                MonthlyTrendBarPoint(month: variablePoint.month, kind: .total, total: totalPoint?.total ?? 0)
+            ]
         }
+    }
+
+    private var yAxisDomain: ClosedRange<Double> {
+        0...roundedChartUpperBound(for: comparisonPoints.map(\.total))
     }
 
     var body: some View {
         ChartPanelCard {
             VStack(alignment: .leading, spacing: ChartPanelMetrics.contentSpacing) {
-                ChartPanelHeader(title: "Monthly Trends", subtitle: selectedTitle)
+                ChartPanelHeader(title: "Monthly Trends")
 
-                SwipeableChartCard(height: 310, selection: $selectedPage) {
-                    MonthlySpendingTrendPage(
-                        history: variableHistory,
-                        currencyCode: currencyCode,
-                        tint: .blue
+                if comparisonPoints.allSatisfy({ $0.total == 0 }) {
+                    ChartEmptyState(
+                        text: "No spending history available in the last six months.",
+                        height: ChartPanelMetrics.lineChartHeight
                     )
-                    .tag(0)
-
-                    MonthlySpendingTrendPage(
-                        history: recurringHistory,
-                        currencyCode: currencyCode,
-                        tint: .teal
-                    )
-                    .tag(1)
-
-                    MonthlySpendingTrendPage(
-                        history: totalHistory,
-                        currencyCode: currencyCode,
-                        tint: .purple
-                    )
-                    .tag(2)
-                }
-            }
-        }
-    }
-}
-
-private struct MonthlySpendingTrendPage: View {
-    let history: [MonthlySpendingPoint]
-    let currencyCode: String
-    let tint: Color
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if history.allSatisfy({ $0.total == 0 }) {
-                ChartEmptyState(
-                    text: "No spending history available in the last six months.",
-                    height: ChartPanelMetrics.lineChartHeight
-                )
-            } else {
-                Chart {
-                    ForEach(history) { point in
+                } else {
+                    Chart(comparisonPoints) { point in
                         BarMark(
                             x: .value("Month", point.month, unit: .month),
-                            y: .value("Spent", point.total)
+                            y: .value("Spent", point.total),
+                            width: .fixed(12)
                         )
-                        .foregroundStyle(tint.gradient)
+                        .foregroundStyle(AppTheme.trendColor(for: point.kind))
+                        .position(by: .value("Series", point.kind.title))
                     }
-
-                    if let trendLine {
-                        ForEach(trendLine) { point in
-                            LineMark(
-                                x: .value("Month", point.month, unit: .month),
-                                y: .value("Trend", point.total)
-                            )
-                            .foregroundStyle(.primary.opacity(0.5))
-                            .lineStyle(.init(lineWidth: 2, dash: [5, 4]))
-                        }
-                    }
-                }
-                .chartYAxis {
-                    AxisMarks(position: .leading) { value in
-                        AxisGridLine()
-                        AxisTick()
-                        AxisValueLabel {
-                            if let amount = value.as(Double.self) {
-                                Text(euroAxisLabel(amount))
+                    .chartYAxis {
+                        AxisMarks(position: .leading) { value in
+                            AxisGridLine()
+                            AxisTick()
+                            AxisValueLabel {
+                                if let amount = value.as(Double.self) {
+                                    Text(chartCurrencyLabel(amount, currencyCode: currencyCode))
+                                }
                             }
                         }
                     }
+                    .chartYScale(domain: yAxisDomain)
+                    .frame(height: ChartPanelMetrics.lineChartHeight)
+
+                    ChartLegendList(
+                        entries: TrendSeriesKind.allCases.map { kind in
+                            ChartLegendEntry(
+                                id: kind.rawValue,
+                                title: kind.title,
+                                value: nil,
+                                color: AppTheme.trendColor(for: kind)
+                            )
+                        },
+                        minHeight: 86
+                    )
                 }
-                .frame(height: ChartPanelMetrics.lineChartHeight)
             }
-        }
-        .padding(.vertical, ChartPanelMetrics.sectionVerticalInset)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
-
-    private var trendLine: [MonthlySpendingPoint]? {
-        guard history.count >= 2 else { return nil }
-
-        let start = history.first?.total ?? 0
-        let end = history.last?.total ?? 0
-        let step = (end - start) / Double(max(history.count - 1, 1))
-
-        return history.enumerated().map { index, point in
-            MonthlySpendingPoint(
-                month: point.month,
-                total: start + (Double(index) * step)
-            )
         }
     }
 }
@@ -317,6 +269,10 @@ private struct CategoryTrendSwipeCard: View {
     let recurringHistory: [NamedCategoryTrendPoint]
     let totalHistory: [NamedCategoryTrendPoint]
     let currencyCode: String
+
+    private var sharedYAxisDomain: ClosedRange<Double> {
+        0...roundedChartUpperBound(for: (variableHistory + recurringHistory + totalHistory).map(\.total))
+    }
 
     private var selectedTitle: String {
         switch selectedPage {
@@ -334,22 +290,25 @@ private struct CategoryTrendSwipeCard: View {
             VStack(alignment: .leading, spacing: ChartPanelMetrics.contentSpacing) {
                 ChartPanelHeader(title: "Category Trends", subtitle: selectedTitle)
 
-                SwipeableChartCard(height: 410, selection: $selectedPage) {
+                SwipeableChartCard(height: 442, selection: $selectedPage) {
                     CategoryTrendPage(
                         history: variableHistory,
-                        currencyCode: currencyCode
+                        currencyCode: currencyCode,
+                        yAxisDomain: sharedYAxisDomain
                     )
                     .tag(0)
 
                     CategoryTrendPage(
                         history: recurringHistory,
-                        currencyCode: currencyCode
+                        currencyCode: currencyCode,
+                        yAxisDomain: sharedYAxisDomain
                     )
                     .tag(1)
 
                     CategoryTrendPage(
                         history: totalHistory,
-                        currencyCode: currencyCode
+                        currencyCode: currencyCode,
+                        yAxisDomain: sharedYAxisDomain
                     )
                     .tag(2)
                 }
@@ -361,6 +320,7 @@ private struct CategoryTrendSwipeCard: View {
 private struct CategoryTrendPage: View {
     let history: [NamedCategoryTrendPoint]
     let currencyCode: String
+    let yAxisDomain: ClosedRange<Double>
 
     private var legendItems: [NamedCategoryLegendItem] {
         Dictionary(grouping: history, by: \.categoryKey)
@@ -398,14 +358,15 @@ private struct CategoryTrendPage: View {
                 .chartYAxis {
                     AxisMarks(position: .leading) { value in
                         AxisGridLine()
-                        AxisTick()
-                        AxisValueLabel {
-                            if let amount = value.as(Double.self) {
-                                Text(euroAxisLabel(amount))
+                            AxisTick()
+                            AxisValueLabel {
+                                if let amount = value.as(Double.self) {
+                                    Text(chartCurrencyLabel(amount, currencyCode: currencyCode))
+                                }
                             }
                         }
                     }
-                }
+                .chartYScale(domain: yAxisDomain)
                 .frame(height: ChartPanelMetrics.lineChartHeight)
 
                 ChartLegendList(
@@ -422,6 +383,7 @@ private struct CategoryTrendPage: View {
             }
         }
         .padding(.vertical, ChartPanelMetrics.sectionVerticalInset)
+        .padding(.bottom, 28)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
@@ -436,4 +398,21 @@ private struct NamedCategoryLegendItem: Identifiable {
     let colorName: String
 
     var id: String { categoryKey }
+}
+
+private struct MonthlyTrendBarPoint: Identifiable {
+    let month: Date
+    let kind: TrendSeriesKind
+    let total: Double
+
+    var id: String {
+        "\(kind.rawValue)-\(month.timeIntervalSinceReferenceDate)"
+    }
+}
+
+private extension Array {
+    subscript(safe index: Int) -> Element? {
+        guard indices.contains(index) else { return nil }
+        return self[index]
+    }
 }

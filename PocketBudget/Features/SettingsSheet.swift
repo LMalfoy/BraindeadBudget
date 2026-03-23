@@ -56,7 +56,12 @@ struct SettingsSheet: View {
     }
 
     private var availableCurrencies: [String] {
-        Locale.commonISOCurrencyCodes.sorted()
+        let prioritized = ["EUR", "USD"]
+        let remaining = Locale.commonISOCurrencyCodes
+            .filter { !prioritized.contains($0) }
+            .sorted()
+
+        return prioritized + remaining
     }
 
     var body: some View {

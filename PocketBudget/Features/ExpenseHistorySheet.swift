@@ -353,21 +353,24 @@ struct ExpenseHistorySheet: View {
         ChartPanelCard {
             SwipeableChartCard(height: 470, showsInteractiveBackground: true) {
                 MonthCategoryChartPage(
-                    title: "Variable Spending by Category",
+                    title: "Spending by Category",
+                    subtitle: "Variable Spending",
                     slices: variableCategorySlices,
                     currencyCode: currencyCode,
                     emptyStateText: "No variable spending recorded for this month."
                 )
 
                 MonthCategoryChartPage(
-                    title: "Recurring Spending by Category",
+                    title: "Spending by Category",
+                    subtitle: "Recurring Spending",
                     slices: recurringCategorySlices,
                     currencyCode: currencyCode,
                     emptyStateText: "No recurring costs configured."
                 )
 
                 MonthCategoryChartPage(
-                    title: "Total Spending by Category",
+                    title: "Spending by Category",
+                    subtitle: "Total Spending",
                     slices: totalCategorySlices,
                     currencyCode: currencyCode,
                     emptyStateText: "No spending data available for this month."
@@ -410,7 +413,7 @@ struct ExpenseHistorySheet: View {
                             .foregroundStyle(value.as(Double.self) == 0 ? Color.secondary : Color.secondary.opacity(0.35))
                         AxisValueLabel {
                             if let amount = value.as(Double.self) {
-                                Text(euroAxisLabel(amount))
+                                Text(chartCurrencyLabel(amount, currencyCode: currencyCode))
                             }
                         }
                     }
@@ -634,6 +637,7 @@ private struct MonthRecurringBreakdownSection: Identifiable, Equatable {
 
 private struct MonthCategoryChartPage: View {
     let title: String
+    let subtitle: String
     let slices: [MonthCategorySlice]
     let currencyCode: String
     let emptyStateText: String
@@ -641,6 +645,7 @@ private struct MonthCategoryChartPage: View {
     var body: some View {
         DonutChartPanel(
             title: title,
+            subtitle: subtitle,
             slices: slices.map {
                 DonutChartDatum(
                     id: $0.id,

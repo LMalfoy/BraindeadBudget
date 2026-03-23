@@ -717,7 +717,7 @@ final class BudgetCalculationTests: XCTestCase {
             referenceDate: referenceDate
         )
 
-        XCTAssertEqual(history.count, 12)
+        XCTAssertEqual(history.count, 18)
 
         let juneStart = calendar.date(from: DateComponents(year: 2026, month: 6, day: 1))!
         XCTAssertTrue(history.contains(where: {
@@ -734,6 +734,11 @@ final class BudgetCalculationTests: XCTestCase {
             calendar.isDate($0.month, equalTo: juneStart, toGranularity: .month) &&
             $0.categoryKey == RecurringExpenseCategory.insurance.rawValue &&
             abs($0.total - 30) < 0.001
+        }))
+        XCTAssertTrue(history.contains(where: {
+            calendar.isDate($0.month, equalTo: juneStart, toGranularity: .month) &&
+            $0.categoryKey == RecurringExpenseCategory.housingUtilities.rawValue &&
+            abs($0.total) < 0.001
         }))
     }
 
@@ -1076,7 +1081,7 @@ final class BudgetCalculationTests: XCTestCase {
         XCTAssertTrue(unlocked.contains(.courseCorrection))
     }
 
-    func testDashboardSnapshotClampsDailySafeSpendAtZeroWhenRemainingBudgetIsNegative() {
+    func testDashboardSnapshotUsesSignedDailySafeSpendWhenRemainingBudgetIsNegative() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
 
@@ -1096,8 +1101,45 @@ final class BudgetCalculationTests: XCTestCase {
         )
 
         XCTAssertLessThan(snapshot.remainingBudget, 0)
-        XCTAssertEqual(snapshot.dailySafeSpend, 0, accuracy: 0.001)
+        XCTAssertEqual(
+            snapshot.dailySafeSpend,
+            snapshot.remainingBudget / Double(snapshot.daysRemainingInCurrentPeriod),
+            accuracy: 0.001
+        )
         XCTAssertEqual(snapshot.safeSpendStreak, 0)
+    }
+
+    func testRecurringCategoryTrendHistoryIncludesAllRecurringCategoriesAcrossWindow() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let referenceDate = makeDate(year: 2026, month: 6, day: 20, calendar: calendar)
+        let recurringExpenseItems = [
+            RecurringExpenseItem(name: "Rent", amount: 1200, category: .housingUtilities),
+            RecurringExpenseItem(name: "Insurance", amount: 30, category: .insurance),
+            RecurringExpenseItem(name: "Savings", amount: 100, category: .savings)
+        ]
+
+        let history = BudgetStore.recurringCategoryTrendHistory(
+            recurringExpenseItems: recurringExpenseItems,
+            months: 2,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        XCTAssertEqual(history.count, 10)
+
+        let juneStart = calendar.date(from: DateComponents(year: 2026, month: 6, day: 1))!
+        XCTAssertTrue(history.contains(where: {
+            calendar.isDate($0.month, equalTo: juneStart, toGranularity: .month) &&
+            $0.categoryKey == RecurringExpenseCategory.housingUtilities.rawValue &&
+            abs($0.total - 1200) < 0.001
+        }))
+        XCTAssertTrue(history.contains(where: {
+            calendar.isDate($0.month, equalTo: juneStart, toGranularity: .month) &&
+            $0.categoryKey == RecurringExpenseCategory.subscriptions.rawValue &&
+            abs($0.total) < 0.001
+        }))
     }
 
     func testDashboardSnapshotUsesIncomeMinusRecurringPlusCarryoverSemantics() {

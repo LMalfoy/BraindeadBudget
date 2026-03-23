@@ -818,7 +818,7 @@ struct BudgetStore {
             availableThisMonth: availableThisMonth,
             remainingBudget: remainingBudget,
             totalSpent: totalSpent,
-            dailySafeSpend: max(0, remainingBudget) / Double(daysRemaining),
+            dailySafeSpend: daysRemaining > 0 ? remainingBudget / Double(daysRemaining) : 0,
             daysRemainingInCurrentPeriod: daysRemaining,
             safeSpendStreak: safeSpendStreak,
             categorySpending: categorySpending,
@@ -1796,19 +1796,21 @@ struct BudgetStore {
             calendar.date(byAdding: .month, value: offset - (months - 1), to: referenceMonth)
         }
         .flatMap { month in
-            let distribution = fixedCostDistribution(
-                for: recurringExpenseItems,
-                referenceDate: month,
-                calendar: calendar
+            let totalsByCategory = Dictionary(
+                uniqueKeysWithValues: fixedCostDistribution(
+                    for: recurringExpenseItems,
+                    referenceDate: month,
+                    calendar: calendar
+                ).map { ($0.category, $0.total) }
             )
 
-            return distribution.map { summary in
+            return RecurringExpenseCategory.allCases.map { category in
                 NamedCategoryTrendPoint(
                     month: month,
-                    categoryKey: summary.category.rawValue,
-                    categoryTitle: summary.category.title,
-                    colorName: summary.category.rawValue,
-                    total: summary.total
+                    categoryKey: category.rawValue,
+                    categoryTitle: category.title,
+                    colorName: category.rawValue,
+                    total: totalsByCategory[category] ?? 0
                 )
             }
         }
@@ -1842,13 +1844,48 @@ struct BudgetStore {
             )
         }
 
-        return variablePoints + recurringCategoryTrendHistory(
+        let recurringPoints = recurringCategoryTrendHistory(
             recurringExpenseItems: recurringExpenseItems,
             months: months,
             budgetPeriodAnchorDay: budgetPeriodAnchorDay,
             calendar: calendar,
             referenceDate: referenceDate
         )
+
+        let categoryMetadata = Dictionary(
+            uniqueKeysWithValues:
+                ExpenseCategory.allCases.map { ($0.rawValue, (title: $0.title, colorName: $0.rawValue)) } +
+                RecurringExpenseCategory.allCases.map { ($0.rawValue, (title: $0.title, colorName: $0.rawValue)) }
+        )
+
+        let combinedTotals = Dictionary(
+            grouping: variablePoints + recurringPoints,
+            by: { "\($0.categoryKey)-\($0.month.timeIntervalSinceReferenceDate)" }
+        )
+
+        let monthsInWindow = (0..<months).compactMap { offset in
+            calendar.date(byAdding: .month, value: offset - (months - 1), to: periodStart(containing: referenceDate, budgetPeriodAnchorDay: budgetPeriodAnchorDay, calendar: calendar))
+        }
+        let allCategoryKeys = ExpenseCategory.allCases.map(\.rawValue) + RecurringExpenseCategory.allCases.map(\.rawValue)
+
+        return monthsInWindow.flatMap { month in
+            allCategoryKeys.compactMap { categoryKey in
+                let lookupKey = "\(categoryKey)-\(month.timeIntervalSinceReferenceDate)"
+                let total = combinedTotals[lookupKey]?.reduce(0) { $0 + $1.total } ?? 0
+
+                guard let metadata = categoryMetadata[categoryKey] else {
+                    return nil
+                }
+
+                return NamedCategoryTrendPoint(
+                    month: month,
+                    categoryKey: categoryKey,
+                    categoryTitle: metadata.title,
+                    colorName: metadata.colorName,
+                    total: total
+                )
+            }
+        }
     }
 
     static func carryoverHistory(

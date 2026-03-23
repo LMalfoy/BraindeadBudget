@@ -27,6 +27,10 @@ enum AppTheme {
     static let savingsCategory = Color(red: 0.44, green: 0.62, blue: 0.28)
     static let debtCategory = Color(red: 0.74, green: 0.29, blue: 0.27)
 
+    static let variableTrend = transportCategory
+    static let recurringTrend = subscriptionsCategory
+    static let totalTrend = funCategory
+
     static func categoryColor(for key: String) -> Color {
         switch key {
         case ExpenseCategory.food.rawValue:
@@ -49,6 +53,17 @@ enum AppTheme {
             return debtCategory
         default:
             return neutralGray
+        }
+    }
+
+    static func trendColor(for kind: TrendSeriesKind) -> Color {
+        switch kind {
+        case .variable:
+            return variableTrend
+        case .recurring:
+            return recurringTrend
+        case .total:
+            return totalTrend
         }
     }
 }
