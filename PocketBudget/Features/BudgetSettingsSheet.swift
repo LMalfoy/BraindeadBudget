@@ -57,7 +57,6 @@ struct BudgetSettingsSheet: View {
     @State private var errorMessage: String?
     @State private var initialAvailableBudgetText = ""
     @State private var hasCustomizedInitialAvailableBudget = false
-    @State private var selectedBudgetPeriodAnchorDay = 1
 
     private var store: BudgetStore {
         BudgetStore(context: modelContext)
@@ -72,13 +71,24 @@ struct BudgetSettingsSheet: View {
     }
 
     private var totalRecurringExpenses: Double {
-        BudgetStore.totalRecurringExpenses(for: recurringExpenseItems)
+        BudgetStore.totalRecurringExpenses(
+            for: recurringExpenseItems,
+            inMonthContaining: .now
+        )
     }
 
     private var availableBudget: Double {
         BudgetStore.availableMonthlyBudget(
             incomeItems: incomeItems,
-            recurringExpenseItems: recurringExpenseItems
+            recurringExpenseItems: recurringExpenseItems,
+            referenceDate: .now
+        )
+    }
+
+    private var currentRecurringExpenseItems: [RecurringExpenseItem] {
+        BudgetStore.activeRecurringExpenseItems(
+            from: recurringExpenseItems,
+            inMonthContaining: .now
         )
     }
 
@@ -174,11 +184,6 @@ struct BudgetSettingsSheet: View {
             } message: {
                 Text(errorMessage ?? "Something went wrong.")
             }
-            .onAppear {
-                if let anchorDay = settings.first?.budgetPeriodAnchorDay {
-                    selectedBudgetPeriodAnchorDay = anchorDay
-                }
-            }
         }
         .interactiveDismissDisabled(mode == .onboarding)
     }
@@ -237,11 +242,11 @@ struct BudgetSettingsSheet: View {
 
     private var recurringExpenseSection: some View {
         Section {
-            if recurringExpenseItems.isEmpty {
+            if currentRecurringExpenseItems.isEmpty {
                 Text("Recurring costs include rent, subscriptions, insurance, electricity, and savings plans.")
                     .foregroundStyle(.secondary)
             } else {
-                ForEach(recurringExpenseItems) { item in
+                ForEach(currentRecurringExpenseItems) { item in
                     BaselineItemRow(name: item.name, amount: item.amount, currencyCode: currencyCode) {
                         activeEditor = BaselineItemDraft(item: item)
                     }
@@ -265,14 +270,6 @@ struct BudgetSettingsSheet: View {
 
     private var personalizationSection: some View {
         Section {
-            Picker("Budget Period Start Day", selection: $selectedBudgetPeriodAnchorDay) {
-                ForEach(1..<31) { day in
-                    Text("Day \(day)").tag(day)
-                }
-            }
-            .pickerStyle(.menu)
-            .accessibilityIdentifier("budgetSetup.periodStartDayPicker")
-
             if mode == .onboarding {
                 TextField("Budget Available for this Period", text: initialAvailableBudgetBinding)
                     .keyboardType(.numbersAndPunctuation)
@@ -284,7 +281,7 @@ struct BudgetSettingsSheet: View {
             if mode == .onboarding {
                 Text("Leave 'Budget Available for this Period' unchanged if you are starting at the beginning of a fresh budget period. Only adjust it if this period has already started and some spending already happened, so the amount left today is lower than your normal monthly budget.")
             } else {
-                Text("Adjust the budget period start day if your monthly budget should reset later than the first day of the calendar month.")
+                Text("Budget periods always follow the calendar month. The current setup applies from this month forward.")
             }
         }
     }
@@ -301,7 +298,7 @@ struct BudgetSettingsSheet: View {
         do {
             try store.saveSettings(
                 currencyCode: currencyCode,
-                budgetPeriodAnchorDay: selectedBudgetPeriodAnchorDay,
+                budgetPeriodAnchorDay: nil,
                 initialAvailableBudget: mode == .onboarding ? currentAvailableBudget : nil,
                 initialBudgetAnchorMonth: mode == .onboarding ? Self.monthAnchor(for: .now) : nil
             )
@@ -326,7 +323,7 @@ struct BudgetSettingsSheet: View {
 
     private func deleteRecurringExpenseItems(at offsets: IndexSet) {
         do {
-            let itemsToDelete = offsets.map { recurringExpenseItems[$0] }
+            let itemsToDelete = offsets.map { currentRecurringExpenseItems[$0] }
 
             for item in itemsToDelete {
                 try store.deleteRecurringExpenseItem(item)

@@ -16,8 +16,6 @@ import SwiftData
 import SwiftUI
 
 struct SettingsSheet: View {
-    private let budgetPeriodColumns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 7)
-
     @AppStorage("appAppearance") private var appAppearance = AppAppearanceOption.system.rawValue
     @AppStorage("hasCompletedBaselineSetup") private var hasCompletedSetup = false
     @Environment(\.dismiss) private var dismiss
@@ -25,7 +23,6 @@ struct SettingsSheet: View {
     @Query(sort: \BudgetSettings.updatedAt, order: .reverse) private var budgets: [BudgetSettings]
 
     @State private var showingBudgetSettings = false
-    @State private var showingBudgetPeriodAnchorPicker = false
     @State private var showingAboutInfo = false
     @State private var showingResetConfirmation = false
     @State private var errorMessage: String?
@@ -51,19 +48,6 @@ struct SettingsSheet: View {
             set: { newValue in
                 do {
                     try store.saveSettings(currencyCode: newValue)
-                } catch {
-                    errorMessage = error.localizedDescription
-                }
-            }
-        )
-    }
-
-    private var selectedBudgetPeriodAnchorDay: Binding<Int> {
-        Binding(
-            get: { budgets.first?.budgetPeriodAnchorDay ?? 1 },
-            set: { newValue in
-                do {
-                    try store.saveBudgetPeriodAnchorDay(newValue)
                 } catch {
                     errorMessage = error.localizedDescription
                 }
@@ -100,25 +84,6 @@ struct SettingsSheet: View {
                     }
                 }
                 .accessibilityIdentifier("settings.currencyPicker")
-
-                Button {
-                    showingBudgetPeriodAnchorPicker = true
-                } label: {
-                    HStack {
-                        Text("Budget Period Starts")
-
-                        Spacer()
-
-                        Text("Day \(selectedBudgetPeriodAnchorDay.wrappedValue)")
-                            .foregroundStyle(.secondary)
-
-                        Image(systemName: "chevron.right")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.tertiary)
-                    }
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("settings.budgetPeriodAnchorButton")
             }
 
             Section("Appearance") {
@@ -212,44 +177,6 @@ struct SettingsSheet: View {
                 }
             }
             .presentationDetents([.medium])
-            .presentationDragIndicator(.visible)
-        }
-        .sheet(isPresented: $showingBudgetPeriodAnchorPicker) {
-            NavigationStack {
-                ScrollView {
-                    LazyVGrid(columns: budgetPeriodColumns, spacing: 10) {
-                        ForEach(1..<31) { day in
-                            Button {
-                                selectedBudgetPeriodAnchorDay.wrappedValue = day
-                                showingBudgetPeriodAnchorPicker = false
-                            } label: {
-                                Text("\(day)")
-                                    .font(.subheadline.weight(.semibold))
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 42)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                            .fill(selectedBudgetPeriodAnchorDay.wrappedValue == day ? Color.accentColor : Color(uiColor: .secondarySystemBackground))
-                                    )
-                                    .foregroundStyle(selectedBudgetPeriodAnchorDay.wrappedValue == day ? Color.white : Color.primary)
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityIdentifier("settings.budgetPeriodAnchorDay.\(day)")
-                        }
-                    }
-                    .padding(20)
-                }
-                .navigationTitle("Budget Period")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Close") {
-                            showingBudgetPeriodAnchorPicker = false
-                        }
-                    }
-                }
-            }
-            .presentationDetents([.height(320)])
             .presentationDragIndicator(.visible)
         }
         .alert("Erase All Data?", isPresented: $showingResetConfirmation) {

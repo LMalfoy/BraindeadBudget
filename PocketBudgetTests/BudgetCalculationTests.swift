@@ -182,7 +182,7 @@ final class BudgetCalculationTests: XCTestCase {
         XCTAssertEqual(carryover, 55, accuracy: 0.001)
     }
 
-    func testCurrentMonthExpensesRespectBudgetPeriodAnchorDay() {
+    func testCurrentMonthExpensesUseCalendarMonthBoundaries() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
 
@@ -195,15 +195,14 @@ final class BudgetCalculationTests: XCTestCase {
 
         let filtered = BudgetStore.currentMonthExpenses(
             from: expenses,
-            budgetPeriodAnchorDay: 15,
             calendar: calendar,
             referenceDate: referenceDate
         )
 
-        XCTAssertEqual(filtered.map(\.title).sorted(), ["After Anchor", "Prev Period Tail"])
+        XCTAssertEqual(filtered.map(\.title).sorted(), ["After Anchor", "Before Anchor"])
     }
 
-    func testRemainingBudgetUsesAnchoredPreviousPeriodCarryover() {
+    func testRemainingBudgetUsesCalendarMonthPreviousCarryover() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
 
@@ -216,12 +215,11 @@ final class BudgetCalculationTests: XCTestCase {
         let remaining = BudgetStore.remainingBudget(
             monthlyBudget: 100,
             expenses: expenses,
-            budgetPeriodAnchorDay: 15,
             calendar: calendar,
             referenceDate: referenceDate
         )
 
-        XCTAssertEqual(remaining, 30, accuracy: 0.001)
+        XCTAssertEqual(remaining, 130, accuracy: 0.001)
     }
 
     func testCategorySpendingAggregatesCurrentMonthExpensesByCategory() {
@@ -505,6 +503,66 @@ final class BudgetCalculationTests: XCTestCase {
 
         XCTAssertEqual(items.map(\.name), ["ChatGPT", "Netflix", "Spotify"])
         XCTAssertEqual(items.map(\.amount), [25, 15, 15])
+    }
+
+    func testActiveRecurringExpenseItemsDoNotBackfillMonthsBeforeEffectiveMonth() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let recurringExpenseItems = [
+            RecurringExpenseItem(
+                name: "Rent",
+                amount: 1200,
+                category: .housingUtilities,
+                effectiveMonth: makeDate(year: 2026, month: 3, day: 1, calendar: calendar)
+            )
+        ]
+
+        let februaryItems = BudgetStore.activeRecurringExpenseItems(
+            from: recurringExpenseItems,
+            inMonthContaining: makeDate(year: 2026, month: 2, day: 14, calendar: calendar),
+            calendar: calendar
+        )
+        let marchItems = BudgetStore.activeRecurringExpenseItems(
+            from: recurringExpenseItems,
+            inMonthContaining: makeDate(year: 2026, month: 3, day: 14, calendar: calendar),
+            calendar: calendar
+        )
+
+        XCTAssertTrue(februaryItems.isEmpty)
+        XCTAssertEqual(marchItems.map(\.name), ["Rent"])
+    }
+
+    func testRecurringSpendingHistoryCarriesLatestKnownVersionForward() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let recurringExpenseItems = [
+            RecurringExpenseItem(
+                seriesID: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
+                name: "Rent",
+                amount: 900,
+                category: .housingUtilities,
+                effectiveMonth: makeDate(year: 2026, month: 5, day: 1, calendar: calendar)
+            ),
+            RecurringExpenseItem(
+                seriesID: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
+                name: "Rent",
+                amount: 1200,
+                category: .housingUtilities,
+                effectiveMonth: makeDate(year: 2026, month: 6, day: 1, calendar: calendar)
+            )
+        ]
+
+        let history = BudgetStore.recurringSpendingHistory(
+            recurringExpenseItems: recurringExpenseItems,
+            months: 3,
+            calendar: calendar,
+            referenceDate: makeDate(year: 2026, month: 7, day: 12, calendar: calendar)
+        )
+
+        XCTAssertEqual(history.map { calendar.component(.month, from: $0.month) }, [5, 6, 7])
+        XCTAssertEqual(history.map(\.total), [900, 1200, 1200])
     }
 
     func testTemporalSpendingGroupsExpensesIntoEarlyMidLateMonth() {

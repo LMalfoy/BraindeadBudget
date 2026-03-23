@@ -47,16 +47,8 @@ struct ExpenseHistorySheet: View {
         budgets.first?.initialBudgetAnchorMonth
     }
 
-    private var budgetPeriodAnchorDay: Int {
-        budgets.first?.budgetPeriodAnchorDay ?? 1
-    }
-
     private var selectedMonthReferenceDate: Date {
-        Self.referenceDate(
-            for: selectedMonth,
-            anchorDay: budgetPeriodAnchorDay,
-            calendar: calendar
-        )
+        selectedMonth
     }
 
     private var monthCategorySpending: [CategorySpendingSummary] {
@@ -67,7 +59,6 @@ struct ExpenseHistorySheet: View {
         BudgetStore.expenses(
             from: expenses,
             inMonthContaining: selectedMonthReferenceDate,
-            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
             calendar: calendar
         )
     }
@@ -85,15 +76,17 @@ struct ExpenseHistorySheet: View {
     private var monthlyBudget: Double {
         BudgetStore.availableMonthlyBudget(
             incomeItems: incomeItems,
-            recurringExpenseItems: recurringExpenseItems
+            recurringExpenseItems: recurringExpenseItems,
+            referenceDate: selectedMonthReferenceDate,
+            calendar: calendar
         )
     }
 
     private var selectedMonthDigest: MonthlyHistoryDigest {
         BudgetStore.monthlyHistoryDigest(
-            monthlyBudget: monthlyBudget,
+            incomeItems: incomeItems,
+            recurringExpenseItems: recurringExpenseItems,
             expenses: expenses,
-            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
             initialAvailableBudget: initialAvailableBudget,
             initialBudgetAnchorMonth: initialBudgetAnchorMonth,
             calendar: calendar,
@@ -103,9 +96,9 @@ struct ExpenseHistorySheet: View {
 
     private var selectedMonthTrajectory: [BudgetTrajectoryPoint] {
         BudgetStore.budgetTrajectory(
-            monthlyBudget: monthlyBudget,
+            incomeItems: incomeItems,
+            recurringExpenseItems: recurringExpenseItems,
             expenses: expenses,
-            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
             initialAvailableBudget: initialAvailableBudget,
             initialBudgetAnchorMonth: initialBudgetAnchorMonth,
             calendar: calendar,
@@ -114,7 +107,11 @@ struct ExpenseHistorySheet: View {
     }
 
     private var recurringSpending: Double {
-        BudgetStore.totalRecurringExpenses(for: recurringExpenseItems)
+        BudgetStore.totalRecurringExpenses(
+            for: recurringExpenseItems,
+            inMonthContaining: selectedMonthReferenceDate,
+            calendar: calendar
+        )
     }
 
     private var totalSpending: Double {
@@ -136,7 +133,11 @@ struct ExpenseHistorySheet: View {
     }
 
     private var recurringCategorySlices: [MonthCategorySlice] {
-        BudgetStore.fixedCostDistribution(for: recurringExpenseItems).map {
+        BudgetStore.fixedCostDistribution(
+            for: recurringExpenseItems,
+            referenceDate: selectedMonthReferenceDate,
+            calendar: calendar
+        ).map {
             MonthCategorySlice(title: $0.category.title, total: $0.total, color: $0.category.color)
         }
     }
@@ -520,7 +521,12 @@ struct ExpenseHistorySheet: View {
         for category: RecurringExpenseCategory,
         title: String
     ) -> MonthRecurringBreakdownSection {
-        let items = BudgetStore.recurringItems(for: recurringExpenseItems, category: category)
+        let items = BudgetStore.recurringItems(
+            for: recurringExpenseItems,
+            category: category,
+            referenceDate: selectedMonthReferenceDate,
+            calendar: calendar
+        )
         return MonthRecurringBreakdownSection(
             title: title,
             total: items.reduce(0) { $0 + $1.amount },
@@ -591,17 +597,6 @@ struct ExpenseHistorySheet: View {
 
     private static func displayMonth(for date: Date, calendar: Calendar = .current) -> Date {
         calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? date
-    }
-
-    private static func referenceDate(
-        for month: Date,
-        anchorDay: Int,
-        calendar: Calendar
-    ) -> Date {
-        let monthStart = displayMonth(for: month, calendar: calendar)
-        let maxDay = calendar.range(of: .day, in: .month, for: monthStart)?.count ?? 28
-        let day = min(max(1, anchorDay), maxDay)
-        return calendar.date(byAdding: .day, value: day - 1, to: monthStart) ?? monthStart
     }
 }
 

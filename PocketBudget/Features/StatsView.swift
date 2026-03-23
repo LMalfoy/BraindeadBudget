@@ -37,7 +37,8 @@ struct StatsView: View {
     private var monthlyBudget: Double {
         BudgetStore.availableMonthlyBudget(
             incomeItems: incomeItems,
-            recurringExpenseItems: recurringExpenseItems
+            recurringExpenseItems: recurringExpenseItems,
+            referenceDate: .now
         )
     }
 
@@ -73,9 +74,9 @@ struct StatsView: View {
 
     private var carryoverHistory: [CarryoverHistoryPoint] {
         BudgetStore.carryoverHistory(
-            monthlyBudget: monthlyBudget,
+            incomeItems: incomeItems,
+            recurringExpenseItems: recurringExpenseItems,
             expenses: expenses,
-            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
             initialAvailableBudget: initialAvailableBudget,
             initialBudgetAnchorMonth: initialBudgetAnchorMonth,
             months: monthWindow

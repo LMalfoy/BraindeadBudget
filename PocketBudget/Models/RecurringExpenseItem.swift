@@ -43,9 +43,12 @@ enum RecurringExpenseCategory: String, CaseIterable, Codable, Identifiable {
 @Model
 final class RecurringExpenseItem {
     @Attribute(.unique) var id: UUID
+    var seriesID: UUID
     var name: String
     var amount: Double
     var categoryRawValue: String?
+    var effectiveMonth: Date
+    var isActive: Bool
     var createdAt: Date
 
     var category: RecurringExpenseCategory {
@@ -55,15 +58,21 @@ final class RecurringExpenseItem {
 
     init(
         id: UUID = UUID(),
+        seriesID: UUID? = nil,
         name: String,
         amount: Double,
         category: RecurringExpenseCategory = .housingUtilities,
+        effectiveMonth: Date? = nil,
+        isActive: Bool = true,
         createdAt: Date = .now
     ) {
         self.id = id
+        self.seriesID = seriesID ?? id
         self.name = name
         self.amount = amount
         categoryRawValue = category.rawValue
+        self.effectiveMonth = Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: effectiveMonth ?? createdAt)) ?? createdAt
+        self.isActive = isActive
         self.createdAt = createdAt
     }
 }

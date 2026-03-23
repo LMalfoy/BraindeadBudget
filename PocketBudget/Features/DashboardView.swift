@@ -346,9 +346,9 @@ struct DashboardView: View {
                     DashboardInsightCardView(
                         categorySpending: snapshot.categorySpending,
                         trajectory: BudgetStore.budgetTrajectory(
-                            monthlyBudget: snapshot.monthlyBudget,
+                            incomeItems: incomeItems,
+                            recurringExpenseItems: recurringExpenseItems,
                             expenses: expenses,
-                            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
                             initialAvailableBudget: initialAvailableBudget,
                             initialBudgetAnchorMonth: initialBudgetAnchorMonth
                         ),

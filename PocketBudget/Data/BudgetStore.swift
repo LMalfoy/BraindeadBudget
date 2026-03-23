@@ -399,9 +399,7 @@ struct BudgetStore {
 
         if let settings = budgets.first {
             settings.currencyCode = currencyCode
-            if let budgetPeriodAnchorDay {
-                settings.budgetPeriodAnchorDay = max(1, min(30, budgetPeriodAnchorDay))
-            }
+            settings.budgetPeriodAnchorDay = nil
             if let initialAvailableBudget {
                 settings.initialAvailableBudget = initialAvailableBudget
             }
@@ -416,28 +414,10 @@ struct BudgetStore {
         } else {
             context.insert(BudgetSettings(
                 currencyCode: currencyCode,
-                budgetPeriodAnchorDay: min(max(budgetPeriodAnchorDay ?? 1, 1), 30),
+                budgetPeriodAnchorDay: nil,
                 initialAvailableBudget: initialAvailableBudget,
                 initialBudgetAnchorMonth: initialBudgetAnchorMonth
             ))
-        }
-
-        try context.save()
-    }
-
-    func saveBudgetPeriodAnchorDay(_ day: Int) throws {
-        let budgets = try context.fetch(FetchDescriptor<BudgetSettings>())
-        let normalizedDay = max(1, min(30, day))
-
-        if let settings = budgets.first {
-            settings.budgetPeriodAnchorDay = normalizedDay
-            settings.updatedAt = .now
-
-            for duplicate in budgets.dropFirst() {
-                context.delete(duplicate)
-            }
-        } else {
-            context.insert(BudgetSettings(budgetPeriodAnchorDay: normalizedDay))
         }
 
         try context.save()
@@ -517,7 +497,14 @@ struct BudgetStore {
     }
 
     func recurringExpenseItems() throws -> [RecurringExpenseItem] {
-        try context.fetch(FetchDescriptor<RecurringExpenseItem>(sortBy: [SortDescriptor(\.createdAt)]))
+        try context.fetch(
+            FetchDescriptor<RecurringExpenseItem>(
+                sortBy: [
+                    SortDescriptor(\.effectiveMonth),
+                    SortDescriptor(\.createdAt)
+                ]
+            )
+        )
     }
 
     func saveIncomeItem(id: UUID? = nil, name: String, amount: Double) throws {
@@ -555,9 +542,11 @@ struct BudgetStore {
         id: UUID? = nil,
         name: String,
         amount: Double,
-        category: RecurringExpenseCategory = .housingUtilities
+        category: RecurringExpenseCategory = .housingUtilities,
+        effectiveMonth: Date = .now
     ) throws {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedEffectiveMonth = Self.monthAnchor(for: effectiveMonth, calendar: calendar)
 
         guard !trimmedName.isEmpty else {
             throw BudgetStoreError.invalidRecurringExpenseName
@@ -570,21 +559,52 @@ struct BudgetStore {
         if let id {
             let descriptor = FetchDescriptor<RecurringExpenseItem>(predicate: #Predicate { $0.id == id })
             if let item = try context.fetch(descriptor).first {
-                item.name = trimmedName
-                item.amount = amount
-                item.category = category
+                if calendar.isDate(item.effectiveMonth, equalTo: normalizedEffectiveMonth, toGranularity: .month) {
+                    item.name = trimmedName
+                    item.amount = amount
+                    item.category = category
+                    item.isActive = true
+                    item.effectiveMonth = normalizedEffectiveMonth
+                } else {
+                    context.insert(
+                        RecurringExpenseItem(
+                            seriesID: item.seriesID,
+                            name: trimmedName,
+                            amount: amount,
+                            category: category,
+                            effectiveMonth: normalizedEffectiveMonth
+                        )
+                    )
+                }
             } else {
-                context.insert(RecurringExpenseItem(id: id, name: trimmedName, amount: amount, category: category))
+                context.insert(
+                    RecurringExpenseItem(
+                        id: id,
+                        name: trimmedName,
+                        amount: amount,
+                        category: category,
+                        effectiveMonth: normalizedEffectiveMonth
+                    )
+                )
             }
         } else {
-            context.insert(RecurringExpenseItem(name: trimmedName, amount: amount, category: category))
+            context.insert(
+                RecurringExpenseItem(
+                    name: trimmedName,
+                    amount: amount,
+                    category: category,
+                    effectiveMonth: normalizedEffectiveMonth
+                )
+            )
         }
 
         try context.save()
     }
 
     func deleteRecurringExpenseItem(_ item: RecurringExpenseItem) throws {
-        context.delete(item)
+        item.isActive = false
+        item.effectiveMonth = Self.monthAnchor(for: .now, calendar: calendar)
+        item.createdAt = .now
         try context.save()
     }
 
@@ -697,6 +717,43 @@ struct BudgetStore {
         recurringExpenseItems.reduce(0) { $0 + $1.amount }
     }
 
+    static func activeRecurringExpenseItems(
+        from recurringExpenseItems: [RecurringExpenseItem],
+        inMonthContaining referenceDate: Date,
+        calendar: Calendar = .current
+    ) -> [RecurringExpenseItem] {
+        let targetMonth = monthAnchor(for: referenceDate, calendar: calendar)
+        let groupedItems = Dictionary(grouping: recurringExpenseItems) { $0.seriesID }
+
+        return groupedItems.values.compactMap { versions in
+            versions
+                .filter { $0.effectiveMonth <= targetMonth }
+                .sorted { lhs, rhs in
+                    if lhs.effectiveMonth == rhs.effectiveMonth {
+                        return lhs.createdAt < rhs.createdAt
+                    }
+
+                    return lhs.effectiveMonth < rhs.effectiveMonth
+                }
+                .last
+        }
+        .filter(\.isActive)
+    }
+
+    static func totalRecurringExpenses(
+        for recurringExpenseItems: [RecurringExpenseItem],
+        inMonthContaining referenceDate: Date,
+        calendar: Calendar = .current
+    ) -> Double {
+        totalRecurringExpenses(
+            for: activeRecurringExpenseItems(
+                from: recurringExpenseItems,
+                inMonthContaining: referenceDate,
+                calendar: calendar
+            )
+        )
+    }
+
     static func dashboardSnapshot(
         incomeItems: [IncomeItem],
         recurringExpenseItems: [RecurringExpenseItem],
@@ -708,7 +765,11 @@ struct BudgetStore {
         referenceDate: Date = .now
     ) -> DashboardSnapshot {
         let monthlyIncome = totalIncome(for: incomeItems)
-        let recurringCosts = totalRecurringExpenses(for: recurringExpenseItems)
+        let recurringCosts = totalRecurringExpenses(
+            for: recurringExpenseItems,
+            inMonthContaining: referenceDate,
+            calendar: calendar
+        )
         let monthlyBudget = monthlyIncome - recurringCosts
         let currentPeriodExpenses = currentMonthExpenses(
             from: expenses,
@@ -718,9 +779,9 @@ struct BudgetStore {
         )
         let totalSpent = totalSpent(for: currentPeriodExpenses)
         let previousMonthCarryover = previousMonthCarryover(
-            monthlyBudget: monthlyBudget,
+            incomeItems: incomeItems,
+            recurringExpenseItems: recurringExpenseItems,
             expenses: expenses,
-            budgetPeriodAnchorDay: budgetPeriodAnchorDay,
             initialAvailableBudget: initialAvailableBudget,
             initialBudgetAnchorMonth: initialBudgetAnchorMonth,
             calendar: calendar,
@@ -776,10 +837,18 @@ struct BudgetStore {
     }
 
     static func fixedCostDistribution(
-        for recurringExpenseItems: [RecurringExpenseItem]
+        for recurringExpenseItems: [RecurringExpenseItem],
+        referenceDate: Date = .now,
+        calendar: Calendar = .current
     ) -> [FixedCostCategorySummary] {
-        RecurringExpenseCategory.allCases.compactMap { category in
-            let total = recurringExpenseItems
+        let activeItems = activeRecurringExpenseItems(
+            from: recurringExpenseItems,
+            inMonthContaining: referenceDate,
+            calendar: calendar
+        )
+
+        return RecurringExpenseCategory.allCases.compactMap { category in
+            let total = activeItems
                 .filter { $0.category == category }
                 .reduce(0) { $0 + $1.amount }
 
@@ -797,9 +866,16 @@ struct BudgetStore {
     }
 
     static func subscriptionLoad(
-        for recurringExpenseItems: [RecurringExpenseItem]
+        for recurringExpenseItems: [RecurringExpenseItem],
+        referenceDate: Date = .now,
+        calendar: Calendar = .current
     ) -> SubscriptionLoadSummary {
-        let subscriptionItems = recurringExpenseItems.filter { $0.category == .subscriptions }
+        let subscriptionItems = activeRecurringExpenseItems(
+            from: recurringExpenseItems,
+            inMonthContaining: referenceDate,
+            calendar: calendar
+        )
+        .filter { $0.category == .subscriptions }
         return SubscriptionLoadSummary(
             count: subscriptionItems.count,
             totalMonthlyCost: subscriptionItems.reduce(0) { $0 + $1.amount }
@@ -807,17 +883,30 @@ struct BudgetStore {
     }
 
     static func subscriptionItems(
-        for recurringExpenseItems: [RecurringExpenseItem]
+        for recurringExpenseItems: [RecurringExpenseItem],
+        referenceDate: Date = .now,
+        calendar: Calendar = .current
     ) -> [SubscriptionItemSummary] {
-        recurringItems(for: recurringExpenseItems, category: .subscriptions)
+        recurringItems(
+            for: recurringExpenseItems,
+            category: .subscriptions,
+            referenceDate: referenceDate,
+            calendar: calendar
+        )
             .map { SubscriptionItemSummary(id: $0.id, name: $0.name, amount: $0.amount) }
     }
 
     static func recurringItems(
         for recurringExpenseItems: [RecurringExpenseItem],
-        category: RecurringExpenseCategory
+        category: RecurringExpenseCategory,
+        referenceDate: Date = .now,
+        calendar: Calendar = .current
     ) -> [RecurringItemSummary] {
-        recurringExpenseItems
+        activeRecurringExpenseItems(
+            from: recurringExpenseItems,
+            inMonthContaining: referenceDate,
+            calendar: calendar
+        )
             .filter { $0.category == category }
             .map { RecurringItemSummary(id: $0.id, name: $0.name, amount: $0.amount) }
             .sorted { lhs, rhs in
@@ -831,9 +920,15 @@ struct BudgetStore {
 
     static func savingsStability(
         incomeItems: [IncomeItem],
-        recurringExpenseItems: [RecurringExpenseItem]
+        recurringExpenseItems: [RecurringExpenseItem],
+        referenceDate: Date = .now,
+        calendar: Calendar = .current
     ) -> SavingsStabilitySummary {
-        let savingsAmount = recurringExpenseItems
+        let savingsAmount = activeRecurringExpenseItems(
+            from: recurringExpenseItems,
+            inMonthContaining: referenceDate,
+            calendar: calendar
+        )
             .filter { $0.category == .savings }
             .reduce(0) { $0 + $1.amount }
 
@@ -854,14 +949,18 @@ struct BudgetStore {
         }
 
         let referenceMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: referenceDate)) ?? referenceDate
-        let savingsAmount = recurringExpenseItems
-            .filter { $0.category == .savings }
-            .reduce(0) { $0 + $1.amount }
-
         return (0..<months).compactMap { offset in
             guard let month = calendar.date(byAdding: .month, value: offset - (months - 1), to: referenceMonth) else {
                 return nil
             }
+
+            let savingsAmount = activeRecurringExpenseItems(
+                from: recurringExpenseItems,
+                inMonthContaining: month,
+                calendar: calendar
+            )
+            .filter { $0.category == .savings }
+            .reduce(0) { $0 + $1.amount }
 
             return SavingsStabilityPoint(month: month, savingsAmount: savingsAmount)
         }
@@ -872,6 +971,124 @@ struct BudgetStore {
         recurringExpenseItems: [RecurringExpenseItem]
     ) -> Double {
         totalIncome(for: incomeItems) - totalRecurringExpenses(for: recurringExpenseItems)
+    }
+
+    static func availableMonthlyBudget(
+        incomeItems: [IncomeItem],
+        recurringExpenseItems: [RecurringExpenseItem],
+        referenceDate: Date,
+        calendar: Calendar = .current
+    ) -> Double {
+        totalIncome(for: incomeItems) - totalRecurringExpenses(
+            for: recurringExpenseItems,
+            inMonthContaining: referenceDate,
+            calendar: calendar
+        )
+    }
+
+    static func previousMonthCarryover(
+        incomeItems: [IncomeItem],
+        recurringExpenseItems: [RecurringExpenseItem],
+        expenses: [Expense],
+        initialAvailableBudget: Double? = nil,
+        initialBudgetAnchorMonth: Date? = nil,
+        calendar: Calendar = .current,
+        referenceDate: Date = .now
+    ) -> Double {
+        guard let previousMonthReferenceDate = calendar.date(byAdding: .month, value: -1, to: referenceDate) else {
+            return 0
+        }
+
+        let previousMonthExpenses = currentMonthExpenses(
+            from: expenses,
+            calendar: calendar,
+            referenceDate: previousMonthReferenceDate
+        )
+
+        if let initialAvailableBudget,
+           isInitialAnchorMonth(
+               previousMonthReferenceDate,
+               initialBudgetAnchorMonth: initialBudgetAnchorMonth,
+               calendar: calendar
+           ) {
+            return initialAvailableBudget - totalSpent(for: previousMonthExpenses)
+        }
+
+        guard !previousMonthExpenses.isEmpty else {
+            return 0
+        }
+
+        let previousAdjustedBudget = adjustedMonthlyBudget(
+            incomeItems: incomeItems,
+            recurringExpenseItems: recurringExpenseItems,
+            expenses: expenses,
+            initialAvailableBudget: initialAvailableBudget,
+            initialBudgetAnchorMonth: initialBudgetAnchorMonth,
+            calendar: calendar,
+            referenceDate: previousMonthReferenceDate
+        )
+
+        return previousAdjustedBudget - totalSpent(for: previousMonthExpenses)
+    }
+
+    static func adjustedMonthlyBudget(
+        incomeItems: [IncomeItem],
+        recurringExpenseItems: [RecurringExpenseItem],
+        expenses: [Expense],
+        initialAvailableBudget: Double? = nil,
+        initialBudgetAnchorMonth: Date? = nil,
+        calendar: Calendar = .current,
+        referenceDate: Date = .now
+    ) -> Double {
+        if let initialAvailableBudget,
+           isInitialAnchorMonth(
+               referenceDate,
+               initialBudgetAnchorMonth: initialBudgetAnchorMonth,
+               calendar: calendar
+           ) {
+            return initialAvailableBudget
+        }
+
+        return availableMonthlyBudget(
+            incomeItems: incomeItems,
+            recurringExpenseItems: recurringExpenseItems,
+            referenceDate: referenceDate,
+            calendar: calendar
+        ) + previousMonthCarryover(
+            incomeItems: incomeItems,
+            recurringExpenseItems: recurringExpenseItems,
+            expenses: expenses,
+            initialAvailableBudget: initialAvailableBudget,
+            initialBudgetAnchorMonth: initialBudgetAnchorMonth,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+    }
+
+    static func remainingBudget(
+        incomeItems: [IncomeItem],
+        recurringExpenseItems: [RecurringExpenseItem],
+        expenses: [Expense],
+        initialAvailableBudget: Double? = nil,
+        initialBudgetAnchorMonth: Date? = nil,
+        calendar: Calendar = .current,
+        referenceDate: Date = .now
+    ) -> Double {
+        adjustedMonthlyBudget(
+            incomeItems: incomeItems,
+            recurringExpenseItems: recurringExpenseItems,
+            expenses: expenses,
+            initialAvailableBudget: initialAvailableBudget,
+            initialBudgetAnchorMonth: initialBudgetAnchorMonth,
+            calendar: calendar,
+            referenceDate: referenceDate
+        ) - totalSpent(
+            for: currentMonthExpenses(
+                from: expenses,
+                calendar: calendar,
+                referenceDate: referenceDate
+            )
+        )
     }
 
     static func previousMonthCarryover(
@@ -1035,6 +1252,40 @@ struct BudgetStore {
     }
 
     static func monthlyHistoryDigest(
+        incomeItems: [IncomeItem],
+        recurringExpenseItems: [RecurringExpenseItem],
+        expenses: [Expense],
+        initialAvailableBudget: Double? = nil,
+        initialBudgetAnchorMonth: Date? = nil,
+        calendar: Calendar = .current,
+        referenceDate: Date = .now
+    ) -> MonthlyHistoryDigest {
+        let selectedMonthExpenses = currentMonthExpenses(
+            from: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        return MonthlyHistoryDigest(
+            totalSpent: totalSpent(for: selectedMonthExpenses),
+            carryover: previousMonthCarryover(
+                incomeItems: incomeItems,
+                recurringExpenseItems: recurringExpenseItems,
+                expenses: expenses,
+                initialAvailableBudget: initialAvailableBudget,
+                initialBudgetAnchorMonth: initialBudgetAnchorMonth,
+                calendar: calendar,
+                referenceDate: referenceDate
+            ),
+            categorySpending: categorySpending(
+                for: expenses,
+                calendar: calendar,
+                referenceDate: referenceDate
+            )
+        )
+    }
+
+    static func monthlyHistoryDigest(
         monthlyBudget: Double,
         expenses: [Expense],
         budgetPeriodAnchorDay: Int = 1,
@@ -1068,6 +1319,90 @@ struct BudgetStore {
                 referenceDate: referenceDate
             )
         )
+    }
+
+    static func budgetTrajectory(
+        incomeItems: [IncomeItem],
+        recurringExpenseItems: [RecurringExpenseItem],
+        expenses: [Expense],
+        initialAvailableBudget: Double? = nil,
+        initialBudgetAnchorMonth: Date? = nil,
+        calendar: Calendar = .current,
+        referenceDate: Date = .now
+    ) -> [BudgetTrajectoryPoint] {
+        let currentMonthExpenses = currentMonthExpenses(
+            from: expenses,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+        let startingBudget = adjustedMonthlyBudget(
+            incomeItems: incomeItems,
+            recurringExpenseItems: recurringExpenseItems,
+            expenses: expenses,
+            initialAvailableBudget: initialAvailableBudget,
+            initialBudgetAnchorMonth: initialBudgetAnchorMonth,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
+
+        let periodStartDate = periodStart(containing: referenceDate, budgetPeriodAnchorDay: 1, calendar: calendar)
+        let periodEndDate = nextPeriodStart(after: periodStartDate, budgetPeriodAnchorDay: 1, calendar: calendar)
+        let groupedExpenses = Dictionary(grouping: currentMonthExpenses) { calendar.startOfDay(for: $0.date) }
+
+        var points: [BudgetTrajectoryPoint] = [
+            BudgetTrajectoryPoint(date: periodStartDate, remainingBudget: startingBudget)
+        ]
+        var cursor = periodStartDate
+        var runningRemaining = startingBudget
+
+        while cursor < periodEndDate {
+            let dayTotal = totalSpent(for: groupedExpenses[cursor, default: []])
+            runningRemaining -= dayTotal
+
+            let markerDate: Date
+            if cursor == periodStartDate {
+                markerDate = calendar.date(byAdding: .hour, value: 12, to: cursor) ?? cursor
+            } else {
+                markerDate = cursor
+            }
+
+            points.append(
+                BudgetTrajectoryPoint(
+                    date: markerDate,
+                    remainingBudget: runningRemaining
+                )
+            )
+
+            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: cursor) else {
+                break
+            }
+            cursor = nextDay
+        }
+
+        return points
+            .sorted { $0.date < $1.date }
+            .reduce(into: [BudgetTrajectoryPoint]()) { partialResult, point in
+                if let last = partialResult.last, calendar.isDate(last.date, inSameDayAs: point.date) {
+                    partialResult[partialResult.count - 1] = point
+                } else {
+                    partialResult.append(point)
+                }
+            }
+            .map { point in
+                BudgetTrajectoryPoint(
+                    date: calendar.startOfDay(for: point.date),
+                    remainingBudget: point.remainingBudget
+                )
+            }
+            .enumerated()
+            .map { index, point in
+                if index == 0 {
+                    return point
+                }
+
+                let adjustedDate = calendar.date(byAdding: .minute, value: index, to: point.date) ?? point.date
+                return BudgetTrajectoryPoint(date: adjustedDate, remainingBudget: point.remainingBudget)
+            }
     }
 
     static func budgetTrajectory(
@@ -1345,14 +1680,20 @@ struct BudgetStore {
         }
 
         let referenceMonth = periodStart(containing: referenceDate, budgetPeriodAnchorDay: budgetPeriodAnchorDay, calendar: calendar)
-        let recurringTotal = totalRecurringExpenses(for: recurringExpenseItems)
 
         return (0..<months).compactMap { offset in
             guard let month = calendar.date(byAdding: .month, value: offset - (months - 1), to: referenceMonth) else {
                 return nil
             }
 
-            return MonthlySpendingPoint(month: month, total: recurringTotal)
+            return MonthlySpendingPoint(
+                month: month,
+                total: totalRecurringExpenses(
+                    for: recurringExpenseItems,
+                    inMonthContaining: month,
+                    calendar: calendar
+                )
+            )
         }
     }
 
@@ -1450,13 +1791,18 @@ struct BudgetStore {
         }
 
         let referenceMonth = periodStart(containing: referenceDate, budgetPeriodAnchorDay: budgetPeriodAnchorDay, calendar: calendar)
-        let distribution = fixedCostDistribution(for: recurringExpenseItems)
 
         return (0..<months).compactMap { offset in
             calendar.date(byAdding: .month, value: offset - (months - 1), to: referenceMonth)
         }
         .flatMap { month in
-            distribution.map { summary in
+            let distribution = fixedCostDistribution(
+                for: recurringExpenseItems,
+                referenceDate: month,
+                calendar: calendar
+            )
+
+            return distribution.map { summary in
                 NamedCategoryTrendPoint(
                     month: month,
                     categoryKey: summary.category.rawValue,
@@ -1503,6 +1849,42 @@ struct BudgetStore {
             calendar: calendar,
             referenceDate: referenceDate
         )
+    }
+
+    static func carryoverHistory(
+        incomeItems: [IncomeItem],
+        recurringExpenseItems: [RecurringExpenseItem],
+        expenses: [Expense],
+        initialAvailableBudget: Double? = nil,
+        initialBudgetAnchorMonth: Date? = nil,
+        months: Int = 6,
+        calendar: Calendar = .current,
+        referenceDate: Date = .now
+    ) -> [CarryoverHistoryPoint] {
+        guard months > 0 else {
+            return []
+        }
+
+        let referenceMonth = periodStart(containing: referenceDate, budgetPeriodAnchorDay: 1, calendar: calendar)
+
+        return (0..<months).compactMap { offset in
+            guard let month = calendar.date(byAdding: .month, value: offset - (months - 1), to: referenceMonth) else {
+                return nil
+            }
+
+            return CarryoverHistoryPoint(
+                month: month,
+                amount: previousMonthCarryover(
+                    incomeItems: incomeItems,
+                    recurringExpenseItems: recurringExpenseItems,
+                    expenses: expenses,
+                    initialAvailableBudget: initialAvailableBudget,
+                    initialBudgetAnchorMonth: initialBudgetAnchorMonth,
+                    calendar: calendar,
+                    referenceDate: month
+                )
+            )
+        }
     }
 
     static func carryoverHistory(
@@ -2079,24 +2461,7 @@ struct BudgetStore {
         budgetPeriodAnchorDay: Int,
         calendar: Calendar
     ) -> Date {
-        // Budget periods are anchored to an arbitrary day of the month rather than always
-        // starting on day 1, so dates before the current month's anchor belong to the
-        // previous anchored period.
-        let monthStart = monthAnchor(for: date, calendar: calendar)
-        let normalizedDay = normalizedAnchorDay(budgetPeriodAnchorDay, forMonthContaining: monthStart, calendar: calendar)
-        let currentMonthAnchor = calendar.date(byAdding: .day, value: normalizedDay - 1, to: monthStart) ?? monthStart
-
-        if date >= currentMonthAnchor {
-            return currentMonthAnchor
-        }
-
-        guard let previousMonth = calendar.date(byAdding: .month, value: -1, to: monthStart) else {
-            return currentMonthAnchor
-        }
-
-        let previousMonthStart = monthAnchor(for: previousMonth, calendar: calendar)
-        let previousNormalizedDay = normalizedAnchorDay(budgetPeriodAnchorDay, forMonthContaining: previousMonthStart, calendar: calendar)
-        return calendar.date(byAdding: .day, value: previousNormalizedDay - 1, to: previousMonthStart) ?? previousMonthStart
+        monthAnchor(for: date, calendar: calendar)
     }
 
     private static func nextPeriodStart(
@@ -2109,18 +2474,7 @@ struct BudgetStore {
             return periodStart
         }
 
-        let nextMonthStart = monthAnchor(for: nextMonth, calendar: calendar)
-        let normalizedDay = normalizedAnchorDay(budgetPeriodAnchorDay, forMonthContaining: nextMonthStart, calendar: calendar)
-        return calendar.date(byAdding: .day, value: normalizedDay - 1, to: nextMonthStart) ?? nextMonthStart
-    }
-
-    private static func normalizedAnchorDay(
-        _ budgetPeriodAnchorDay: Int,
-        forMonthContaining date: Date,
-        calendar: Calendar
-    ) -> Int {
-        let maxDay = calendar.range(of: .day, in: .month, for: date)?.count ?? 28
-        return max(1, min(maxDay, budgetPeriodAnchorDay))
+        return monthAnchor(for: nextMonth, calendar: calendar)
     }
 
     func currentMonthExpenses(from expenses: [Expense], referenceDate: Date = .now) -> [Expense] {

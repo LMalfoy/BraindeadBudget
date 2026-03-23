@@ -84,6 +84,43 @@ final class BudgetStoreTests: XCTestCase {
         XCTAssertEqual(recurringItem.category, .housingUtilities)
     }
 
+    func testSaveRecurringExpenseItemInNewMonthCreatesForwardVersion() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let store = BudgetStore(context: context)
+
+        let march = makeDate(year: 2026, month: 3, day: 1)
+        let april = makeDate(year: 2026, month: 4, day: 1)
+
+        try store.saveRecurringExpenseItem(
+            name: "Rent",
+            amount: 900,
+            category: .housingUtilities,
+            effectiveMonth: march
+        )
+
+        let original = try XCTUnwrap(context.fetch(FetchDescriptor<RecurringExpenseItem>()).first)
+
+        try store.saveRecurringExpenseItem(
+            id: original.id,
+            name: "Rent",
+            amount: 1200,
+            category: .housingUtilities,
+            effectiveMonth: april
+        )
+
+        let recurringItems = try context.fetch(
+            FetchDescriptor<RecurringExpenseItem>(
+                sortBy: [SortDescriptor(\.effectiveMonth)]
+            )
+        )
+
+        XCTAssertEqual(recurringItems.count, 2)
+        XCTAssertEqual(recurringItems.map(\.amount), [900, 1200])
+        XCTAssertEqual(recurringItems.map(\.seriesID).count, 2)
+        XCTAssertEqual(Set(recurringItems.map(\.seriesID)).count, 1)
+    }
+
     func testAddExpensePersistsExpense() throws {
         let container = try makeContainer()
         let context = ModelContext(container)
@@ -263,5 +300,12 @@ final class BudgetStoreTests: XCTestCase {
             AchievementUnlock.self,
             configurations: configuration
         )
+    }
+
+    private func makeDate(year: Int, month: Int, day: Int) -> Date {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let components = DateComponents(year: year, month: month, day: day)
+        return calendar.date(from: components) ?? .distantPast
     }
 }
