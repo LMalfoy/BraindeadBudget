@@ -1170,13 +1170,13 @@ final class BudgetCalculationTests: XCTestCase {
         XCTAssertEqual(snapshot.remainingBudget, -832, accuracy: 0.001)
     }
 
-    func testDashboardSnapshotDoesNotUseInitialAnchorToMaskNegativeMonthlyBudget() {
+    func testDashboardSnapshotUsesInitialAvailableBudgetForAnchoredCurrentPeriod() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
 
         let referenceDate = makeDate(year: 2026, month: 6, day: 20, calendar: calendar)
         let incomeItems = [IncomeItem(name: "Salary", amount: 1000)]
-        let recurringExpenseItems = [RecurringExpenseItem(name: "Rent", amount: 1737)]
+        let recurringExpenseItems = [RecurringExpenseItem(name: "Rent", amount: 200)]
 
         let snapshot = BudgetStore.dashboardSnapshot(
             incomeItems: incomeItems,
@@ -1188,8 +1188,10 @@ final class BudgetCalculationTests: XCTestCase {
             referenceDate: referenceDate
         )
 
-        XCTAssertEqual(snapshot.availableThisMonth, -737, accuracy: 0.001)
-        XCTAssertEqual(snapshot.remainingBudget, -737, accuracy: 0.001)
+        XCTAssertEqual(snapshot.monthlyBudget, 800, accuracy: 0.001)
+        XCTAssertEqual(snapshot.previousMonthCarryover, 0, accuracy: 0.001)
+        XCTAssertEqual(snapshot.availableThisMonth, 500, accuracy: 0.001)
+        XCTAssertEqual(snapshot.remainingBudget, 500, accuracy: 0.001)
     }
 
     func testSafeSpendStreakCountsConsecutiveDaysUnderSafeSpend() {

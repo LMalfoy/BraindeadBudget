@@ -771,6 +771,13 @@ struct BudgetStore {
             calendar: calendar
         )
         let monthlyBudget = monthlyIncome - recurringCosts
+        let usesInitialAnchorForCurrentMonth =
+            initialAvailableBudget != nil &&
+            isInitialAnchorMonth(
+                referenceDate,
+                initialBudgetAnchorMonth: initialBudgetAnchorMonth,
+                calendar: calendar
+            )
         let currentPeriodExpenses = currentMonthExpenses(
             from: expenses,
             budgetPeriodAnchorDay: budgetPeriodAnchorDay,
@@ -778,7 +785,7 @@ struct BudgetStore {
             referenceDate: referenceDate
         )
         let totalSpent = totalSpent(for: currentPeriodExpenses)
-        let previousMonthCarryover = previousMonthCarryover(
+        let previousMonthCarryover = usesInitialAnchorForCurrentMonth ? 0 : previousMonthCarryover(
             incomeItems: incomeItems,
             recurringExpenseItems: recurringExpenseItems,
             expenses: expenses,
@@ -787,7 +794,15 @@ struct BudgetStore {
             calendar: calendar,
             referenceDate: referenceDate
         )
-        let availableThisMonth = monthlyBudget + previousMonthCarryover
+        let availableThisMonth = adjustedMonthlyBudget(
+            incomeItems: incomeItems,
+            recurringExpenseItems: recurringExpenseItems,
+            expenses: expenses,
+            initialAvailableBudget: initialAvailableBudget,
+            initialBudgetAnchorMonth: initialBudgetAnchorMonth,
+            calendar: calendar,
+            referenceDate: referenceDate
+        )
         let remainingBudget = availableThisMonth - totalSpent
         let categorySpending = categorySpending(
             for: expenses,
