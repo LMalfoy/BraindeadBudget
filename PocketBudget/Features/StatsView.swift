@@ -157,13 +157,13 @@ struct StatsView: View {
                             x: .value("Month", point.month, unit: .month),
                             y: .value("Carryover", point.amount)
                         )
-                        .foregroundStyle(.green)
+                        .foregroundStyle(AppTheme.primaryGreen)
 
                         AreaMark(
                             x: .value("Month", point.month, unit: .month),
                             y: .value("Carryover", point.amount)
                         )
-                        .foregroundStyle(.green.opacity(0.12))
+                        .foregroundStyle(AppTheme.primaryGreen.opacity(0.12))
                     }
                     .chartYAxis {
                         AxisMarks(position: .leading) { value in
@@ -330,10 +330,17 @@ private struct CategoryTrendPage: View {
                 return NamedCategoryLegendItem(
                     categoryKey: first.categoryKey,
                     categoryTitle: first.categoryTitle,
-                    colorName: first.colorName
+                    colorName: first.colorName,
+                    total: points.reduce(0) { $0 + $1.total }
                 )
             }
-            .sorted { $0.categoryTitle < $1.categoryTitle }
+            .sorted { lhs, rhs in
+                if lhs.total == rhs.total {
+                    return lhs.categoryTitle < rhs.categoryTitle
+                }
+
+                return lhs.total > rhs.total
+            }
     }
 
     var body: some View {
@@ -396,6 +403,7 @@ private struct NamedCategoryLegendItem: Identifiable {
     let categoryKey: String
     let categoryTitle: String
     let colorName: String
+    let total: Double
 
     var id: String { categoryKey }
 }

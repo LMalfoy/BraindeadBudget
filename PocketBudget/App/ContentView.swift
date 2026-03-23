@@ -10,26 +10,26 @@
 import SwiftUI
 
 enum AppTheme {
-    static let primaryGreen = Color(red: 0.18, green: 0.63, blue: 0.42)
-    static let secondaryGreen = Color(red: 0.28, green: 0.72, blue: 0.50)
-    static let warningRed = Color(red: 0.82, green: 0.28, blue: 0.25)
+    static let primaryGreen = Color(red: 0.1294, green: 0.7098, blue: 0.2039)
+    static let secondaryGreen = Color(red: 0.5647, green: 0.7373, blue: 0.1020)
+    static let warningRed = Color(red: 0.8784, green: 0.2078, blue: 0.1412)
     static let neutralGray = Color(uiColor: .systemGray4)
     static let panelBackground = Color(uiColor: .secondarySystemBackground)
 
-    static let foodCategory = Color(red: 0.25, green: 0.59, blue: 0.35)
-    static let transportCategory = Color(red: 0.24, green: 0.44, blue: 0.78)
-    static let householdCategory = Color(red: 0.78, green: 0.51, blue: 0.21)
-    static let funCategory = Color(red: 0.74, green: 0.31, blue: 0.56)
+    static let foodCategory = primaryGreen
+    static let transportCategory = Color(red: 0.1216, green: 0.3922, blue: 0.6784)
+    static let householdCategory = Color(red: 0.9412, green: 0.4863, blue: 0.0706)
+    static let funCategory = Color(red: 0.5647, green: 0.2039, blue: 0.5961)
 
-    static let housingCategory = Color(red: 0.35, green: 0.40, blue: 0.70)
-    static let subscriptionsCategory = Color(red: 0.16, green: 0.56, blue: 0.59)
-    static let insuranceCategory = Color(red: 0.24, green: 0.61, blue: 0.73)
-    static let savingsCategory = Color(red: 0.44, green: 0.62, blue: 0.28)
-    static let debtCategory = Color(red: 0.74, green: 0.29, blue: 0.27)
+    static let housingCategory = Color(red: 0.0000, green: 0.5843, blue: 0.6745)
+    static let subscriptionsCategory = Color(red: 1.0000, green: 0.7608, blue: 0.0000)
+    static let insuranceCategory = Color(red: 0.2510, green: 0.2510, blue: 0.6275)
+    static let savingsCategory = secondaryGreen
+    static let debtCategory = warningRed
 
-    static let variableTrend = transportCategory
-    static let recurringTrend = subscriptionsCategory
-    static let totalTrend = funCategory
+    static let variableTrend = foodCategory
+    static let recurringTrend = housingCategory
+    static let totalTrend = insuranceCategory
 
     static func categoryColor(for key: String) -> Color {
         switch key {

@@ -41,7 +41,7 @@ struct QuickAddWidgetEntryView: View {
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(Color.green)
+                    .fill(Color(red: 0.1294, green: 0.7098, blue: 0.2039))
             )
             .padding(10)
             .containerBackground(for: .widget) {

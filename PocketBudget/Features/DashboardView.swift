@@ -472,20 +472,14 @@ private struct OnboardingTutorialView: View {
     private let pages = [
         OnboardingTutorialPage(
             id: 0,
-            title: "Welcome",
-            bodyText: "Thanks for trying this budgeting app.\n\nThe idea is simple:\nset up your monthly budget once, then just track your spending during the month.\n\nEverything runs locally on your device. Your financial data never leaves your phone.",
+            title: "Budget Rock",
+            bodyText: "Thanks for using Budget Rock. :)\n\nThe idea is simple:\nSet up your monthly budget once and then track your spending during the month.\n\nAfter the initial setup, recording expenses only takes a few seconds.",
             buttonTitle: nil
         ),
         OnboardingTutorialPage(
             id: 1,
-            title: "Set up your monthly budget",
-            bodyText: "First, add your income and recurring costs like housing, insurance, subscriptions, loan payments, or savings.\n\nThis can take a few minutes, but you only need to do it once.\n\nIncome minus recurring costs becomes your normal monthly budget.",
-            buttonTitle: nil
-        ),
-        OnboardingTutorialPage(
-            id: 2,
-            title: "You're ready",
-            bodyText: "After setup, the app stays simple.\n\nTrack spending quickly, check the dashboard to see how much budget is left, and use the widget if you want even faster logging.\n\nSet up your budget and start tracking.",
+            title: "How your monthly budget works",
+            bodyText: "1. Add your monthly income\nEnter all regular sources of income you receive each month.\n\n2. Add recurring costs\nInclude rent, subscriptions, insurance, savings, loan payments and other monthly commitments.\n\nSavings are treated like recurring monthly commitments.\n\n3. Your monthly budget is calculated\n\nYour budget equals:\n\nmonthly income – recurring costs\n\nThe app also calculates how much you can safely spend per day.\n\nIf you spend less than that amount, you will likely have money left at the end of the month.\n\nThat leftover amount becomes your carryover for the next budget period.",
             buttonTitle: "Start Setup"
         )
     ]
@@ -581,9 +575,9 @@ private struct SummaryCardView: View {
                         Spacer(minLength: 8)
 
                         if daysRemainingInCurrentPeriod > 0 {
-                            Text("\(compactCurrency(dailySafeSpend))/day")
-                                .font(.footnote.weight(.medium))
-                                .foregroundStyle(.secondary)
+                            Text("\(compactCurrency(max(0, dailySafeSpend)))/day")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(AppTheme.primaryGreen)
                         }
                     }
                 }
@@ -693,8 +687,9 @@ private struct DashboardInsightCardView: View {
                             x: .value("Date", point.date),
                             y: .value("Remaining", point.remainingBudget)
                         )
-                        .foregroundStyle((trajectory.last?.remainingBudget ?? 0) < 0 ? .red : .green)
+                        .foregroundStyle((trajectory.last?.remainingBudget ?? 0) < 0 ? AppTheme.warningRed : AppTheme.primaryGreen)
                         .interpolationMethod(.linear)
+                        .lineStyle(.init(lineWidth: 2.5))
 
                         AreaMark(
                             x: .value("Date", point.date),
@@ -706,8 +701,8 @@ private struct DashboardInsightCardView: View {
                         )
                         .foregroundStyle(
                             isNegativeState
-                                ? .red.opacity(0.12)
-                                : .green.opacity(0.12)
+                                ? AppTheme.warningRed.opacity(0.2)
+                                : AppTheme.primaryGreen.opacity(0.18)
                         )
                     }
                 }
@@ -724,12 +719,7 @@ private struct DashboardInsightCardView: View {
                 }
                 .chartYAxis {
                     AxisMarks(position: .leading) { value in
-                        if let amount = value.as(Double.self), abs(amount) < 0.0001 {
-                            AxisGridLine(stroke: StrokeStyle(lineWidth: 1.5, dash: [4, 4]))
-                                .foregroundStyle(.secondary.opacity(0.65))
-                        } else {
-                            AxisGridLine()
-                        }
+                        AxisGridLine()
                         AxisTick()
                         AxisValueLabel {
                             if let amount = value.as(Double.self) {
@@ -738,13 +728,9 @@ private struct DashboardInsightCardView: View {
                         }
                     }
                 }
-                .chartPlotStyle { plotArea in
-                    plotArea
-                        .padding(.top, 12)
-                }
+                .chartXScale(domain: xAxisDomain)
                 .chartYScale(domain: yAxisDomain)
                 .frame(height: 270)
-                .clipped()
 
                 Spacer(minLength: 0)
             }
@@ -757,16 +743,9 @@ private struct DashboardInsightCardView: View {
     private var yAxisDomain: ClosedRange<Double> {
         let values = trajectory.map(\.remainingBudget) + idealTrajectory.map(\.remainingBudget)
         let minimum = values.min() ?? 0
-        let maximum = values.max() ?? 0
+        let maximum = max(values.max() ?? 0, trajectory.first?.remainingBudget ?? 0)
         let lowerBound = min(minimum < 0 ? roundedFloor(minimum) : 0, 0)
-        let upperBound: Double
-
-        if maximum <= 0 {
-            let referenceMagnitude = max(abs(minimum), 1)
-            upperBound = roundedCeiling(referenceMagnitude * 0.12)
-        } else {
-            upperBound = max(roundedCeiling(maximum), 0)
-        }
+        let upperBound = max(roundedCeiling(maximum * 1.08), maximum)
 
         return lowerBound...max(upperBound, lowerBound + 1)
     }
@@ -774,45 +753,51 @@ private struct DashboardInsightCardView: View {
     private var idealTrajectory: [BudgetTrajectoryPoint] {
         guard
             let first = trajectory.first,
-            let last = trajectory.last
+            let monthStart = Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: first.date)),
+            let monthRange = Calendar.current.range(of: .day, in: .month, for: monthStart)
         else {
             return []
         }
 
-        let totalSteps = max(trajectory.count - 1, 1)
+        let dailyStep = max(0, first.remainingBudget / Double(monthRange.count))
 
-        return trajectory.enumerated().map { index, point in
-            let progress = Double(index) / Double(totalSteps)
-            let target = first.remainingBudget + ((0 - first.remainingBudget) * progress)
-            let date = index == trajectory.count - 1 ? last.date : point.date
+        return monthRange.compactMap { day in
+            guard let date = Calendar.current.date(byAdding: .day, value: day - 1, to: monthStart) else {
+                return nil
+            }
 
-            return BudgetTrajectoryPoint(date: date, remainingBudget: target)
+            let remaining = max(0, first.remainingBudget - (Double(day - 1) * dailyStep))
+            return BudgetTrajectoryPoint(date: date, remainingBudget: remaining)
         }
     }
 
     private var xAxisMarks: [Date] {
-        guard let start = trajectory.first?.date, let end = trajectory.last?.date else {
+        guard
+            let start = trajectory.first?.date,
+            let monthStart = Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: start)),
+            let monthRange = Calendar.current.range(of: .day, in: .month, for: monthStart)
+        else {
             return []
         }
 
-        let calendar = Calendar.current
-        let totalDays = max(calendar.dateComponents([.day], from: start, to: end).day ?? 0, 0)
-        let step = max(totalDays / 3, 1)
+        let tickDays = [1, 8, 15, 22, 29].filter { monthRange.contains($0) }
 
-        var marks = [calendar.startOfDay(for: start)]
-        var cursor = calendar.startOfDay(for: start)
+        return tickDays.compactMap { day in
+            Calendar.current.date(byAdding: .day, value: day - 1, to: monthStart)
+        }
+    }
 
-        while let next = calendar.date(byAdding: .day, value: step, to: cursor), next < end {
-            marks.append(next)
-            cursor = next
+    private var xAxisDomain: ClosedRange<Date> {
+        guard
+            let start = trajectory.first?.date,
+            let monthStart = Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: start)),
+            let nextMonthStart = Calendar.current.date(byAdding: .month, value: 1, to: monthStart),
+            let monthEnd = Calendar.current.date(byAdding: .day, value: -1, to: nextMonthStart)
+        else {
+            return Date.now...Date.now
         }
 
-        let endOfDay = calendar.startOfDay(for: end)
-        if marks.last != endOfDay {
-            marks.append(endOfDay)
-        }
-
-        return marks
+        return Calendar.current.startOfDay(for: monthStart)...Calendar.current.startOfDay(for: monthEnd)
     }
 
     private func roundedCeiling(_ value: Double) -> Double {

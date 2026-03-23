@@ -1359,12 +1359,7 @@ struct BudgetStore {
             let dayTotal = totalSpent(for: groupedExpenses[cursor, default: []])
             runningRemaining -= dayTotal
 
-            let markerDate: Date
-            if cursor == periodStartDate {
-                markerDate = calendar.date(byAdding: .hour, value: 12, to: cursor) ?? cursor
-            } else {
-                markerDate = cursor
-            }
+            let markerDate = calendar.date(byAdding: .hour, value: 12, to: cursor) ?? cursor
 
             points.append(
                 BudgetTrajectoryPoint(
@@ -1379,30 +1374,7 @@ struct BudgetStore {
             cursor = nextDay
         }
 
-        return points
-            .sorted { $0.date < $1.date }
-            .reduce(into: [BudgetTrajectoryPoint]()) { partialResult, point in
-                if let last = partialResult.last, calendar.isDate(last.date, inSameDayAs: point.date) {
-                    partialResult[partialResult.count - 1] = point
-                } else {
-                    partialResult.append(point)
-                }
-            }
-            .map { point in
-                BudgetTrajectoryPoint(
-                    date: calendar.startOfDay(for: point.date),
-                    remainingBudget: point.remainingBudget
-                )
-            }
-            .enumerated()
-            .map { index, point in
-                if index == 0 {
-                    return point
-                }
-
-                let adjustedDate = calendar.date(byAdding: .minute, value: index, to: point.date) ?? point.date
-                return BudgetTrajectoryPoint(date: adjustedDate, remainingBudget: point.remainingBudget)
-            }
+        return points.sorted { $0.date < $1.date }
     }
 
     static func budgetTrajectory(

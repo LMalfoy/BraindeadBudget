@@ -29,13 +29,8 @@ struct SettingsSheet: View {
 
     private var appVersion: String {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"
-        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
-
-        guard let build, build != version else {
-            return version
-        }
-
-        return "\(version) (\(build))"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?"
+        return "Version \(version) (Build \(build))"
     }
 
     private var store: BudgetStore {

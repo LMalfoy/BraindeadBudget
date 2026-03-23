@@ -161,16 +161,17 @@ struct ExpenseHistorySheet: View {
     }
 
     private var trajectoryAxisDates: [Date] {
-        guard !selectedMonthTrajectory.isEmpty else {
+        guard
+            let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedMonthReferenceDate)),
+            let monthRange = calendar.range(of: .day, in: .month, for: monthStart)
+        else {
             return []
         }
 
-        let rawDates = selectedMonthTrajectory.map { calendar.startOfDay(for: $0.date) }
-        let strideDates = rawDates.enumerated().compactMap { index, date in
-            index.isMultiple(of: 7) ? date : nil
+        let axisDays = [1, 8, 15, 22, 29].filter { monthRange.contains($0) }
+        return axisDays.compactMap { day in
+            calendar.date(byAdding: .day, value: day - 1, to: monthStart)
         }
-        let combined = Array(Set(strideDates + [rawDates.first!, rawDates.last!])).sorted()
-        return combined
     }
 
     private var selectedMonthYear: Int {
@@ -391,20 +392,20 @@ struct ExpenseHistorySheet: View {
                             yStart: .value("Budget", 0),
                             yEnd: .value("Budget", point.remainingBudget)
                         )
-                        .foregroundStyle(point.remainingBudget >= 0 ? Color.green.opacity(0.18) : Color.red.opacity(0.2))
+                        .foregroundStyle(point.remainingBudget >= 0 ? AppTheme.primaryGreen.opacity(0.18) : AppTheme.warningRed.opacity(0.2))
 
                         LineMark(
                             x: .value("Date", point.date),
                             y: .value("Budget", point.remainingBudget)
                         )
-                        .foregroundStyle(point.remainingBudget >= 0 ? Color.green : Color.red)
+                        .foregroundStyle(point.remainingBudget >= 0 ? AppTheme.primaryGreen : AppTheme.warningRed)
                         .lineStyle(.init(lineWidth: 2.5))
                     }
                 }
                 .chartXAxis {
                     AxisMarks(values: trajectoryAxisDates) { value in
                         AxisGridLine()
-                        AxisValueLabel(format: .dateTime.day().month(.abbreviated))
+                        AxisValueLabel(format: .dateTime.day())
                     }
                 }
                 .chartYAxis {

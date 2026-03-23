@@ -210,7 +210,13 @@ struct BudgetSettingsSheet: View {
         } header: {
             Text(mode == .onboarding ? "Monthly Budget" : "Summary")
         } footer: {
-            Text(summaryFooterText)
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Calculated Monthly Budget")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+
+                Text("Your monthly budget equals your total income minus your recurring costs.")
+            }
         }
     }
 
@@ -237,6 +243,8 @@ struct BudgetSettingsSheet: View {
             .accessibilityIdentifier("budgetSetup.addIncomeButton")
         } header: {
             Text("Monthly Income")
+        } footer: {
+            Text("Enter all monthly income sources you receive.")
         }
     }
 
@@ -264,7 +272,10 @@ struct BudgetSettingsSheet: View {
         } header: {
             Text("Recurring Monthly Costs")
         } footer: {
-            Text("Savings plans are treated like recurring monthly commitments.")
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Enter all regular monthly expenses.")
+                Text("Savings are treated like recurring monthly commitments.")
+            }
         }
     }
 
@@ -276,22 +287,14 @@ struct BudgetSettingsSheet: View {
                     .accessibilityIdentifier("budgetSetup.initialAvailableBudgetField")
             }
         } header: {
-            Text("Personalization")
+            Text("Budget available for this period")
         } footer: {
             if mode == .onboarding {
-                Text("Leave 'Budget Available for this Period' unchanged if you are starting at the beginning of a fresh budget period. Only adjust it if this period has already started and some spending already happened, so the amount left today is lower than your normal monthly budget.")
+                Text("Leave this value unchanged if you are starting at the beginning of a fresh budget period.\n\nAdjust it only if the current period has already started and some spending already happened that you did not record in the app.\n\nIn that case, enter the amount that is actually left today.")
             } else {
                 Text("Budget periods always follow the calendar month. The current setup applies from this month forward.")
             }
         }
-    }
-
-    private var summaryFooterText: String {
-        if mode == .onboarding {
-            return "This shows your calculated monthly budget automatically. In most cases, leave the personalization budget value unchanged. Only change it if you are starting mid-period and some of that budget has already been spent."
-        }
-
-        return "Update these values any time to recalculate your monthly budget."
     }
 
     private func completeFlow() {
