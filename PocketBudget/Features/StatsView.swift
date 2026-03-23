@@ -425,28 +425,7 @@ private struct CategoryTrendPage: View {
     }
 
     private func color(for colorName: String) -> Color {
-        switch colorName {
-        case ExpenseCategory.food.rawValue:
-            return .green
-        case ExpenseCategory.transport.rawValue:
-            return .blue
-        case ExpenseCategory.household.rawValue:
-            return .orange
-        case ExpenseCategory.fun.rawValue:
-            return .pink
-        case RecurringExpenseCategory.housingUtilities.rawValue:
-            return .indigo
-        case RecurringExpenseCategory.subscriptions.rawValue:
-            return .teal
-        case RecurringExpenseCategory.insurance.rawValue:
-            return .cyan
-        case RecurringExpenseCategory.savings.rawValue:
-            return .mint
-        case RecurringExpenseCategory.debt.rawValue:
-            return .red
-        default:
-            return .gray
-        }
+        AppTheme.categoryColor(for: colorName)
     }
 }
 

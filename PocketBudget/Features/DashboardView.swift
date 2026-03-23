@@ -446,7 +446,7 @@ private struct OnboardingTutorialPage: Identifiable {
     let id: Int
     let title: String
     let bodyText: String
-    let buttonTitle: String
+    let buttonTitle: String?
 }
 
 private struct OnboardingTutorialView: View {
@@ -458,84 +458,73 @@ private struct OnboardingTutorialView: View {
         OnboardingTutorialPage(
             id: 0,
             title: "Welcome",
-            bodyText: "Thanks for trying this budgeting app.\n\nThe idea is simple:\nset up your monthly budget once — then just track your spending during the month.\n\nEverything runs locally on your device.\nYour financial data never leaves your phone.",
-            buttonTitle: "Next"
+            bodyText: "Thanks for trying this budgeting app.\n\nThe idea is simple:\nset up your monthly budget once, then just track your spending during the month.\n\nEverything runs locally on your device. Your financial data never leaves your phone.",
+            buttonTitle: nil
         ),
         OnboardingTutorialPage(
             id: 1,
             title: "Set up your monthly budget",
-            bodyText: "First, define your monthly budget.\n\nAdd your income and your recurring costs, such as:\n- housing / rent\n- insurance\n- subscriptions\n- loan payments\n- savings\n\nThis step may take a few minutes, but you only need to do it once.\n\nThe difference between income and recurring costs becomes your available monthly budget.",
-            buttonTitle: "Next"
+            bodyText: "First, add your income and recurring costs like housing, insurance, subscriptions, loan payments, or savings.\n\nThis can take a few minutes, but you only need to do it once.\n\nIncome minus recurring costs becomes your normal monthly budget.",
+            buttonTitle: nil
         ),
         OnboardingTutorialPage(
             id: 2,
-            title: "Track spending quickly",
-            bodyText: "After setup, the app becomes very simple.\n\nWhenever you spend money, tap “Add Expense” and record it.\n\nThe goal is to track spending quickly and always know how much of your monthly budget is left.",
-            buttonTitle: "Next"
-        ),
-        OnboardingTutorialPage(
-            id: 3,
-            title: "Fast tracking",
-            bodyText: "The app is designed to be fast.\n\nYou can also add the widget to your home screen to quickly log expenses without opening the app.\n\nThe dashboard will show you your current budget status and spending trends.",
-            buttonTitle: "Next"
-        ),
-        OnboardingTutorialPage(
-            id: 4,
             title: "You're ready",
-            bodyText: "That's it.\n\nSet up your budget and start tracking your spending.\n\nHave fun using the app.\n\n— Kevin Sicking",
+            bodyText: "After setup, the app stays simple.\n\nTrack spending quickly, check the dashboard to see how much budget is left, and use the widget if you want even faster logging.\n\nSet up your budget and start tracking.",
             buttonTitle: "Start Setup"
         )
     ]
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 24) {
-                TabView(selection: $selectedPage) {
-                    ForEach(pages) { page in
-                        VStack(alignment: .leading, spacing: 18) {
-                            Spacer(minLength: 0)
+            TabView(selection: $selectedPage) {
+                ForEach(pages) { page in
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(page.bodyText)
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                            .padding(.horizontal, 24)
+                            .padding(.top, 28)
 
-                            VStack(alignment: .leading, spacing: 14) {
-                                Text(page.title)
-                                    .font(.system(size: 32, weight: .bold, design: .rounded))
-
-                                Text(page.bodyText)
-                                    .font(.body)
-                                    .foregroundStyle(.secondary)
-                            }
-
-                            Spacer(minLength: 0)
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-                        .padding(.horizontal, 24)
-                        .padding(.top, 24)
-                        .tag(page.id)
+                        Spacer(minLength: 0)
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .tag(page.id)
                 }
-                .tabViewStyle(.page(indexDisplayMode: .automatic))
-                .indexViewStyle(.page(backgroundDisplayMode: .always))
-
-                Button(currentPage.buttonTitle) {
-                    if selectedPage == pages.count - 1 {
-                        onContinue()
-                    } else {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            selectedPage += 1
-                        }
-                    }
-                }
-                .font(.headline)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(AppTheme.primaryGreen)
-                .foregroundStyle(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .padding(.horizontal, 24)
-                .padding(.bottom, 24)
-                .accessibilityIdentifier("onboardingTutorial.primaryButton")
             }
+            .tabViewStyle(.page(indexDisplayMode: .automatic))
+            .indexViewStyle(.page(backgroundDisplayMode: .always))
             .navigationTitle(currentPage.title)
             .navigationBarTitleDisplayMode(.inline)
+            .safeAreaInset(edge: .bottom) {
+                ZStack {
+                    if let buttonTitle = currentPage.buttonTitle {
+                        Button {
+                            onContinue()
+                        } label: {
+                            Text(buttonTitle)
+                                .font(.headline)
+                                .frame(maxWidth: .infinity)
+                                .frame(minHeight: 52)
+                                .padding(.vertical, 16)
+                                .background(AppTheme.primaryGreen)
+                                .foregroundStyle(.white)
+                                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("onboardingTutorial.primaryButton")
+                    } else {
+                        Color.clear
+                    }
+                }
+                .frame(height: 84)
+                .padding(.horizontal, 24)
+                .padding(.top, 8)
+                .padding(.bottom, 16)
+                .background(.clear)
+            }
         }
         .interactiveDismissDisabled(true)
     }
@@ -825,21 +814,6 @@ private struct ExpenseRowView: View {
                 .foregroundStyle(.tertiary)
         }
         .padding(.vertical, 4)
-    }
-}
-
-private extension ExpenseCategory {
-    var color: Color {
-        switch self {
-        case .food:
-            return .green
-        case .transport:
-            return .blue
-        case .household:
-            return .orange
-        case .fun:
-            return .pink
-        }
     }
 }
 

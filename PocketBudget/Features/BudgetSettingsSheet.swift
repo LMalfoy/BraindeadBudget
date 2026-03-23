@@ -56,6 +56,8 @@ struct BudgetSettingsSheet: View {
     @State private var activeEditor: BaselineItemDraft?
     @State private var errorMessage: String?
     @State private var initialAvailableBudgetText = ""
+    @State private var hasCustomizedInitialAvailableBudget = false
+    @State private var selectedBudgetPeriodAnchorDay = 1
 
     private var store: BudgetStore {
         BudgetStore(context: modelContext)
@@ -85,11 +87,31 @@ struct BudgetSettingsSheet: View {
     }
 
     private var currentAvailableBudget: Double {
-        parsedInitialAvailableBudget ?? 0
+        parsedInitialAvailableBudget ?? availableBudget
+    }
+
+    private var hasValidInitialAvailableBudget: Bool {
+        !hasCustomizedInitialAvailableBudget || parsedInitialAvailableBudget != nil
+    }
+
+    private var initialAvailableBudgetBinding: Binding<String> {
+        Binding(
+            get: {
+                if hasCustomizedInitialAvailableBudget {
+                    return initialAvailableBudgetText
+                }
+
+                return formattedAmountText(availableBudget)
+            },
+            set: { newValue in
+                hasCustomizedInitialAvailableBudget = true
+                initialAvailableBudgetText = newValue
+            }
+        )
     }
 
     private var canCompleteSetup: Bool {
-        !incomeItems.isEmpty && (mode == .manage || parsedInitialAvailableBudget != nil)
+        !incomeItems.isEmpty && (mode == .manage || hasValidInitialAvailableBudget)
     }
 
     private var errorAlertBinding: Binding<Bool> {
@@ -109,10 +131,7 @@ struct BudgetSettingsSheet: View {
                 summarySection
                 incomeSection
                 recurringExpenseSection
-
-                if mode == .onboarding {
-                    initialBudgetAnchorSection
-                }
+                personalizationSection
             }
             .navigationTitle(mode.title)
             .navigationBarTitleDisplayMode(.inline)
@@ -155,6 +174,11 @@ struct BudgetSettingsSheet: View {
             } message: {
                 Text(errorMessage ?? "Something went wrong.")
             }
+            .onAppear {
+                if let anchorDay = settings.first?.budgetPeriodAnchorDay {
+                    selectedBudgetPeriodAnchorDay = anchorDay
+                }
+            }
         }
         .interactiveDismissDisabled(mode == .onboarding)
     }
@@ -178,14 +202,6 @@ struct BudgetSettingsSheet: View {
             }
             .accessibilityIdentifier("budgetSetup.availableBudgetValue")
 
-            if mode == .onboarding {
-                LabeledContent("Available Right Now") {
-                    Text(currentAvailableBudget.formatted(.currency(code: currencyCode)))
-                        .fontWeight(.semibold)
-                        .foregroundStyle(currentAvailableBudget < 0 ? AppTheme.warningRed : .primary)
-                }
-                .accessibilityIdentifier("budgetSetup.initialAvailableBudgetValue")
-            }
         } header: {
             Text(mode == .onboarding ? "Monthly Budget" : "Summary")
         } footer: {
@@ -247,21 +263,35 @@ struct BudgetSettingsSheet: View {
         }
     }
 
-    private var initialBudgetAnchorSection: some View {
+    private var personalizationSection: some View {
         Section {
-            TextField("Available Budget Right Now", text: $initialAvailableBudgetText)
-                .keyboardType(.numbersAndPunctuation)
-                .accessibilityIdentifier("budgetSetup.initialAvailableBudgetField")
+            Picker("Budget Period Start Day", selection: $selectedBudgetPeriodAnchorDay) {
+                ForEach(1..<31) { day in
+                    Text("Day \(day)").tag(day)
+                }
+            }
+            .pickerStyle(.menu)
+            .accessibilityIdentifier("budgetSetup.periodStartDayPicker")
+
+            if mode == .onboarding {
+                TextField("Budget Available for this Period", text: initialAvailableBudgetBinding)
+                    .keyboardType(.numbersAndPunctuation)
+                    .accessibilityIdentifier("budgetSetup.initialAvailableBudgetField")
+            }
         } header: {
-            Text("Starting Point")
+            Text("Personalization")
         } footer: {
-            Text("Enter how much variable budget you still have available for the rest of the current period. This becomes your initial budget anchor and is not stored as past spending.")
+            if mode == .onboarding {
+                Text("Leave 'Budget Available for this Period' unchanged if you are starting at the beginning of a fresh budget period. Only adjust it if this period has already started and some spending already happened, so the amount left today is lower than your normal monthly budget.")
+            } else {
+                Text("Adjust the budget period start day if your monthly budget should reset later than the first day of the calendar month.")
+            }
         }
     }
 
     private var summaryFooterText: String {
         if mode == .onboarding {
-            return "This shows your calculated monthly baseline first. During setup, also enter how much budget is still available right now."
+            return "This shows your calculated monthly budget automatically. In most cases, leave the personalization budget value unchanged. Only change it if you are starting mid-period and some of that budget has already been spent."
         }
 
         return "Update these values any time to recalculate your monthly budget."
@@ -271,8 +301,8 @@ struct BudgetSettingsSheet: View {
         do {
             try store.saveSettings(
                 currencyCode: currencyCode,
-                budgetPeriodAnchorDay: settings.first?.budgetPeriodAnchorDay,
-                initialAvailableBudget: mode == .onboarding ? parsedInitialAvailableBudget : nil,
+                budgetPeriodAnchorDay: selectedBudgetPeriodAnchorDay,
+                initialAvailableBudget: mode == .onboarding ? currentAvailableBudget : nil,
                 initialBudgetAnchorMonth: mode == .onboarding ? Self.monthAnchor(for: .now) : nil
             )
             hasCompletedSetup = true
@@ -411,6 +441,7 @@ private struct BaselineItemEditorSheet: View {
     @State private var amountText: String
     @State private var recurringCategory: RecurringExpenseCategory
     @State private var errorMessage: String?
+    @State private var hasRequestedInitialFocus = false
 
     init(
         draft: BaselineItemDraft,
@@ -433,6 +464,22 @@ private struct BaselineItemEditorSheet: View {
         name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || (parsedAmount ?? 0) <= 0
     }
 
+    private var saveAvailabilityHint: String? {
+        if name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && (parsedAmount ?? 0) <= 0 {
+            return "Enter a name and amount to enable save."
+        }
+
+        if name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "Enter a name to enable save."
+        }
+
+        if (parsedAmount ?? 0) <= 0 {
+            return "Enter an amount to enable save."
+        }
+
+        return nil
+    }
+
     private var errorAlertBinding: Binding<Bool> {
         Binding(
             get: { errorMessage != nil },
@@ -446,12 +493,14 @@ private struct BaselineItemEditorSheet: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                if draft.kind == .recurringExpense {
-                    Section {
-                        recurringCategoryTiles
-                    } header: {
-                        Text("Category")
+            VStack(spacing: 0) {
+                Form {
+                    if draft.kind == .recurringExpense {
+                        Section {
+                            recurringCategoryTiles
+                        } header: {
+                            Text("Category")
+                        }
                     }
 
                     Section {
@@ -466,30 +515,6 @@ private struct BaselineItemEditorSheet: View {
 
                         TextField("Amount", text: $amountText)
                             .keyboardType(.decimalPad)
-                            .submitLabel(.done)
-                            .focused($focusedField, equals: .amount)
-                            .onSubmit {
-                                guard !isSaveDisabled else {
-                                    return
-                                }
-
-                                saveItem()
-                            }
-                            .accessibilityIdentifier("baselineItem.amountField")
-                    } header: {
-                        Text("Recurring Cost")
-                    } footer: {
-                        Text("Amounts are stored as monthly values in \(currencyCode).")
-                    }
-                } else {
-                    Section {
-                        TextField(draft.kind.nameLabel, text: $name)
-                            .textInputAutocapitalization(.words)
-                            .focused($focusedField, equals: .name)
-                            .accessibilityIdentifier("baselineItem.nameField")
-
-                        TextField("Amount", text: $amountText)
-                            .keyboardType(.decimalPad)
                             .focused($focusedField, equals: .amount)
                             .accessibilityIdentifier("baselineItem.amountField")
                     } header: {
@@ -498,8 +523,35 @@ private struct BaselineItemEditorSheet: View {
                         Text("Amounts are stored as monthly values in \(currencyCode).")
                     }
                 }
+                .scrollDismissesKeyboard(.interactively)
+
+                Button {
+                    saveItem()
+                } label: {
+                    Text("Save \(draft.kind.title)")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(isSaveDisabled ? AppTheme.neutralGray : AppTheme.primaryGreen)
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 10)
+                .disabled(isSaveDisabled)
+                .accessibilityIdentifier("baselineItem.saveButton")
+
+                if let saveAvailabilityHint {
+                    Text(saveAvailabilityHint)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 18)
+                        .padding(.top, 6)
+                }
+
+                Spacer(minLength: 12)
             }
-            .scrollDismissesKeyboard(.interactively)
             .navigationTitle(draft.sourceID == nil ? "Add \(draft.kind.title)" : "Edit \(draft.kind.title)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -508,13 +560,10 @@ private struct BaselineItemEditorSheet: View {
                         dismiss()
                     }
                 }
-
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        saveItem()
-                    }
-                    .disabled(isSaveDisabled)
-                    .accessibilityIdentifier("baselineItem.saveButton")
+            }
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    EmptyView()
                 }
             }
             .alert("Couldn’t Save Item", isPresented: errorAlertBinding) {
@@ -525,6 +574,9 @@ private struct BaselineItemEditorSheet: View {
                 Text(errorMessage ?? "Something went wrong.")
             }
             .defaultFocus($focusedField, .name)
+            .onAppear {
+                requestInitialFocusIfNeeded()
+            }
         }
     }
 
@@ -537,7 +589,11 @@ private struct BaselineItemEditorSheet: View {
         }
 
         do {
-            try onSave(name, amount, draft.kind == .recurringExpense ? recurringCategory : nil)
+            try onSave(
+                name.trimmingCharacters(in: .whitespacesAndNewlines),
+                amount,
+                draft.kind == .recurringExpense ? recurringCategory : nil
+            )
             dismiss()
         } catch {
             errorMessage = error.localizedDescription
@@ -586,6 +642,23 @@ private struct BaselineItemEditorSheet: View {
 
         return formattedAmountText(amount)
     }
+
+    private func requestInitialFocusIfNeeded() {
+        guard !hasRequestedInitialFocus else {
+            return
+        }
+
+        hasRequestedInitialFocus = true
+
+        Task { @MainActor in
+            focusedField = .name
+            try? await Task.sleep(for: .milliseconds(120))
+
+            if focusedField == nil {
+                focusedField = .name
+            }
+        }
+    }
 }
 
 private func parseDecimalAmount(_ text: String) -> Double? {
@@ -600,51 +673,4 @@ private func parseDecimalAmount(_ text: String) -> Double? {
 
 private func formattedAmountText(_ amount: Double) -> String {
     String(format: "%.2f", amount)
-}
-
-private extension RecurringExpenseCategory {
-    var shortTitle: String {
-        switch self {
-        case .housingUtilities:
-            return "Housing"
-        case .subscriptions:
-            return "Abos"
-        case .insurance:
-            return "Insurance"
-        case .savings:
-            return "Savings"
-        case .debt:
-            return "Debt"
-        }
-    }
-
-    var color: Color {
-        switch self {
-        case .housingUtilities:
-            return .blue
-        case .subscriptions:
-            return .purple
-        case .insurance:
-            return .teal
-        case .savings:
-            return .green
-        case .debt:
-            return .red
-        }
-    }
-
-    var symbolName: String {
-        switch self {
-        case .housingUtilities:
-            return "house.fill"
-        case .subscriptions:
-            return "play.rectangle.fill"
-        case .insurance:
-            return "shield.fill"
-        case .savings:
-            return "banknote.fill"
-        case .debt:
-            return "creditcard.fill"
-        }
-    }
 }

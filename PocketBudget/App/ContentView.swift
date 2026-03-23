@@ -15,6 +15,117 @@ enum AppTheme {
     static let warningRed = Color(red: 0.82, green: 0.28, blue: 0.25)
     static let neutralGray = Color(uiColor: .systemGray4)
     static let panelBackground = Color(uiColor: .secondarySystemBackground)
+
+    static let foodCategory = Color(red: 0.25, green: 0.59, blue: 0.35)
+    static let transportCategory = Color(red: 0.24, green: 0.44, blue: 0.78)
+    static let householdCategory = Color(red: 0.78, green: 0.51, blue: 0.21)
+    static let funCategory = Color(red: 0.74, green: 0.31, blue: 0.56)
+
+    static let housingCategory = Color(red: 0.35, green: 0.40, blue: 0.70)
+    static let subscriptionsCategory = Color(red: 0.16, green: 0.56, blue: 0.59)
+    static let insuranceCategory = Color(red: 0.24, green: 0.61, blue: 0.73)
+    static let savingsCategory = Color(red: 0.44, green: 0.62, blue: 0.28)
+    static let debtCategory = Color(red: 0.74, green: 0.29, blue: 0.27)
+
+    static func categoryColor(for key: String) -> Color {
+        switch key {
+        case ExpenseCategory.food.rawValue:
+            return foodCategory
+        case ExpenseCategory.transport.rawValue:
+            return transportCategory
+        case ExpenseCategory.household.rawValue:
+            return householdCategory
+        case ExpenseCategory.fun.rawValue:
+            return funCategory
+        case RecurringExpenseCategory.housingUtilities.rawValue:
+            return housingCategory
+        case RecurringExpenseCategory.subscriptions.rawValue:
+            return subscriptionsCategory
+        case RecurringExpenseCategory.insurance.rawValue:
+            return insuranceCategory
+        case RecurringExpenseCategory.savings.rawValue:
+            return savingsCategory
+        case RecurringExpenseCategory.debt.rawValue:
+            return debtCategory
+        default:
+            return neutralGray
+        }
+    }
+}
+
+extension ExpenseCategory {
+    var color: Color {
+        switch self {
+        case .food:
+            return AppTheme.foodCategory
+        case .transport:
+            return AppTheme.transportCategory
+        case .household:
+            return AppTheme.householdCategory
+        case .fun:
+            return AppTheme.funCategory
+        }
+    }
+
+    var symbolName: String {
+        switch self {
+        case .food:
+            return "fork.knife"
+        case .transport:
+            return "car.fill"
+        case .household:
+            return "house.fill"
+        case .fun:
+            return "sparkles"
+        }
+    }
+}
+
+extension RecurringExpenseCategory {
+    var color: Color {
+        switch self {
+        case .housingUtilities:
+            return AppTheme.housingCategory
+        case .subscriptions:
+            return AppTheme.subscriptionsCategory
+        case .insurance:
+            return AppTheme.insuranceCategory
+        case .savings:
+            return AppTheme.savingsCategory
+        case .debt:
+            return AppTheme.debtCategory
+        }
+    }
+
+    var shortTitle: String {
+        switch self {
+        case .housingUtilities:
+            return "Housing"
+        case .subscriptions:
+            return "Abos"
+        case .insurance:
+            return "Insurance"
+        case .savings:
+            return "Savings"
+        case .debt:
+            return "Debt"
+        }
+    }
+
+    var symbolName: String {
+        switch self {
+        case .housingUtilities:
+            return "house.fill"
+        case .subscriptions:
+            return "play.rectangle.fill"
+        case .insurance:
+            return "shield.fill"
+        case .savings:
+            return "banknote.fill"
+        case .debt:
+            return "creditcard.fill"
+        }
+    }
 }
 
 struct ContentView: View {
